@@ -1,0 +1,44 @@
+const mongoose = require("mongoose");
+
+const bloodRequestSchema = new mongoose.Schema(
+  {
+    patientName: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    bloodGroup: {
+      type: String,
+      required: true,
+      enum: ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"],
+    },
+    urgency: {
+      type: String,
+      required: true,
+      enum: ["Normal", "Urgent", "Critical"],
+    },
+    hospitalName: {
+      type: String,
+      required: true,
+    },
+    location: {
+      type: String,
+      required: true,
+    },
+    contactNumber: {
+      type: String,
+      required: true,
+    },
+    whatsappNumber: {
+      type: String,
+      required: true,
+    },
+    additionalInfo: {
+      type: String,
+      default: "",
+    },
+  },
+  { timestamps: true }
+);
+
+module.exports = mongoose.model("BloodRequest", bloodRequestSchema);
