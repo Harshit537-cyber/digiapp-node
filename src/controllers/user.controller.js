@@ -10,52 +10,63 @@ const fs = require("fs");
 // --------------------------------------------------
 exports.register = async (req, res) => {
   try {
+    const { mobile } = req.body;
+
+    if (!mobile) {
+      return response.error(res, "Mobile number is required", 400);
+    }
+
+    //  MOBILE BASED CHECK
+    const existingUser = await userService.findUserByMobile(mobile);
+
+    if (existingUser) {
+      if (req.file && fs.existsSync(req.file.path)) {
+        fs.unlinkSync(req.file.path);
+      }
+      return response.error(
+        res,
+        "User already registered with this mobile number",
+        409
+      );
+    }
+
     let profilePhotoUrl = null;
 
-    // Upload profile photo to Cloudinary (if provided)
     if (req.file) {
       const localFilePath = req.file.path;
-
       const uploadResult = await cloudinary.uploader.upload(localFilePath, {
         folder: "user_profiles",
       });
-
       profilePhotoUrl = uploadResult.secure_url;
-
-      // Remove local file after upload
       fs.unlinkSync(localFilePath);
     }
 
-    // Prepare user data
     const userData = {
       ...req.body,
       profilePhoto: profilePhotoUrl,
     };
 
-    // Save user to database
     const user = await userService.registerUser(userData);
 
-    // Generate JWT token
     const token = jwt.sign(
-      {
-        userId: user._id,
-        role: user.role,
-      },
+      { userId: user._id, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRES_IN }
     );
 
-    // Send success response with token
     return response.success(res, "User Registered Successfully", {
       user,
       token,
     });
-
   } catch (err) {
     console.error(err);
+    if (req.file && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
     return response.error(res, err.message || "Something went wrong", 500);
   }
 };
+
 
 // --------------------------------------------------
 // Get All Users Controller
@@ -73,8 +84,10 @@ exports.getAllUsers = async (req, res) => {
   }
 };
 
-//Delete User Controller
-//Delete User By Id
+// --------------------------------------------------
+// Delete User Controller
+// Delete User By Id
+// --------------------------------------------------
 exports.deleteUser = async (req, res) => {
   try {
     const { id } = req.params;
@@ -92,9 +105,9 @@ exports.deleteUser = async (req, res) => {
   }
 };
 
-
-
+// --------------------------------------------------
 // Update User Controller
+// --------------------------------------------------
 exports.updateUser = async (req, res) => {
   try {
     const { id } = req.params;

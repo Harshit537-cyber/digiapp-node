@@ -4,6 +4,8 @@ const userRoutes = require("./routes/user.routes");
 const bloodRequestRoutes  = require("../../DigiApp/src/routes/bloodRequest.routes");
 const trustedContactRoutes = require('./routes/trustedContact.routes');
 const jobRoutes = require("./routes/job.routes");
+const businessRoutes = require('../src/routes/business.routes'); 
+const itemRoutes = require('./routes/item.routes'); 
 const app = express();
 require("dotenv").config();
 
@@ -21,6 +23,10 @@ app.use("/api/blood-request", bloodRequestRoutes);
 app.use("/api/job", jobRoutes); 
 
 app.use('/api/trusted-contact', trustedContactRoutes);
+
+app.use('/api/business', businessRoutes); 
+
+app.use('/api/items', itemRoutes); 
 
 
 module.exports = app;
