@@ -1,4 +1,4 @@
-const User = require("../models/user");
+const User = require("../models/user.model");
 
 exports.findUserByMobile = async (mobile) => {
   return await User.findOne({ mobile });
