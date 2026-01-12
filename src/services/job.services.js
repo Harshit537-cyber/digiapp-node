@@ -45,6 +45,21 @@ const createJob = async (jobData, files, userId) => {
   }
 };
 
+
+const deactivateJob = async (jobId, userId) => {
+  const job = await Job.findById(jobId);
+  if (!job) throw new Error("Job not found");
+  
+  if (job.userId.toString() !== userId.toString()) {
+    throw new Error("Unauthorized: You can only deactivate your own posts");
+  }
+
+  job.status = "closed";
+  return await job.save();
+};
+
+
+
 const getAllJobs = async () => {
   return await Job.find({ status: "active", expiresAt: { $gte: new Date() } })
     .populate("userId", "fullName profilePhoto location")
@@ -74,4 +89,4 @@ const updateJob = async (jobId, updateData, files, userId) => {
   return await Job.findByIdAndUpdate(jobId, { ...updateData, images: updatedImages }, { new: true });
 };
 
-module.exports = { createJob, getAllJobs, getJobById, updateJob };
+module.exports = { createJob, getAllJobs, getJobById, updateJob, deactivateJob };
