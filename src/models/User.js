@@ -13,6 +13,15 @@ const UserSchema = new Schema(
       required: true,
     },
     bloodGroup: { type: String, required: true },
+    
+    
+    status: { 
+      type: String, 
+      enum: ["Active", "Blocked"], 
+      default: "Active" 
+    },
+    credits: { type: Number, default: 0 },
+    isVerified: { type: Boolean, default: false }
   },
   { timestamps: true }
 );

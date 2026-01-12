@@ -89,4 +89,39 @@ const updateJob = async (jobId, updateData, files, userId) => {
   return await Job.findByIdAndUpdate(jobId, { ...updateData, images: updatedImages }, { new: true });
 };
 
-module.exports = { createJob, getAllJobs, getJobById, updateJob, deactivateJob };
+
+const activateJob = async (jobId, userId) => {
+  const job = await Job.findById(jobId);
+  if (!job) throw new Error("Job not found");
+
+  // Debugging logs - Terminal check karein
+  console.log("Job from DB:", job);
+  console.log("UserID from Token:", userId);
+
+  // Check specific missing ID
+  if (!job.userId) {
+    throw new Error("Database error: This job post doesn't have an owner ID.");
+  }
+  if (!userId) {
+    throw new Error("Auth error: User ID not found in request.");
+  }
+
+  // Comparison
+  if (job.userId.toString() !== userId.toString()) {
+    throw new Error("Unauthorized: You can only activate your own posts");
+  }
+
+  // Update logic
+  let daysToAdd = job.jobCategory === "Local task" ? 7 : 15;
+  const newExpiry = new Date();
+  newExpiry.setDate(newExpiry.getDate() + daysToAdd);
+
+  job.status = "active";
+  job.expiresAt = newExpiry;
+  
+  return await job.save();
+};
+
+
+
+module.exports = { createJob, getAllJobs, getJobById, updateJob, deactivateJob, activateJob };

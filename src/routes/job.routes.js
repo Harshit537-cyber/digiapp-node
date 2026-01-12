@@ -13,4 +13,6 @@ router.put("/update/:id", verifyToken, upload.array("images", 3), jobController.
 
 router.patch("/deactivate/:id", verifyToken, jobController.deactivateJob); 
 
+router.patch("/activate/:id", verifyToken, jobController.activateJob);
+
 module.exports = router;

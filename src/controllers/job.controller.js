@@ -55,4 +55,18 @@ const updateJob = async (req, res) => {
   }
 };
 
-module.exports = { postJob, getAllJobs, getJobById, updateJob ,deactivateJob};
+
+const activateJob = async (req, res) => {
+  try {
+    console.log("User Object from Middleware:", req.user); // इसे चेक करें
+    
+    const userId = req.user.userId || req.user.id || req.user._id; 
+    
+    const updatedJob = await jobService.activateJob(req.params.id, userId);
+    res.status(200).json({ success: true, message: "Post activated successfully", data: updatedJob });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+module.exports = { postJob, getAllJobs, getJobById, updateJob ,deactivateJob , activateJob };
