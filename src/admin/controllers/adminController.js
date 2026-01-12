@@ -1,4 +1,5 @@
 const Admin = require('../models/Admin');
+const User = require("../../models/User");
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 
@@ -140,4 +141,57 @@ exports.deleteAdmin = async (req, res) => {
     } catch (error) {
         res.status(500).json({ message: "Server Error", error: error.message });
     }
+};
+
+
+
+
+exports.getDashboardStats = async (req, res) => {
+  try {
+    // 1. Total Users
+    const totalUsers = await User.countDocuments();
+
+    // 2. New Today (Users joined in last 24 hours)
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+    const newToday = await User.countDocuments({
+      createdAt: { $gte: startOfToday },
+    });
+
+    // 3. Active Now (Users who did something in the last 15 minutes)
+    // Note: Iske liye hum updatedAt field ka use kar rahe hain
+    const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
+    const activeNow = await User.countDocuments({
+      updatedAt: { $gte: fifteenMinutesAgo },
+    });
+
+    // 4. Monthly Active (Users active in last 30 days)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const monthlyActive = await User.countDocuments({
+      updatedAt: { $gte: thirtyDaysAgo },
+    });
+
+    // 5. Total Downloads 
+    // (Kyuki Schema mein download track nahi hai, toh ye aksar static ya 
+    // kisi third-party API/Log se aata hai. Yahan hum mock data bhej rahe hain)
+    const totalDownloads = 25000; 
+
+    res.status(200).json({
+      success: true,
+      data: {
+        totalUsers,
+        newToday,
+        activeNow,
+        monthlyActive,
+        totalDownloads
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Server Error",
+      error: error.message,
+    });
+  }
 };

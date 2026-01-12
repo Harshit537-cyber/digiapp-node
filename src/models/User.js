@@ -2,7 +2,7 @@ const { Schema, model } = require("mongoose");
 
 const UserSchema = new Schema(
   {
-    mobile: { type: String, required: true }, // mobile number sabse pehle
+    mobile: { type: String, required: true }, 
     fullName: { type: String, required: true },
     gender: { type: String, enum: ["male", "female", "other"], required: true },
     location: { type: String, required: true },

@@ -9,6 +9,7 @@ const businessRoutes = require("./routes/business.routes");
 const itemRoutes = require("./routes/item.routes");
 const adminRoutes = require("./admin/routes/adminRoutes");
 
+
 require("dotenv").config();
 
 const app = express();
@@ -23,6 +24,8 @@ app.use("/api/job", jobRoutes);
 app.use("/api/trusted-contact", trustedContactRoutes);
 app.use("/api/business", businessRoutes);
 app.use("/api/items", itemRoutes);
+app.use("/api/admin", adminRoutes);
+
 app.use("/api/admin", adminRoutes);
 
 module.exports = app;
