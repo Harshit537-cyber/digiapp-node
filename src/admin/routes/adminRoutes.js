@@ -16,6 +16,7 @@ router.get('/dashboard', verifyAdmin, (req, res) => {
     res.json({ message: "Welcome to Admin Dashboard" });
 });
 
-router.get("/dashboard-stats", getDashboardStats);
+//For dashboard
+router.get("/dashboard-stats",verifyAdmin, getDashboardStats);
 
 module.exports = router;

@@ -159,7 +159,7 @@ exports.getDashboardStats = async (req, res) => {
     });
 
     // 3. Active Now (Users who did something in the last 15 minutes)
-    // Note: Iske liye hum updatedAt field ka use kar rahe hain
+
     const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
     const activeNow = await User.countDocuments({
       updatedAt: { $gte: fifteenMinutesAgo },
@@ -172,10 +172,8 @@ exports.getDashboardStats = async (req, res) => {
       updatedAt: { $gte: thirtyDaysAgo },
     });
 
-    // 5. Total Downloads 
-    // (Kyuki Schema mein download track nahi hai, toh ye aksar static ya 
-    // kisi third-party API/Log se aata hai. Yahan hum mock data bhej rahe hain)
-    const totalDownloads = 25000; 
+   
+    const totalDownloads = 0; 
 
     res.status(200).json({
       success: true,
