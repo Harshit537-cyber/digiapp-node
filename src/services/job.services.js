@@ -204,5 +204,37 @@ const getMyJobs = async (userId) => {
 };
 
 
+const getMyActiveJobs = async (userId) => {
+  try {
+    const jobs = await Job.find({ 
+      userId, 
+      status: "active", 
+      expiresAt: { $gte: new Date() }
+    })
+    .populate('userId', 'fullName location profilePhoto')
+    .sort({ createdAt: -1 });
 
-module.exports = { createJob, getAllJobs, getJobById, updateJob, deactivateJob, activateJob ,searchJobsByTitle , getMyJobs };
+    return jobs;
+  } catch (error) {
+    throw new Error(error.message);
+  }
+};
+
+const getMyDeactivatedJobs = async (userId) => {
+  try {
+    const jobs = await Job.find({ 
+      userId, 
+      status: "closed" 
+    })
+    .populate('userId', 'fullName location profilePhoto')
+    .sort({ createdAt: -1 });
+
+    return jobs;
+  } catch (error) {
+    throw new Error(error.message);
+  }
+};
+
+
+module.exports = { createJob, getAllJobs, getJobById, updateJob, deactivateJob, activateJob ,searchJobsByTitle , getMyJobs, getMyActiveJobs, 
+  getMyDeactivatedJobs  };

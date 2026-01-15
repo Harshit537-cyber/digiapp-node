@@ -10,6 +10,11 @@ router.get("/search", jobController.searchJobs);
 
 router.get("/my-jobs", verifyToken, jobController.getMyJobs);
 
+
+router.get("/my-active", verifyToken, jobController.getMyActiveJobs);
+router.get("/my-deactivated", verifyToken, jobController.getMyDeactivatedJobs);
+
+
 // Post Job or Task (upto 3 images)
 router.post("/post", verifyToken, upload.array("images", 3), jobController.postJob);
 
@@ -20,6 +25,8 @@ router.put("/update/:id", verifyToken, upload.array("images", 3), jobController.
 router.patch("/deactivate/:id", verifyToken, jobController.deactivateJob); 
 
 router.patch("/activate/:id", verifyToken, jobController.activateJob);
+
+
 
 
 
