@@ -116,7 +116,7 @@ const getMyJobs = async (req, res) => {
       success: true,
       totalJobsPosted: total, 
       countInThisResponse: jobs.length,
-      data: jobs
+      data: jobs 
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

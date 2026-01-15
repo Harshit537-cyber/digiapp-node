@@ -191,8 +191,9 @@ const searchJobsByTitle = async (searchQuery) => {
 
 const getMyJobs = async (userId) => {
   try {
-    
-    const jobs = await Job.find({ userId }).sort({ createdAt: -1 });
+    const jobs = await Job.find({ userId })
+      .populate('userId', 'fullName location profilePhoto') 
+      .sort({ createdAt: -1 });
 
     const total = await Job.countDocuments({ userId });
 
