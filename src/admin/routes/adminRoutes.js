@@ -26,14 +26,7 @@ router.patch('/user-status/:id', verifyAdmin, toggleUserStatus);
 // ---------------------------
 
 
-// Saari jobs fetch karne ke liye (Table me dikhane ke liye)
-router.get('/jobs', verifyAdmin, getAllJobsForAdmin);
 
-// Kisi specific job ko edit karne ke liye
-router.put('/job/update/:id', verifyAdmin, adminUpdateJob);
-
-// Kisi specific job ko delete karne ke liye
-router.delete('/job/delete/:id', verifyAdmin, adminDeleteJob);
 
 
 module.exports = router;

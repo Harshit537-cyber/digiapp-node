@@ -60,10 +60,32 @@ const deactivateJob = async (jobId, userId) => {
 
 
 
-const getAllJobs = async () => {
-  return await Job.find({ status: "active", expiresAt: { $gte: new Date() } })
-    .populate("userId", "fullName profilePhoto location")
-    .sort({ createdAt: -1 });
+const getAllJobs = async (page, limit) => {
+  try {
+   
+    const skip = (page - 1) * limit;
+
+    const query = { 
+      status: "active", 
+      expiresAt: { $gte: new Date() } 
+    };
+
+   
+    const totalJobs = await Job.countDocuments(query);
+
+   
+    const jobs = await Job.find(query)
+      .populate("userId", "fullName profilePhoto location")
+      .sort({ createdAt: -1 })
+      .skip(skip)   
+      .limit(limit); 
+
+    const totalPages = Math.ceil(totalJobs / limit);
+
+    return { jobs, totalJobs, totalPages };
+  } catch (error) {
+    throw new Error(error.message);
+  }
 };
 
 const getJobById = async (jobId) => {
@@ -91,37 +113,81 @@ const updateJob = async (jobId, updateData, files, userId) => {
 
 
 const activateJob = async (jobId, userId) => {
-  const job = await Job.findById(jobId);
-  if (!job) throw new Error("Job not found");
+  try {
+    // Basic validation
+    if (!jobId) {
+      throw new Error("Job ID is required");
+    }
 
-  // Debugging logs - Terminal check karein
-  console.log("Job from DB:", job);
-  console.log("UserID from Token:", userId);
+    if (!userId) {
+      throw new Error("Auth error: User ID not found in request");
+    }
 
-  // Check specific missing ID
-  if (!job.userId) {
-    throw new Error("Database error: This job post doesn't have an owner ID.");
+    // Fetch job
+    const job = await Job.findById(jobId);
+
+    if (!job) {
+      throw new Error("Job not found");
+    }
+
+    console.log("Job from DB:", job);
+    console.log("UserID from Token:", userId);
+
+    // Check job owner
+    if (!job.userId) {
+      throw new Error(
+        "Database error: This job post doesn't have an owner ID"
+      );
+    }
+
+    // Authorization check
+    if (job.userId.toString() !== userId.toString()) {
+      throw new Error(
+        "Unauthorized: You can only activate your own job posts"
+      );
+    }
+
+    // Prevent re-activation
+    if (job.status === "active") {
+      throw new Error("Job is already active");
+    }
+
+    // Expiry logic
+    const daysToAdd = job.jobCategory === "Local task" ? 7 : 15;
+    const newExpiry = new Date();
+    newExpiry.setDate(newExpiry.getDate() + daysToAdd);
+
+    job.status = "active";
+    job.expiresAt = newExpiry;
+
+    // Save job
+    const updatedJob = await job.save();
+    return updatedJob;
+
+  } catch (error) {
+    console.error("Activate Job Error:", error.message);
+
+   
+    throw new Error(error.message || "Something went wrong while activating job");
   }
-  if (!userId) {
-    throw new Error("Auth error: User ID not found in request.");
+};
+
+
+const searchJobsByTitle = async (searchQuery) => {
+  try {
+    
+    const jobs = await Job.find({
+      title: { $regex: searchQuery, $options: "i" }, 
+      status: "active", 
+      expiresAt: { $gte: new Date() } 
+    }).populate("userId", "fullName profilePhoto location");
+
+    return jobs;
+  } catch (error) {
+    throw new Error(error.message);
   }
-
-  // Comparison
-  if (job.userId.toString() !== userId.toString()) {
-    throw new Error("Unauthorized: You can only activate your own posts");
-  }
-
-  // Update logic
-  let daysToAdd = job.jobCategory === "Local task" ? 7 : 15;
-  const newExpiry = new Date();
-  newExpiry.setDate(newExpiry.getDate() + daysToAdd);
-
-  job.status = "active";
-  job.expiresAt = newExpiry;
-  
-  return await job.save();
 };
 
 
 
-module.exports = { createJob, getAllJobs, getJobById, updateJob, deactivateJob, activateJob };
+module.exports = { createJob, getAllJobs, getJobById, updateJob, deactivateJob, activateJob ,searchJobsByTitle   };

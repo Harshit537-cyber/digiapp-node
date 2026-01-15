@@ -8,6 +8,8 @@ const jobRoutes = require("./routes/job.routes");
 const businessRoutes = require("./routes/business.routes");
 const itemRoutes = require("./routes/item.routes");
 const adminRoutes = require("./admin/routes/adminRoutes");
+const fullTimeJobRoutes = require('./admin/routes/fullTimeJobRoutes');
+const partTimeJobRoutes = require('./admin/routes/partTimeJobRoutes');
 
 
 require("dotenv").config();
@@ -27,5 +29,7 @@ app.use("/api/items", itemRoutes);
 app.use("/api/admin", adminRoutes);
 
 app.use("/api/admin", adminRoutes);
+app.use('/api/admin/part-time', partTimeJobRoutes);
+app.use('/api/admin/full-time', fullTimeJobRoutes);
 
 module.exports = app;

@@ -30,8 +30,20 @@ const deactivateJob = async (req, res) => {
 
 const getAllJobs = async (req, res) => {
   try {
-    const jobs = await jobService.getAllJobs();
-    res.status(200).json({ success: true, count: jobs.length, data: jobs });
+    
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+
+    const { jobs, totalJobs, totalPages } = await jobService.getAllJobs(page, limit);
+
+    res.status(200).json({
+      success: true,
+      count: jobs.length, 
+      totalJobs,         
+      totalPages,        
+      currentPage: page,
+      data: jobs
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -58,7 +70,7 @@ const updateJob = async (req, res) => {
 
 const activateJob = async (req, res) => {
   try {
-    console.log("User Object from Middleware:", req.user); // इसे चेक करें
+    console.log("User Object from Middleware:", req.user); 
     
     const userId = req.user.userId || req.user.id || req.user._id; 
     
@@ -69,4 +81,28 @@ const activateJob = async (req, res) => {
   }
 };
 
-module.exports = { postJob, getAllJobs, getJobById, updateJob ,deactivateJob , activateJob };
+
+const searchJobs = async (req, res) => {
+  try {
+    const query = req.query.q; 
+    
+    if (!query) {
+      return res.status(400).json({ success: false, message: "Search query is required" });
+    }
+
+    const jobs = await jobService.searchJobsByTitle(query);
+
+    res.status(200).json({
+      success: true,
+      count: jobs.length,
+      data: jobs
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+
+
+
+module.exports = { postJob, getAllJobs, getJobById, updateJob ,deactivateJob , activateJob , searchJobs };

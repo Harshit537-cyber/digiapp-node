@@ -4,6 +4,9 @@ const jobController = require("../controllers/job.controller");
 const verifyToken = require("../middlewares/auth.middlewares");
 const upload = require("../middlewares/upload");
 
+
+router.get("/search", jobController.searchJobs);
+
 // Post Job or Task (upto 3 images)
 router.post("/post", verifyToken, upload.array("images", 3), jobController.postJob);
 
@@ -14,5 +17,7 @@ router.put("/update/:id", verifyToken, upload.array("images", 3), jobController.
 router.patch("/deactivate/:id", verifyToken, jobController.deactivateJob); 
 
 router.patch("/activate/:id", verifyToken, jobController.activateJob);
+
+
 
 module.exports = router;
