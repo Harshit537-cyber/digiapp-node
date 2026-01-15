@@ -7,6 +7,9 @@ const upload = require("../middlewares/upload");
 
 router.get("/search", jobController.searchJobs);
 
+
+router.get("/my-jobs", verifyToken, jobController.getMyJobs);
+
 // Post Job or Task (upto 3 images)
 router.post("/post", verifyToken, upload.array("images", 3), jobController.postJob);
 

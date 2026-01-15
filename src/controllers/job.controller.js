@@ -102,7 +102,26 @@ const searchJobs = async (req, res) => {
   }
 };
 
+const getMyJobs = async (req, res) => {
+  try {
+    const userId = req.user.userId; 
+
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "Unauthorized: User not found" });
+    }
+
+    const { jobs, total } = await jobService.getMyJobs(userId);
+
+    res.status(200).json({
+      success: true,
+      totalJobsPosted: total, 
+      countInThisResponse: jobs.length,
+      data: jobs
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
 
 
-
-module.exports = { postJob, getAllJobs, getJobById, updateJob ,deactivateJob , activateJob , searchJobs };
+module.exports = { postJob, getAllJobs, getJobById, updateJob ,deactivateJob , activateJob , searchJobs ,getMyJobs };

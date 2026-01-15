@@ -11,10 +11,23 @@ const createBusiness = async (data) => {
 };
 
 // 2. Get All Businesses
-const getAllBusinesses = async () => {
+const getAllBusinesses = async (page = 1, limit = 10) => {
   try {
-    // Aap chahein to .populate('userId') use kar sakte hain agar user details bhi chahiye
-    return await Business.find().sort({ createdAt: -1 });
+    const skip = (page - 1) * limit;
+
+    const businesses = await Business.find()
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    const totalBusinesses = await Business.countDocuments();
+
+    return {
+      businesses,
+      totalBusinesses,
+      totalPages: Math.ceil(totalBusinesses / limit),
+      currentPage: page
+    };
   } catch (error) {
     throw error;
   }

@@ -79,17 +79,29 @@ const registerBusiness = async (req, res) => {
   }
 };
 
-// --- 2. Get All Businesses ---
+// --- 2. Get All Businesses (With Pagination) ---
 const getAllBusinesses = async (req, res) => {
   try {
-    const businesses = await businessService.getAllBusinesses();
+    
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+
+    const result = await businessService.getAllBusinesses(page, limit);
+
     return res.status(200).json({
       success: true,
-      count: businesses.length,
-      data: businesses,
+      count: result.businesses.length, 
+      totalRecords: result.totalBusinesses, 
+      totalPages: result.totalPages,
+      currentPage: result.currentPage,
+      data: result.businesses,
     });
   } catch (error) {
-    return res.status(500).json({ success: false, message: "Error fetching businesses", error: error.message });
+    return res.status(500).json({ 
+      success: false, 
+      message: "Error fetching businesses", 
+      error: error.message 
+    });
   }
 };
 
@@ -159,6 +171,7 @@ const updateBusiness = async (req, res) => {
     return res.status(500).json({ success: false, message: "Error updating business", error: error.message });
   }
 };
+
 
 // --- 5. Delete Business ---
 const deleteBusiness = async (req, res) => {

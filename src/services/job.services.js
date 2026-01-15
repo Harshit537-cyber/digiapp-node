@@ -189,5 +189,19 @@ const searchJobsByTitle = async (searchQuery) => {
 };
 
 
+const getMyJobs = async (userId) => {
+  try {
+    
+    const jobs = await Job.find({ userId }).sort({ createdAt: -1 });
 
-module.exports = { createJob, getAllJobs, getJobById, updateJob, deactivateJob, activateJob ,searchJobsByTitle   };
+    const total = await Job.countDocuments({ userId });
+
+    return { jobs, total };
+  } catch (error) {
+    throw new Error(error.message);
+  }
+};
+
+
+
+module.exports = { createJob, getAllJobs, getJobById, updateJob, deactivateJob, activateJob ,searchJobsByTitle , getMyJobs };
