@@ -10,12 +10,15 @@ const itemRoutes = require("./routes/item.routes");
 const adminRoutes = require("./admin/routes/adminRoutes");
 const fullTimeJobRoutes = require('./admin/routes/fullTimeJobRoutes');
 const partTimeJobRoutes = require('./admin/routes/partTimeJobRoutes');
-
+const cors = require("cors");
 
 require("dotenv").config();
 
 const app = express();
 connectDB();
+
+
+app.use(cors()); 
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
