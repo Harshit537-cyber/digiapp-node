@@ -1,4 +1,5 @@
 const Job = require("../models/Job");
+const SavedJob = require("../models/SavedJob"); 
 const cloudinary = require("../config/cloudinary");
 const fs = require("fs");
 
@@ -236,5 +237,33 @@ const getMyDeactivatedJobs = async (userId) => {
 };
 
 
+const toggleSaveJob = async (userId, jobId) => {
+  const existingSave = await SavedJob.findOne({ userId, jobId });
+
+  if (existingSave) {
+    await SavedJob.deleteOne({ _id: existingSave._id });
+    return { status: "removed", message: "Job removed from saved list" };
+  } else {
+    const newSave = new SavedJob({ userId, jobId });
+    await newSave.save();
+    return { status: "saved", message: "Job saved successfully" };
+  }
+};
+
+
+const getMySavedJobs = async (userId) => {
+  const savedJobs = await SavedJob.find({ userId })
+    .populate({
+      path: "jobId",
+      populate: { path: "userId", select: "fullName profilePhoto" } 
+    })
+    .sort({ savedAt: -1 });
+
+  return savedJobs.map(item => item.jobId); 
+};
+
+
+
 module.exports = { createJob, getAllJobs, getJobById, updateJob, deactivateJob, activateJob ,searchJobsByTitle , getMyJobs, getMyActiveJobs, 
-  getMyDeactivatedJobs  };
+  getMyDeactivatedJobs ,toggleSaveJob, 
+    getMySavedJobs };

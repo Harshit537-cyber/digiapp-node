@@ -159,6 +159,29 @@ const getMyDeactivatedJobs = async (req, res) => {
 };
 
 
+const toggleSaveJob = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const jobId = req.params.id;
+
+    const result = await jobService.toggleSaveJob(userId, jobId);
+    res.status(200).json({ success: true, ...result });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+const getSavedJobs = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const jobs = await jobService.getMySavedJobs(userId);
+    res.status(200).json({ success: true, count: jobs.length, data: jobs });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 
 module.exports = { postJob, getAllJobs, getJobById, updateJob ,deactivateJob , activateJob , searchJobs ,getMyJobs, getMyActiveJobs, 
-  getMyDeactivatedJobs  };
+  getMyDeactivatedJobs , toggleSaveJob,
+    getSavedJobs };
