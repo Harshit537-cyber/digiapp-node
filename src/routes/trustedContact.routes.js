@@ -25,4 +25,20 @@ router.delete(
   trustedContactController.deleteTrustedContact
 );
 
+
+
+router.get(
+  "/all",
+  verifyToken,
+  trustedContactController.getAllContacts
+);
+
+
+router.get(
+  "/:id",
+  verifyToken,
+  trustedContactController.getContactById
+);
+
+
 module.exports = router;

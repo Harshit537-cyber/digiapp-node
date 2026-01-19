@@ -27,8 +27,20 @@ const deleteContact = async (id, userId) => {
 };
 
 
+const getAllContacts = async (userId) => {
+  return await TrustedContact.find({ user: userId });
+};
+
+
+const getContactById = async (id, userId) => {
+  return await TrustedContact.findOne({ _id: id, user: userId });
+};
+
+
 module.exports = {
   createContact,
   updateContact,
-  deleteContact
+  deleteContact,
+  getAllContacts,
+  getContactById
 };

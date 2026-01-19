@@ -19,4 +19,9 @@ router.put('/update/:id', verifyToken, upload.array('images', 5), itemController
 
 router.delete('/delete/:id', verifyToken, itemController.deleteItem);
 
+router.patch('/activate/:id', verifyToken, itemController.activateItem);
+
+
+router.patch('/deactivate/:id', verifyToken, itemController.deactivateItem);
+
 module.exports = router;

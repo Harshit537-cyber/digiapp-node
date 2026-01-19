@@ -166,3 +166,54 @@ exports.deleteTrustedContact = async (req, res) => {
     });
   }
 };
+
+
+
+
+exports.getAllContacts = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+
+    const contacts = await trustedContactService.getAllContacts(userId);
+
+    return res.status(200).json({
+      success: true,
+      count: contacts.length,
+      data: contacts,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+      error: error.message,
+    });
+  }
+};
+
+// 2. Get Single Trusted Contact by ID
+exports.getContactById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.userId;
+
+    const contact = await trustedContactService.getContactById(id, userId);
+
+    if (!contact) {
+      return res.status(404).json({
+        success: false,
+        message: "Trusted contact not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: contact,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+      error: error.message,
+    });
+  }
+};

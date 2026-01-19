@@ -10,6 +10,7 @@ const itemRoutes = require("./routes/item.routes");
 const adminRoutes = require("./admin/routes/adminRoutes");
 const fullTimeJobRoutes = require('./admin/routes/fullTimeJobRoutes');
 const partTimeJobRoutes = require('./admin/routes/partTimeJobRoutes');
+const bloodRoutes = require("./admin/routes/bloodRequestRoutes");
 const cors = require("cors");
 
 require("dotenv").config();
@@ -34,5 +35,6 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/admin", adminRoutes);
 app.use('/api/admin/part-time', partTimeJobRoutes);
 app.use('/api/admin/full-time', fullTimeJobRoutes);
+app.use("/api/admin", bloodRoutes);
 
 module.exports = app;

@@ -148,10 +148,55 @@ const deleteItem = async (req, res) => {
     }
 };
 
+
+const activateItem = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const userId = req.user.userId;
+
+        const item = await itemService.getItemById(id);
+        if (!item) return response.error(res, "Item not found", 404);
+
+        // Security: Check if the user owns this item
+        if (item.user._id.toString() !== userId) {
+            return response.error(res, "Unauthorized access", 403);
+        }
+
+        const updatedItem = await itemService.activateItem(id);
+        return response.success(res, "Item activated successfully", updatedItem);
+    } catch (error) {
+        return response.error(res, error.message, 500);
+    }
+};
+
+// --- Deactivate Item ---
+const deactivateItem = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const userId = req.user.userId;
+
+        const item = await itemService.getItemById(id);
+        if (!item) return response.error(res, "Item not found", 404);
+
+        
+        if (item.user._id.toString() !== userId) {
+            return response.error(res, "Unauthorized access", 403);
+        }
+
+        const updatedItem = await itemService.deactivateItem(id);
+        return response.success(res, "Item deactivated successfully", updatedItem);
+    } catch (error) {
+        return response.error(res, error.message, 500);
+    }
+};
+
+
 module.exports = { 
     postItem, 
     getAllItems, 
     getItemById,
     updateItem, 
-    deleteItem  
+    deleteItem ,
+    activateItem, 
+    deactivateItem 
 };

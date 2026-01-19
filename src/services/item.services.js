@@ -27,10 +27,22 @@ const deleteItem = async (itemId) => {
     return await Item.findByIdAndDelete(itemId);
 };
 
+
+const activateItem = async (itemId) => {
+    return await Item.findByIdAndUpdate(itemId, { isActive: true }, { new: true });
+};
+
+
+const deactivateItem = async (itemId) => {
+    return await Item.findByIdAndUpdate(itemId, { isActive: false }, { new: true });
+};
+
 module.exports = { 
     createItem, 
     getAllItems, 
     getItemById,
     updateItem, 
-    deleteItem  
+    deleteItem ,
+    activateItem,
+    deactivateItem
 };
