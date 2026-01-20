@@ -2,6 +2,12 @@ const mongoose = require("mongoose");
 
 const bloodRequestSchema = new mongoose.Schema(
   {
+    
+      userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
     patientName: {
       type: String,
       required: true,

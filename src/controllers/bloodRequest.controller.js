@@ -3,7 +3,12 @@ const response = require("../utils/response");
 
 const createBloodRequest = async (req, res) => {
   try {
-    const {
+    console.log("Token User Data:", req.user); // Ye check karne ke liye ke token sahi hai ya nahi
+    
+    const { patientName, bloodGroup, urgency, hospitalName, location, contactNumber, whatsappNumber, additionalInfo } = req.body;
+
+    const bloodRequestData = {
+      userId: req.user.userId, // <--- Confirm karein ye value aa rahi hai
       patientName,
       bloodGroup,
       urgency,
@@ -12,42 +17,12 @@ const createBloodRequest = async (req, res) => {
       contactNumber,
       whatsappNumber,
       additionalInfo,
-    } = req.body || {};
+    };
 
-    if (
-      !patientName ||
-      !bloodGroup ||
-      !urgency ||
-      !hospitalName ||
-      !location ||
-      !contactNumber ||
-      !whatsappNumber ||
-      !additionalInfo
-    ) {
-      return response.error(
-        res,
-        "All required fields must be filled",
-        400
-      );
-    }
+    console.log("Data being sent to Service:", bloodRequestData);
 
-    const bloodRequest = await bloodRequestService.createBloodRequest({
-      patientName,
-      bloodGroup,
-      urgency,
-      hospitalName,
-      location,
-      contactNumber,
-      whatsappNumber,
-      additionalInfo,
-    });
-
-    return response.success(
-      res,
-      "Blood request created successfully",
-      bloodRequest
-    );
-
+    const bloodRequest = await bloodRequestService.createBloodRequest(bloodRequestData);
+    return response.success(res, "Blood request created successfully", bloodRequest);
   } catch (error) {
     console.error(error);
     return response.error(res, "Server error", 500);
@@ -151,12 +126,31 @@ const getBloodRequestById = async (req, res) => {
   }
 };
 
+const getMyBloodRequests = async (req, res) => {
+  try {
+    
+    console.log("Decoded User Data:", req.user);
 
+    
+    const userId = req.user.userId; 
+
+    if (!userId) {
+      return response.error(res, "User ID not found in token", 401);
+    }
+
+    const requests = await bloodRequestService.getRequestsByUserId(userId);
+    return response.success(res, "Your blood requests fetched successfully", requests);
+  } catch (error) {
+    console.error("Error in getMyBloodRequests:", error);
+    return response.error(res, "Server error", 500);
+  }
+};
 
 
 
 module.exports = {
   createBloodRequest,
+  getMyBloodRequests,
   updateBloodRequest,
   deleteBloodRequest,
   getAllBloodRequests,

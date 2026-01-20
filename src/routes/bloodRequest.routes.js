@@ -16,6 +16,8 @@ router.delete(
 /* 🔹 GET all blood requests */
 router.get("/all", verifyToken, bloodRequestController.getAllBloodRequests);
 
+router.get("/my-requests", verifyToken, bloodRequestController.getMyBloodRequests);
+
 /* 🔹 GET single blood request by ID */
 router.get("/:id", verifyToken, bloodRequestController.getBloodRequestById);
 
