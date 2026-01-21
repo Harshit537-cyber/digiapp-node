@@ -146,7 +146,76 @@ const getMyBloodRequests = async (req, res) => {
   }
 };
 
+const activateBloodRequest = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.userId;
 
+    const request = await bloodRequestService.getBloodRequestById(id);
+    if (!request) return response.error(res, "Request not found", 404);
+
+    // Security: Check if user owns this request
+    if (request.userId.toString() !== userId) {
+      return response.error(res, "Unauthorized to update this request", 403);
+    }
+
+    const updated = await bloodRequestService.updateRequestStatus(id, "Active");
+    return response.success(res, "Blood request activated successfully", updated);
+  } catch (error) {
+    return response.error(res, "Server error", 500);
+  }
+};
+
+
+const deactivateBloodRequest = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user.userId;
+
+    const request = await bloodRequestService.getBloodRequestById(id);
+    if (!request) return response.error(res, "Request not found", 404);
+
+    // Security: Check if user owns this request
+    if (request.userId.toString() !== userId) {
+      return response.error(res, "Unauthorized to update this request", 403);
+    }
+
+    const updated = await bloodRequestService.updateRequestStatus(id, "Deactive");
+    return response.success(res, "Blood request deactivated successfully", updated);
+  } catch (error) {
+    return response.error(res, "Server error", 500);
+  }
+};
+
+const searchBloodRequests = async (req, res) => {
+  try {
+    const { bloodGroup, urgency, location, hospitalName } = req.query;
+    
+    // Filters object banayein
+    let filters = {};
+
+    if (bloodGroup) filters.bloodGroup = bloodGroup;
+    if (urgency) filters.urgency = urgency;
+    
+    // Location aur Hospital name ke liye Case-Insensitive Search (regex)
+    if (location) {
+      filters.location = { $regex: location, $options: "i" };
+    }
+    if (hospitalName) {
+      filters.hospitalName = { $regex: hospitalName, $options: "i" };
+    }
+
+    // Default: Sirf active requests dikhayein (optional)
+    filters.status = "Active";
+
+    const results = await bloodRequestService.searchBloodRequests(filters);
+    
+    return response.success(res, "Search results fetched successfully", results);
+  } catch (error) {
+    console.error("Search Error:", error);
+    return response.error(res, "Error while searching blood requests", 500);
+  }
+};
 
 module.exports = {
   createBloodRequest,
@@ -155,4 +224,7 @@ module.exports = {
   deleteBloodRequest,
   getAllBloodRequests,
   getBloodRequestById,
+  activateBloodRequest,
+  deactivateBloodRequest,
+  searchBloodRequests
 };

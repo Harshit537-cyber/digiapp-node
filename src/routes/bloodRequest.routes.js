@@ -4,6 +4,9 @@ const verifyToken = require("../middlewares/auth.middlewares");
 
 const router = express.Router();
 
+
+router.get("/search", verifyToken, bloodRequestController.searchBloodRequests);
+
 router.post("/create", verifyToken, bloodRequestController.createBloodRequest);
 
 router.delete(
@@ -13,14 +16,18 @@ router.delete(
 );
 
 
-/* 🔹 GET all blood requests */
+
 router.get("/all", verifyToken, bloodRequestController.getAllBloodRequests);
 
 router.get("/my-requests", verifyToken, bloodRequestController.getMyBloodRequests);
 
-/* 🔹 GET single blood request by ID */
+
 router.get("/:id", verifyToken, bloodRequestController.getBloodRequestById);
 
 router.put("/update/:id", verifyToken, bloodRequestController.updateBloodRequest);
+
+router.patch("/activate/:id", verifyToken, bloodRequestController.activateBloodRequest);
+
+router.patch("/deactivate/:id", verifyToken, bloodRequestController.deactivateBloodRequest);
 
 module.exports = router;

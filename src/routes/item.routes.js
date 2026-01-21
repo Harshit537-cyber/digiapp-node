@@ -4,6 +4,13 @@ const itemController = require('../controllers/item.controller');
 const verifyToken = require('../middlewares/auth.middlewares');
 const upload = require('../middlewares/upload');
 
+
+
+
+router.get('/search', itemController.searchItems);
+
+router.get('/my-items', verifyToken, itemController.getMyItems);
+
 // Create Item (Auth Required)
 router.post('/post-item', verifyToken, upload.array('images', 5), itemController.postItem);
 
@@ -12,6 +19,8 @@ router.get('/all', itemController.getAllItems);
 
 // Get Single Item (Public)
 router.get('/:id', itemController.getItemById);
+
+
 
 
 router.put('/update/:id', verifyToken, upload.array('images', 5), itemController.updateItem);

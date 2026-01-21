@@ -37,6 +37,19 @@ const deactivateItem = async (itemId) => {
     return await Item.findByIdAndUpdate(itemId, { isActive: false }, { new: true });
 };
 
+
+const searchItemsByTitle = async (query) => {
+    return await Item.find({
+        title: { $regex: query, $options: 'i' } 
+    }).populate('user', 'name email').sort({ createdAt: -1 });
+};
+
+const getUserItems = async (userId) => {
+    return await Item.find({ user: userId }).sort({ createdAt: -1 });
+};
+
+
+
 module.exports = { 
     createItem, 
     getAllItems, 
@@ -44,5 +57,7 @@ module.exports = {
     updateItem, 
     deleteItem ,
     activateItem,
-    deactivateItem
+    deactivateItem,
+    searchItemsByTitle,
+    getUserItems
 };

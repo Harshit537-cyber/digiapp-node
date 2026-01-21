@@ -190,6 +190,32 @@ const deactivateItem = async (req, res) => {
     }
 };
 
+const searchItems = async (req, res) => {
+    try {
+        const { q } = req.query; 
+
+        if (!q) {
+            return response.error(res, "Search query is required", 400);
+        }
+
+        const items = await itemService.searchItemsByTitle(q);
+        return response.success(res, "Search results fetched successfully", items);
+    } catch (error) {
+        return response.error(res, error.message, 500);
+    }
+};
+
+
+const getMyItems = async (req, res) => {
+    try {
+        const userId = req.user.userId; 
+        const items = await itemService.getUserItems(userId);
+        
+        return response.success(res, "Your items fetched successfully", items);
+    } catch (error) {
+        return response.error(res, error.message, 500);
+    }
+};
 
 module.exports = { 
     postItem, 
@@ -198,5 +224,7 @@ module.exports = {
     updateItem, 
     deleteItem ,
     activateItem, 
-    deactivateItem 
+    deactivateItem ,
+    searchItems,
+    getMyItems
 };

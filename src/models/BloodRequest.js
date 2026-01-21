@@ -2,8 +2,8 @@ const mongoose = require("mongoose");
 
 const bloodRequestSchema = new mongoose.Schema(
   {
-    
-      userId: {
+
+    userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
@@ -42,6 +42,11 @@ const bloodRequestSchema = new mongoose.Schema(
     additionalInfo: {
       type: String,
       default: "",
+    },
+    status: {
+      type: String,
+      enum: ["Active", "Deactive"],
+      default: "Active",
     },
   },
   { timestamps: true }

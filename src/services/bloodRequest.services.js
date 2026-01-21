@@ -29,6 +29,24 @@ const getRequestsByUserId = async (userId) => {
   return await BloodRequest.find({ userId: userId }).sort({ createdAt: -1 });
 };
 
+const updateRequestStatus = async (id, status) => {
+  return await BloodRequest.findByIdAndUpdate(
+    id,
+    { status: status },
+    { new: true, runValidators: true }
+  );
+};
+
+
+const searchBloodRequests = async (filters) => {
+  try {
+   
+    return await BloodRequest.find(filters).sort({ createdAt: -1 });
+  } catch (error) {
+    throw error;
+  }
+};
+
 // Sab exports ek saath niche likhein
 module.exports = {
   createBloodRequest,
@@ -36,5 +54,7 @@ module.exports = {
   deleteBloodRequestById,
   getAllBloodRequests,
   getBloodRequestById,
-  getRequestsByUserId
+  getRequestsByUserId,
+  updateRequestStatus,
+  searchBloodRequests
 };
