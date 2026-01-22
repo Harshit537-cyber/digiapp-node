@@ -191,13 +191,13 @@ const searchBloodRequests = async (req, res) => {
   try {
     const { bloodGroup, urgency, location, hospitalName } = req.query;
     
-    // Filters object banayein
+    
     let filters = {};
 
     if (bloodGroup) filters.bloodGroup = bloodGroup;
     if (urgency) filters.urgency = urgency;
     
-    // Location aur Hospital name ke liye Case-Insensitive Search (regex)
+  
     if (location) {
       filters.location = { $regex: location, $options: "i" };
     }
@@ -205,7 +205,7 @@ const searchBloodRequests = async (req, res) => {
       filters.hospitalName = { $regex: hospitalName, $options: "i" };
     }
 
-    // Default: Sirf active requests dikhayein (optional)
+  
     filters.status = "Active";
 
     const results = await bloodRequestService.searchBloodRequests(filters);

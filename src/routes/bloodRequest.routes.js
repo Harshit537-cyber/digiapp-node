@@ -5,9 +5,10 @@ const verifyToken = require("../middlewares/auth.middlewares");
 const router = express.Router();
 
 
-router.get("/search", verifyToken, bloodRequestController.searchBloodRequests);
+
 
 router.post("/create", verifyToken, bloodRequestController.createBloodRequest);
+
 
 router.delete(
     "/delete/:id",
@@ -21,6 +22,7 @@ router.get("/all", verifyToken, bloodRequestController.getAllBloodRequests);
 
 router.get("/my-requests", verifyToken, bloodRequestController.getMyBloodRequests);
 
+router.get("/search", verifyToken, bloodRequestController.searchBloodRequests);
 
 router.get("/:id", verifyToken, bloodRequestController.getBloodRequestById);
 
