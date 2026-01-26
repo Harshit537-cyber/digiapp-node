@@ -1,4 +1,5 @@
 const Job = require("../../models/Job");
+const jobService = require("../../services/job.services")
 
 //  GET ALL FULL-TIME JOBS
 exports.getAllFullTimeJobs = async (req, res) => {
@@ -106,6 +107,41 @@ exports.getFullTimeJobById = async (req, res) => {
         res.status(500).json({ 
             success: false, 
             message: "Error fetching job details", 
+            error: error.message 
+        });
+    }
+};
+
+exports.adminCreateFullTimeJob = async (req, res) => {
+    try {
+      
+        if (!req.user || !req.user.id) {
+            return res.status(401).json({ 
+                success: false, 
+                message: "Admin authentication failed. No ID in token." 
+            });
+        }
+
+        // Job category fix karein
+        const jobData = {
+            ...req.body,
+            jobCategory: "Full-time job"
+        };
+
+        const userId = req.user.id;
+        const files = req.files;
+       
+        const job = await jobService.createJob(jobData, files, userId);
+
+        res.status(201).json({
+            success: true,
+            message: "Full-time job created successfully by Admin",
+            data: job
+        });
+    } catch (error) {
+        res.status(500).json({ 
+            success: false, 
+            message: "Failed to create full-time job", 
             error: error.message 
         });
     }
