@@ -217,6 +217,24 @@ const getMyItems = async (req, res) => {
     }
 };
 
+
+const searchMyItems = async (req, res) => {
+    try {
+        const userId = req.user.userId; // Middleware se aayi user ID
+        const { q } = req.query; 
+
+        if (!q) {
+            return response.error(res, "Search query is required", 400);
+        }
+
+        const items = await itemService.searchUserItemsByTitle(userId, q);
+        return response.success(res, "Filtered personal items fetched successfully", items);
+    } catch (error) {
+        return response.error(res, error.message, 500);
+    }
+};
+
+
 module.exports = { 
     postItem, 
     getAllItems, 
@@ -226,5 +244,6 @@ module.exports = {
     activateItem, 
     deactivateItem ,
     searchItems,
-    getMyItems
+    getMyItems,
+    searchMyItems
 };

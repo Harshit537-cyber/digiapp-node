@@ -48,6 +48,12 @@ const getUserItems = async (userId) => {
     return await Item.find({ user: userId }).sort({ createdAt: -1 });
 };
 
+const searchUserItemsByTitle = async (userId, query) => {
+    return await Item.find({
+        user: userId, 
+        title: { $regex: query, $options: 'i' } 
+    }).sort({ createdAt: -1 });
+};
 
 
 module.exports = { 
@@ -59,5 +65,6 @@ module.exports = {
     activateItem,
     deactivateItem,
     searchItemsByTitle,
-    getUserItems
+    getUserItems,
+    searchUserItemsByTitle
 };

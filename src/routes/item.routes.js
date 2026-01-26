@@ -9,6 +9,8 @@ const upload = require('../middlewares/upload');
 
 router.get('/search', itemController.searchItems);
 
+router.get('/my-items/search', verifyToken, itemController.searchMyItems);
+
 router.get('/my-items', verifyToken, itemController.getMyItems);
 
 // Create Item (Auth Required)

@@ -1,5 +1,5 @@
 const Job = require("../../models/Job");
-
+const jobService = require("../../services/job.services"); 
 
 // --- GET ALL JOBS (For Admin Table) ---
 exports.getAllJobsForAdmin = async (req, res) => {
@@ -96,5 +96,33 @@ exports.getJobByIdForAdmin = async (req, res) => {
         });
     } catch (error) {
         res.status(500).json({ message: "Server Error", error: error.message });
+    }
+};
+
+exports.adminCreateJob = async (req, res) => {
+    try {
+        
+        const jobData = {
+            ...req.body,
+            jobCategory: "Part-time job"
+        };
+
+        const userId = req.user.id; 
+        const files = req.files;   
+
+        
+        const job = await jobService.createJob(jobData, files, userId);
+
+        res.status(201).json({
+            success: true,
+            message: "Part-time job created successfully by Admin with images",
+            data: job
+        });
+    } catch (error) {
+        res.status(500).json({ 
+            success: false, 
+            message: "Server Error", 
+            error: error.message 
+        });
     }
 };
