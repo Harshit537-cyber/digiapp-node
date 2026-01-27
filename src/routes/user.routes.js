@@ -9,6 +9,8 @@ const upload = require("../middlewares/upload");
 // User controller (business logic)
 const userController = require("../controllers/user.controller");
 
+const cat = require('../controllers/category.controller');
+
 // -------------------- USER ROUTES --------------------
 
 // Register a new user (with profile photo upload)
@@ -39,5 +41,7 @@ router.put(
 
 
 // ----------------------------------------------------
+router.get('/categories', verifyToken ,cat.getAppCategories);
+
 
 module.exports = router;

@@ -220,7 +220,7 @@ const getMyItems = async (req, res) => {
 
 const searchMyItems = async (req, res) => {
     try {
-        const userId = req.user.userId; // Middleware se aayi user ID
+        const userId = req.user.userId; 
         const { q } = req.query; 
 
         if (!q) {

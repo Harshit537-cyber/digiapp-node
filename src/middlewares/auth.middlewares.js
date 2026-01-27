@@ -11,7 +11,6 @@ const verifyToken = (req, res, next) => {
     });
   }
 
-  // Expect: Bearer TOKEN
   const token = authHeader.split(" ")[1];
 
   if (!token) {
@@ -24,9 +23,16 @@ const verifyToken = (req, res, next) => {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-   
-    req.user = decoded;
+    // --- ROLE CHECK ADDED HERE ---
+    // Agar token ke andar role 'admin' hai, toh user route block kar do
+    if (decoded.role && decoded.role.toLowerCase() === 'admin') {
+        return res.status(403).json({
+            success: false,
+            message: "Access denied. Admin cannot access user routes."
+        });
+    }
 
+    req.user = decoded;
     next();
   } catch (error) {
     return res.status(401).json({
