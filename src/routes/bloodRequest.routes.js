@@ -23,6 +23,11 @@ router.get("/all", verifyToken, bloodRequestController.getAllBloodRequests);
 router.get("/my-requests", verifyToken, bloodRequestController.getMyBloodRequests);
 
 router.get("/search", verifyToken, bloodRequestController.searchBloodRequests);
+router.get(
+  "/urgent-and-recent",
+  bloodRequestController.getUrgentAndRecentBloodRequests
+);
+
 
 router.get("/:id", verifyToken, bloodRequestController.getBloodRequestById);
 

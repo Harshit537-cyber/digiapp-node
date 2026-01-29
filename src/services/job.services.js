@@ -262,8 +262,24 @@ const getMySavedJobs = async (userId) => {
   return savedJobs.map(item => item.jobId); 
 };
 
+const getRecentJobs = async (limit = 10) => {
+  try {
+    const jobs = await Job.find({
+      status: "active",
+      expiresAt: { $gte: new Date() }
+    })
+      .populate("userId", "fullName profilePhoto location")
+      .sort({ createdAt: -1 })   // 🔥 MOST IMPORTANT LINE
+      .limit(limit);
+
+    return jobs;
+  } catch (error) {
+    throw new Error(error.message);
+  }
+};
+
 
 
 module.exports = { createJob, getAllJobs, getJobById, updateJob, deactivateJob, activateJob ,searchJobsByTitle , getMyJobs, getMyActiveJobs, 
   getMyDeactivatedJobs ,toggleSaveJob, 
-    getMySavedJobs };
+    getMySavedJobs , getRecentJobs};

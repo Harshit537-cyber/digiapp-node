@@ -1,29 +1,135 @@
+
+
+// const { Schema, model } = require("mongoose");
+
+// const UserSchema = new Schema(
+//   {
+//     mobile: { type: String, required: true },
+//     fullName: { type: String, required: true },
+//     gender: { type: String, enum: ["male", "female", "other"], required: true },
+
+//     location: {
+//       type: {
+//         type: String,
+//         enum: ["Point"],
+//         default: "Point"
+//       },
+//       coordinates: {
+//         type: [Number], // [longitude, latitude]
+//         required: true
+//       },
+//       address: {
+//         type: String
+//       }
+//     },
+
+//     profilePhoto: { type: String },
+
+//     role: {
+//       type: String,
+//       enum: ["SERVICE_PROVIDER", "BUSINESS_SHOPS", "JOB_SEEKER", "GENERAL_USER"],
+//       required: true,
+//     },
+
+//     bloodGroup: { type: String, required: true },
+
+//     status: {
+//       type: String,
+//       enum: ["Active", "Blocked"],
+//       default: "Active"
+//     },
+
+//     credits: { type: Number, default: 0 },
+//     isVerified: { type: Boolean, default: false }
+//   },
+//   { timestamps: true }
+// );
+
+// UserSchema.index({ location: "2dsphere" });
+
+// module.exports = model("User", UserSchema);
+
 const { Schema, model } = require("mongoose");
 
 const UserSchema = new Schema(
   {
-    mobile: { type: String, required: true }, 
-    fullName: { type: String, required: true },
-    gender: { type: String, enum: ["male", "female", "other"], required: true },
-    location: { type: String, required: true },
-    profilePhoto: { type: String },
+    mobile: {
+      type: String,
+      required: true,
+      unique: true,
+      trim: true
+    },
+
+    fullName: {
+      type: String,
+      required: true,
+      trim: true
+    },
+
+    gender: {
+      type: String,
+      enum: ["male", "female", "other"],
+      required: true
+    },
+
+    // ---------------- LOCATION (GeoJSON) ----------------
+    location: {
+      type: {
+        type: String,
+        enum: ["Point"],
+        default: "Point"
+      },
+      coordinates: {
+        type: [Number], // [longitude, latitude]
+        required: true
+      },
+      address: {
+        type: String,
+        trim: true
+      }
+    },
+
+    // ---------------- PROFILE ----------------
+    profilePhoto: {
+      type: String
+    },
+
     role: {
       type: String,
-      enum: ["SERVICE_PROVIDER", "BUSINESS_SHOPS", "JOB_SEEKER", "GENERAL_USER"],
-      required: true,
+      enum: [
+        "SERVICE_PROVIDER",
+        "BUSINESS_SHOPS",
+        "JOB_SEEKER",
+        "GENERAL_USER"
+      ],
+      required: true
     },
-    bloodGroup: { type: String, required: true },
-    
-    
-    status: { 
-      type: String, 
-      enum: ["Active", "Blocked"], 
-      default: "Active" 
+
+    bloodGroup: {
+      type: String,
+      required: true
     },
-    credits: { type: Number, default: 0 },
-    isVerified: { type: Boolean, default: false }
+
+    status: {
+      type: String,
+      enum: ["Active", "Blocked"],
+      default: "Active"
+    },
+
+    credits: {
+      type: Number,
+      default: 0
+    },
+
+    isVerified: {
+      type: Boolean,
+      default: false
+    }
   },
   { timestamps: true }
 );
+
+// 🔥 VERY IMPORTANT for near queries
+UserSchema.index({ location: "2dsphere" });
 
 module.exports = model("User", UserSchema);

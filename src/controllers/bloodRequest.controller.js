@@ -217,6 +217,23 @@ const searchBloodRequests = async (req, res) => {
   }
 };
 
+const getUrgentAndRecentBloodRequests = async (req, res) => {
+  try {
+    const requests =
+      await bloodRequestService.getUrgentAndLast24HoursRequests();
+
+    return response.success(
+      res,
+      "Urgent & last 24 hours blood requests fetched",
+      requests
+    );
+  } catch (error) {
+    console.error(error);
+    return response.error(res, "Server error", 500);
+  }
+};
+
+
 module.exports = {
   createBloodRequest,
   getMyBloodRequests,
@@ -226,5 +243,7 @@ module.exports = {
   getBloodRequestById,
   activateBloodRequest,
   deactivateBloodRequest,
-  searchBloodRequests
+  searchBloodRequests,
+  getUrgentAndRecentBloodRequests
 };
+ 

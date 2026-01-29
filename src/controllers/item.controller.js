@@ -21,6 +21,17 @@ const uploadImages = async (files) => {
     return urls;
 };
 
+
+// latest 10
+const getTop10LatestItems = async (req, res) => {
+  try {
+    const items = await itemService.getTop10LatestItems();
+    res.status(200).json(items);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 // --- Post New Item ---
 const postItem = async (req, res) => {
     try {
@@ -235,6 +246,8 @@ const searchMyItems = async (req, res) => {
 };
 
 
+
+
 module.exports = { 
     postItem, 
     getAllItems, 
@@ -245,5 +258,6 @@ module.exports = {
     deactivateItem ,
     searchItems,
     getMyItems,
-    searchMyItems
+    searchMyItems,
+    getTop10LatestItems
 };

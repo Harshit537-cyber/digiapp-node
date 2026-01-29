@@ -5,7 +5,8 @@ const verifyToken = require('../middlewares/auth.middlewares');
 const upload = require('../middlewares/upload');
 
 
-
+// ✅ LATEST 10 (PUBLIC)
+router.get("/latest", itemController.getTop10LatestItems);
 
 router.get('/search', itemController.searchItems);
 

@@ -56,6 +56,15 @@ const searchUserItemsByTitle = async (userId, query) => {
 };
 
 
+// ✅ LATEST 10 ITEMS (your requirement)
+const getTop10LatestItems = async () => {
+  return await Item.find({ isActive: true })
+    .sort({ createdAt: -1 })
+    .limit(10);
+};
+
+
+
 module.exports = { 
     createItem, 
     getAllItems, 
@@ -66,5 +75,6 @@ module.exports = {
     deactivateItem,
     searchItemsByTitle,
     getUserItems,
-    searchUserItemsByTitle
+    searchUserItemsByTitle,
+      getTop10LatestItems
 };
