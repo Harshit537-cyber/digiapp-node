@@ -203,7 +203,7 @@ exports.register = async (req, res) => {
       location: lat && lng
         ? {
             type: "Point",
-            coordinates: [lng, lat],
+            coordinates: [Number(lng), Number(lat)], // ✅ FIX
             address,
           }
         : undefined,
