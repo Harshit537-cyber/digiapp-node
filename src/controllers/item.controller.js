@@ -311,8 +311,26 @@
 
 const itemService = require('../services/item.services');
 const response = require('../utils/response');
+
 const cloudinary = require("../config/cloudinary");
 const fs = require("fs");
+
+
+
+
+/* ================= GET ALL ================= */
+const getAllItems = async (req, res) => {
+  try {
+    const items = await itemService.getAllItems();
+    return response.success(res, "Items fetched successfully", items);
+  } catch (error) {
+    console.error("getAllItems error:", error);
+    return response.error(res, "Server error", 500);
+  }
+};
+
+
+
 
 /* ================= IMAGE UPLOAD ================= */
 const uploadImages = async (files) => {
@@ -329,6 +347,8 @@ const uploadImages = async (files) => {
   }
   return urls;
 };
+
+
 
 /* ================= TOP 10 ================= */
 const getTop10LatestItems = async (req, res) => {
@@ -375,26 +395,27 @@ const postItem = async (req, res) => {
   }
 };
 
-/* ================= GET ALL ================= */
-const getAllItems = async (req, res) => {
-  try {
-    const items = await itemService.getAllItems();
-    return response.success(res, "Items fetched successfully", items);
-  } catch (error) {
-    return response.error(res, error.message, 500);
-  }
-};
 
-/* ================= GET SINGLE ================= */
+
+
 const getItemById = async (req, res) => {
   try {
-    const item = await itemService.getItemById(req.params.id);
+    const { id } = req.params;
+
+    // ✅ ObjectId validation
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return response.error(res, "Invalid item id", 400);
+    }
+
+    const item = await itemService.getItemById(id);
     if (!item) return response.error(res, "Item not found", 404);
+
     return response.success(res, "Item fetched", item);
   } catch (error) {
     return response.error(res, error.message, 500);
   }
 };
+
 
 /* ================= UPDATE ================= */
 const updateItem = async (req, res) => {
@@ -470,14 +491,25 @@ const searchItems = async (req, res) => {
 };
 
 /* ================= MY ITEMS ================= */
+// const getMyItems = async (req, res) => {
+//   try {
+//     const items = await itemService.getUserItems(req.user.userId);
+//     return response.success(res, "My items fetched", items);
+//   } catch (error) {
+//     return response.error(res, error.message, 500);
+//   }
+// };
 const getMyItems = async (req, res) => {
   try {
-    const items = await itemService.getUserItems(req.user.userId);
+    const userId = req.user.userId || req.user.id;
+
+    const items = await itemService.getUserItems(userId);
     return response.success(res, "My items fetched", items);
   } catch (error) {
     return response.error(res, error.message, 500);
   }
 };
+
 
 const searchMyItems = async (req, res) => {
   try {
@@ -528,7 +560,6 @@ const searchSavedItems = async (req, res) => {
     return response.error(res, error.message, 500);
   }
 };
-
 
 
 

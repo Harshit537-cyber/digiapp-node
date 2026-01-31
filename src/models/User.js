@@ -72,7 +72,7 @@ const UserSchema = new Schema(
       required: true
     },
 
-    // ---------------- LOCATION (GeoJSON) ----------------
+    // ---------------- LOCATION ----------------
     location: {
       type: {
         type: String,
@@ -80,19 +80,23 @@ const UserSchema = new Schema(
         default: "Point"
       },
       coordinates: {
-        type: [Number], // [longitude, latitude]
+        type: [Number], // [lng, lat]
         required: true
-      },
-      address: {
-        type: String,
-        trim: true
       }
     },
 
-    // ---------------- PROFILE ----------------
-    profilePhoto: {
-      type: String
+    // human readable address
+    address: {
+      type: String,
+      trim: true
     },
+
+    city: String,
+    state: String,
+    country: String,
+
+    // ---------------- PROFILE ----------------
+    profilePhoto: String,
 
     role: {
       type: String,
@@ -105,10 +109,7 @@ const UserSchema = new Schema(
       required: true
     },
 
-    bloodGroup: {
-      type: String,
-      required: true
-    },
+    bloodGroup: String,
 
     status: {
       type: String,
@@ -129,7 +130,6 @@ const UserSchema = new Schema(
   { timestamps: true }
 );
 
-// 🔥 VERY IMPORTANT for near queries
 UserSchema.index({ location: "2dsphere" });
 
 module.exports = model("User", UserSchema);

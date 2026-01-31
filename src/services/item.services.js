@@ -151,7 +151,8 @@
 //       getNearbyShops
 
 // };
-
+const mongoose = require("mongoose");
+`1`
 const Item = require("../models/item");
 const SavedItem = require("../models/savedItems");
 
@@ -264,12 +265,20 @@ const getNearbyItems = async (lat, lng, distanceKm = 10) => {
 };
 
 
+
 const searchSavedItems = async (userId, query) => {
-  return SavedItem.find({ user: userId })
-    .populate({
-      path: "item",
-      match: { title: { $regex: query, $options: "i" } }
-    });
+  const populateOptions = {
+    path: "item"
+  };
+
+  // apply regex ONLY when query is a valid string
+  if (query && typeof query === "string") {
+    populateOptions.match = {
+      title: { $regex: query, $options: "i" }
+    };
+  }
+
+  return SavedItem.find({ user: userId }).populate(populateOptions);
 };
 
 
