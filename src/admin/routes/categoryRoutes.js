@@ -1,17 +1,51 @@
+// const express = require('express');
+// const router = express.Router();
+// const categoryCtrl = require('../controllers/categoryController'); 
+// const adminAuth = require('../middlewares/adminAuth'); // Aapka middleware
+// const upload = require('../../middlewares/upload');
+
+// // POST route par adminAuth add kiya gaya hai
+// router.post('/add', adminAuth, upload.single('image'), categoryCtrl.createCategory);
+
+// router.get('/all', adminAuth, categoryCtrl.getAllCategories); 
+// router.delete('/delete/:id', adminAuth, categoryCtrl.deleteCategory);
+
+// module.exports = router;
+
 const express = require('express');
 const router = express.Router();
-const categoryCtrl = require('../controllers/categoryController'); 
-const adminAuth = require('../middlewares/adminAuth'); // Aapka middleware
+
+const categoryCtrl = require('../controllers/categoryController');
+const adminAuth = require('../middlewares/adminAuth');
 const upload = require('../../middlewares/upload');
 
-// POST route par adminAuth add kiya gaya hai
-router.post('/add', adminAuth, upload.single('image'), categoryCtrl.createCategory);
+/*
+|--------------------------------------------------------------------------
+| CATEGORY ROUTES
+|--------------------------------------------------------------------------
+*/
 
-router.get('/all', adminAuth, categoryCtrl.getAllCategories); 
-router.delete('/delete/:id', adminAuth, categoryCtrl.deleteCategory);
+// Create category (jobs / sale / shop)
+router.post(
+  '/add',
+  adminAuth,
+  upload.single('image'),
+  categoryCtrl.createCategory
+);
 
-router.patch('/status/:id', categoryCtrl.toggleCategoryStatus);
+// Get all categories OR filter by type
+// Example: /all?type=jobs
+router.get(
+  '/all',
+  adminAuth,
+  categoryCtrl.getAllCategories
+);
 
-router.patch('/update/:id', adminAuth, upload.single('image'), categoryCtrl.updateCategory);
+// Delete category by ID
+router.delete(
+  '/delete/:id',
+  adminAuth,
+  categoryCtrl.deleteCategory
+);
 
 module.exports = router;

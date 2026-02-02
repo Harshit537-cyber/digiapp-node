@@ -182,6 +182,26 @@ const getSavedJobs = async (req, res) => {
 };
 
 
+const getRecentJobs = async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 10;
+
+    const jobs = await jobService.getRecentJobs(limit);
+
+    res.status(200).json({
+      success: true,
+      message: "Recently added jobs",
+      count: jobs.length,
+      data: jobs
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
 module.exports = { postJob, getAllJobs, getJobById, updateJob ,deactivateJob , activateJob , searchJobs ,getMyJobs, getMyActiveJobs, 
   getMyDeactivatedJobs , toggleSaveJob,
-    getSavedJobs };
+    getSavedJobs, getRecentJobs };

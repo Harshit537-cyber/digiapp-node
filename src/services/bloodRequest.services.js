@@ -47,6 +47,20 @@ const searchBloodRequests = async (filters) => {
   }
 };
 
+
+const getUrgentAndLast24HoursRequests = async () => {
+  const last24Hours = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+  return await BloodRequest.find({
+    status: "Active",
+    $or: [
+      { urgency: { $in: ["Urgent", "Critical"] } },
+      { createdAt: { $gte: last24Hours } }
+    ]
+  }).sort({ createdAt: -1 });
+};
+
+
 // Sab exports ek saath niche likhein
 module.exports = {
   createBloodRequest,
@@ -56,5 +70,6 @@ module.exports = {
   getBloodRequestById,
   getRequestsByUserId,
   updateRequestStatus,
-  searchBloodRequests
+  searchBloodRequests,
+  getUrgentAndLast24HoursRequests
 };

@@ -20,6 +20,8 @@ router.get("/my-deactivated", verifyToken, jobController.getMyDeactivatedJobs);
 router.post("/save/:id", verifyToken, jobController.toggleSaveJob);
 router.get("/my/saved", verifyToken, jobController.getSavedJobs);
 
+router.get("/recents", verifyToken, jobController.getRecentJobs)
+
 // Post Job or Task (upto 3 images)
 router.post("/post", verifyToken, upload.array("images", 3), jobController.postJob);
 

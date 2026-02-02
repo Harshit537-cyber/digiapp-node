@@ -15,7 +15,7 @@ const bloodRequestSchema = new mongoose.Schema(
     },
     bloodGroup: {
       type: String,
-      required: true,
+
       enum: ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"],
     },
     urgency: {
