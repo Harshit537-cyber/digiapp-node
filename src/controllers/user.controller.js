@@ -161,12 +161,11 @@ const userService = require("../services/user.services");
 const cloudinary = require("../config/cloudinary");
 const fs = require("fs");
 
-// --------------------------------------------------
-// Register New User
-// --------------------------------------------------
+
 exports.register = async (req, res) => {
   try {
-    const { mobile, latitude, longitude, address } = req.body;
+   
+    const { mobile, latitude, longitude, address, ...restBody } = req.body;
 
     if (!mobile) {
       return response.error(res, "Mobile number is required", 400);
@@ -195,20 +194,24 @@ exports.register = async (req, res) => {
       fs.unlinkSync(localFilePath);
     }
 
-    const { latitude: lat, longitude: lng, ...rest } = req.body;
-
+  
     const userData = {
-      ...rest,
+      ...restBody,
+      mobile,
       profilePhoto: profilePhotoUrl,
-      location: lat && lng
-        ? {
-            type: "Point",
-            coordinates: [Number(lng), Number(lat)], // ✅ FIX
-            address,
-          }
-        : undefined,
+      ...(address && { address }), // Add address if present
     };
 
+   
+    const lat = latitude;
+    const lng = longitude;
+    if (lat && lng && String(lat).trim() !== "" && String(lng).trim() !== "") {
+        userData.location = {
+            type: "Point",
+
+            coordinates: [Number(lng), Number(lat)], 
+        };
+    }
     const user = await userService.registerUser(userData);
 
     const token = jwt.sign(
@@ -231,9 +234,7 @@ exports.register = async (req, res) => {
   }
 };
 
-// --------------------------------------------------
-// Get All Users
-// --------------------------------------------------
+
 exports.getAllUsers = async (req, res) => {
   try {
     const users = await userService.getAllUsers();
@@ -288,22 +289,30 @@ exports.updateUser = async (req, res) => {
 
     const updateData = { ...req.body };
 
-    if (req.body.latitude && req.body.longitude) {
+    // Update location only if both latitude and longitude are provided
+    if (updateData.latitude && updateData.longitude) {
       updateData.location = {
         type: "Point",
-        coordinates: [req.body.longitude, req.body.latitude],
-        address: req.body.address,
+        // Ensure coordinates are numbers and in [lng, lat] order
+        coordinates: [Number(updateData.longitude), Number(updateData.latitude)],
       };
+    } else if (updateData.latitude || updateData.longitude) {
+        // If only one coordinate is sent, prevent partial update of location
+        // You might consider sending a 400 error here instead, but ignoring is safer.
+        delete updateData.location; 
     }
+    
+    // address is a top-level field and is already in updateData if sent in req.body
 
     if (profilePhotoUrl) {
       updateData.profilePhoto = profilePhotoUrl;
     }
 
-    delete updateData.mobile;
+    // Clean up temporary fields before passing to service
+    delete updateData.mobile; // Prevent mobile update
     delete updateData.latitude;
     delete updateData.longitude;
-    delete updateData.address;
+    // NOTE: Do NOT delete updateData.address here. It's a top-level field now.
 
     const updatedUser = await userService.updateUserById(id, updateData);
 

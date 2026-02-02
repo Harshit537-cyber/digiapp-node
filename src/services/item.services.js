@@ -152,7 +152,7 @@
 
 // };
 const mongoose = require("mongoose");
-`1`
+
 const Item = require("../models/item");
 const SavedItem = require("../models/savedItems");
 
