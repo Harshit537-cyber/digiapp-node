@@ -10,4 +10,8 @@ router.post('/add', adminAuth, upload.single('image'), categoryCtrl.createCatego
 router.get('/all', adminAuth, categoryCtrl.getAllCategories); 
 router.delete('/delete/:id', adminAuth, categoryCtrl.deleteCategory);
 
+router.patch('/status/:id', categoryCtrl.toggleCategoryStatus);
+
+router.patch('/update/:id', adminAuth, upload.single('image'), categoryCtrl.updateCategory);
+
 module.exports = router;

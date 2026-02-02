@@ -23,8 +23,6 @@ const verifyToken = (req, res, next) => {
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-    // --- ROLE CHECK ADDED HERE ---
-    // Agar token ke andar role 'admin' hai, toh user route block kar do
     if (decoded.role && decoded.role.toLowerCase() === 'admin') {
         return res.status(403).json({
             success: false,
