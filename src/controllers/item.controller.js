@@ -3,7 +3,7 @@ const itemService = require('../services/item.services');
 const response = require('../utils/response');
 const cloudinary = require("../config/cloudinary");
 const fs = require("fs");
-//  ObjectId validation ke liye add kiya
+
 
 
 /* ================= IMAGE UPLOAD ================= */
