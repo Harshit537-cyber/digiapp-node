@@ -114,6 +114,37 @@ const addService = async (businessId, serviceData) => {
   }
 };
 
+const deleteService = async (businessId, serviceId) => {
+  try {
+    return await Business.findByIdAndUpdate(
+      businessId,
+      { $pull: { services: { _id: serviceId } } }, 
+      { new: true }
+    );
+  } catch (error) {
+    throw error;
+  }
+};
+
+const updateService = async (businessId, serviceId, updateFields) => {
+  try {
+    
+    const updateObj = {};
+    for (const key in updateFields) {
+      updateObj[`services.$.${key}`] = updateFields[key];
+    }
+
+    return await Business.findOneAndUpdate(
+      { _id: businessId, "services._id": serviceId },
+      { $set: updateObj }, 
+      { new: true }
+    );
+  } catch (error) {
+    throw error;
+  }
+};
+
+
 
 module.exports = {
   createBusiness,
@@ -123,6 +154,8 @@ module.exports = {
   deleteBusiness,
   getPendingBusinesses,
   updateBusinessStatus,
-  addService
+  addService,
+ deleteService ,
+ updateService 
 
 };

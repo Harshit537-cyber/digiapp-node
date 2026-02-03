@@ -47,4 +47,17 @@ router.post(
   businessController.addServiceToBusiness
 );
 
+router.get('/:id/services', businessController.getBusinessServices);
+
+router.delete('/:id/service/:serviceId', verifyToken, businessController.deleteServiceFromBusiness);
+
+
+router.put(
+  '/:id/service/:serviceId', 
+  verifyToken,
+  upload.single('serviceImage'), 
+  businessController.updateServiceInBusiness
+);
+
+
 module.exports = router;
