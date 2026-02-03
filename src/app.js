@@ -12,6 +12,8 @@ const fullTimeJobRoutes = require('./admin/routes/fullTimeJobRoutes');
 const partTimeJobRoutes = require('./admin/routes/partTimeJobRoutes');
 const bloodRoutes = require("./admin/routes/bloodRequestRoutes");
 
+const verifiedBusinessRoutes = require("./admin/routes/verifiedBusinessRoutes"); 
+
 const adminCategoryRoutes = require('../src/admin/routes/categoryRoutes');
  const userCategoryRoutes  = require('./routes/user.routes');
 
@@ -44,6 +46,8 @@ app.use("/api/admin", bloodRoutes);
 
 
 app.use('/api/admin/category', adminCategoryRoutes);
+
+app.use("/api/admin/business", verifiedBusinessRoutes); 
 
 
 app.use('/api/user', userCategoryRoutes);

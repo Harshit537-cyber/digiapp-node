@@ -250,8 +250,7 @@ const searchMyItems = async (req, res) => {
   }
 };
 
-/* ================= SAVE / UNSAVE ================= */
-// ... (No change in saveItem/unsaveItem/getSavedItems/searchSavedItems)
+
 const saveItem = async (req, res) => {
   try {
     const saved = await itemService.saveItem(req.user.userId, req.params.itemId);

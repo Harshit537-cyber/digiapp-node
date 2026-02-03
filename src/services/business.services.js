@@ -60,10 +60,53 @@ const deleteBusiness = async (id) => {
   }
 };
 
+const getPendingBusinesses = async (page = 1, limit = 10) => {
+  try {
+    const skip = (page - 1) * limit;
+
+    const businesses = await Business.find({ status: 'Pending' })
+      .sort({ createdAt: 1 }) // Oldest first for review
+      .skip(skip)
+      .limit(limit);
+
+    const totalBusinesses = await Business.countDocuments({ status: 'Pending' });
+
+    return {
+      businesses,
+      totalBusinesses,
+      totalPages: Math.ceil(totalBusinesses / limit),
+      currentPage: page
+    };
+  } catch (error) {
+    throw error;
+  }
+};
+
+// 7. Update Business Status (Approve/Reject)
+const updateBusinessStatus = async (id, newStatus) => {
+    // newStatus should be 'Approved' or 'Rejected'
+    if (!['Approved', 'Rejected'].includes(newStatus)) {
+        throw new Error("Invalid status update.");
+    }
+    try {
+        return await Business.findByIdAndUpdate(
+            id, 
+            { status: newStatus }, 
+            { new: true }
+        );
+    } catch (error) {
+        throw error;
+    }
+}
+
+
 module.exports = {
   createBusiness,
   getAllBusinesses,
   getBusinessById,
   updateBusiness,
-  deleteBusiness
+  deleteBusiness,
+  getPendingBusinesses,
+  updateBusinessStatus
+
 };

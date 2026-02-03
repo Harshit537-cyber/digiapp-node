@@ -23,7 +23,15 @@ const businessSchema = new mongoose.Schema({
   // Image URLs (Cloudinary)
   businessImages: [{ type: String, required: true }], 
   nationalIdImage: { type: String, required: true },  
-  ownerImage: { type: String, required: true }        
+  ownerImage: { type: String, required: true },
+  
+  // NEW FIELD FOR ADMIN VERIFICATION FLOW
+  status: {
+    type: String,
+    enum: ['Pending', 'Approved', 'Rejected'], 
+    default: 'Pending',
+    required: true
+  }        
 
 }, { timestamps: true });
 

@@ -80,30 +80,28 @@ const registerBusiness = async (req, res) => {
 };
 
 // --- 2. Get All Businesses (With Pagination) ---
-const getAllBusinesses = async (req, res) => {
+const getAllBusinesses = async (page = 1, limit = 10) => {
   try {
-    
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
 
-    const result = await businessService.getAllBusinesses(page, limit);
+    const businesses = await Business.find({ status: 'Approved' }) // <<<--- KEY CHANGE
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
 
-    return res.status(200).json({
-      success: true,
-      count: result.businesses.length, 
-      totalRecords: result.totalBusinesses, 
-      totalPages: result.totalPages,
-      currentPage: result.currentPage,
-      data: result.businesses,
-    });
+    const totalBusinesses = await Business.countDocuments({ status: 'Approved' }); // <<<--- KEY CHANGE
+
+    return {
+      businesses,
+      totalBusinesses,
+      totalPages: Math.ceil(totalBusinesses / limit),
+      currentPage: page
+    };
   } catch (error) {
-    return res.status(500).json({ 
-      success: false, 
-      message: "Error fetching businesses", 
-      error: error.message 
-    });
+    throw error;
   }
 };
+
 
 // --- 3. Get Single Business By ID ---
 const getBusinessById = async (req, res) => {
@@ -202,10 +200,53 @@ const deleteBusiness = async (req, res) => {
   }
 };
 
+
+const getPendingBusinesses = async (page = 1, limit = 10) => {
+  try {
+    const skip = (page - 1) * limit;
+
+    const businesses = await Business.find({ status: 'Pending' })
+      .sort({ createdAt: 1 }) // Oldest first for review
+      .skip(skip)
+      .limit(limit);
+
+    const totalBusinesses = await Business.countDocuments({ status: 'Pending' });
+
+    return {
+      businesses,
+      totalBusinesses,
+      totalPages: Math.ceil(totalBusinesses / limit),
+      currentPage: page
+    };
+  } catch (error) {
+    throw error;
+  }
+};
+
+// 7. Update Business Status (Approve/Reject)
+const updateBusinessStatus = async (id, newStatus) => {
+    // newStatus should be 'Approved' or 'Rejected'
+    if (!['Approved', 'Rejected'].includes(newStatus)) {
+        throw new Error("Invalid status update.");
+    }
+    try {
+        return await Business.findByIdAndUpdate(
+            id, 
+            { status: newStatus }, 
+            { new: true }
+        );
+    } catch (error) {
+        throw error;
+    }
+}
+
+
 module.exports = {
   registerBusiness,
   getAllBusinesses,
   getBusinessById,
   updateBusiness,
-  deleteBusiness
+  deleteBusiness,
+  updateBusinessStatus,
+  
 };
