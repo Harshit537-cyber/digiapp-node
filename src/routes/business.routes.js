@@ -39,4 +39,12 @@ router.put(
 // 5. DELETE: Delete Business (Token Required)
 router.delete('/delete/:id', verifyToken, businessController.deleteBusiness);
 
+
+router.post(
+  '/:id/add-service', 
+  verifyToken,
+  upload.single('serviceImage'),
+  businessController.addServiceToBusiness
+);
+
 module.exports = router;

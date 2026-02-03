@@ -15,12 +15,14 @@ const getAllBusinesses = async (page = 1, limit = 10) => {
   try {
     const skip = (page - 1) * limit;
 
-    const businesses = await Business.find()
+    // Find only businesses with 'Approved' status
+    const businesses = await Business.find({ status: 'Approved' }) // <<<--- ADD THIS FILTER
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
 
-    const totalBusinesses = await Business.countDocuments();
+    // Count only the 'Approved' businesses
+    const totalBusinesses = await Business.countDocuments({ status: 'Approved' }); // <<<--- ADD THIS FILTER
 
     return {
       businesses,
@@ -100,6 +102,19 @@ const updateBusinessStatus = async (id, newStatus) => {
 }
 
 
+const addService = async (businessId, serviceData) => {
+  try {
+    return await Business.findByIdAndUpdate(
+      businessId,
+      { $push: { services: serviceData } }, // Use $push to add the new service to the services array
+      { new: true }
+    );
+  } catch (error) {
+    throw error;
+  }
+};
+
+
 module.exports = {
   createBusiness,
   getAllBusinesses,
@@ -107,6 +122,7 @@ module.exports = {
   updateBusiness,
   deleteBusiness,
   getPendingBusinesses,
-  updateBusinessStatus
+  updateBusinessStatus,
+  addService
 
 };

@@ -79,26 +79,32 @@ const registerBusiness = async (req, res) => {
   }
 };
 
+
 // --- 2. Get All Businesses (With Pagination) ---
-const getAllBusinesses = async (page = 1, limit = 10) => {
+const getAllBusinesses = async (req, res) => { // <<<--- FIX 1: Add (req, res)
   try {
-    const skip = (page - 1) * limit;
+    // FIX 2: Get page and limit from the request query string
+    // Provide default values (e.g., page 1, limit 10) if they are not sent
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
 
-    const businesses = await Business.find({ status: 'Approved' }) // <<<--- KEY CHANGE
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit);
+    // FIX 3: Call the service function to get the data
+    const result = await businessService.getAllBusinesses(page, limit);
 
-    const totalBusinesses = await Business.countDocuments({ status: 'Approved' }); // <<<--- KEY CHANGE
+    // FIX 4: Send a JSON response back to the client (Postman)
+    return res.status(200).json({
+      success: true,
+      message: "Businesses retrieved successfully",
+      data: result,
+    });
 
-    return {
-      businesses,
-      totalBusinesses,
-      totalPages: Math.ceil(totalBusinesses / limit),
-      currentPage: page
-    };
   } catch (error) {
-    throw error;
+    // FIX 5: Send an error response if something goes wrong
+    return res.status(500).json({
+      success: false,
+      message: "Failed to retrieve businesses",
+      error: error.message,
+    });
   }
 };
 
@@ -241,6 +247,52 @@ const updateBusinessStatus = async (id, newStatus) => {
 }
 
 
+const addServiceToBusiness = async (req, res) => {
+  try {
+    const { id } = req.params; // Business ki ID
+    const userId = req.user?.userId; // Logged-in user ki ID
+    const { serviceTitle, serviceDetails } = req.body;
+    const serviceImageFile = req.file; // Service ki image file
+
+    const business = await businessService.getBusinessById(id);
+
+    if (!business) {
+      return res.status(404).json({ success: false, message: "Business not found" });
+    }
+
+    // Check karein ki user business ka malik hai aur business approved hai
+    if (business.userId.toString() !== userId.toString()) {
+       return res.status(403).json({ success: false, message: "Aap is business mein service add nahi kar sakte" });
+    }
+    
+    if (business.status !== 'Approved') {
+       return res.status(403).json({ success: false, message: "Service add karne ke liye business ka Approved hona zaroori hai" });
+    }
+
+    // Image ko Cloudinary par upload karein
+    const serviceImageUrl = await uploadToCloudinary(serviceImageFile.path);
+
+    const newService = {
+        serviceTitle,
+        serviceDetails,
+        serviceImage: serviceImageUrl
+    };
+
+    // Service ko database mein save karein
+    const updatedBusiness = await businessService.addService(id, newService);
+
+    return res.status(200).json({
+      success: true,
+      message: "Service successfully add ho gayi",
+      data: updatedBusiness,
+    });
+
+  } catch (error) {
+    return res.status(500).json({ success: false, message: "Service add karne mein error aaya", error: error.message });
+  }
+};
+
+
 module.exports = {
   registerBusiness,
   getAllBusinesses,
@@ -248,5 +300,5 @@ module.exports = {
   updateBusiness,
   deleteBusiness,
   updateBusinessStatus,
-  
+  addServiceToBusiness
 };
