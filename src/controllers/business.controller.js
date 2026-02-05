@@ -372,6 +372,35 @@ const updateServiceInBusiness = async (req, res) => {
   }
 };
 
+
+const getMyBusinesses = async (req, res) => {
+  try {
+    const userId = getUserId(req); // Aapka helper function already bana hua hai
+
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "Unauthorized access" });
+    }
+
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+
+    const result = await businessService.getBusinessesByUserId(userId, page, limit);
+
+    return res.status(200).json({
+      success: true,
+      message: "Your businesses retrieved successfully",
+      data: result,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Error fetching your businesses",
+      error: error.message,
+    });
+  }
+};
+
+
 module.exports = {
   registerBusiness,
   getAllBusinesses,
@@ -383,5 +412,6 @@ module.exports = {
   addServiceToBusiness,
   getBusinessServices,
   deleteServiceFromBusiness,
-  updateServiceInBusiness
+  updateServiceInBusiness,
+  getMyBusinesses
 };

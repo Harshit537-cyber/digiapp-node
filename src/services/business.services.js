@@ -145,6 +145,29 @@ const updateService = async (businessId, serviceId, updateFields) => {
 };
 
 
+const getBusinessesByUserId = async (userId, page = 1, limit = 10) => {
+  try {
+    const skip = (page - 1) * limit;
+
+   
+    const businesses = await Business.find({ userId: userId })
+      .sort({ createdAt: -1 }) // Newest first
+      .skip(skip)
+      .limit(limit);
+
+    const totalBusinesses = await Business.countDocuments({ userId: userId });
+
+    return {
+      businesses,
+      totalBusinesses,
+      totalPages: Math.ceil(totalBusinesses / limit),
+      currentPage: page
+    };
+  } catch (error) {
+    throw error;
+  }
+};
+
 
 module.exports = {
   createBusiness,
@@ -156,6 +179,7 @@ module.exports = {
   updateBusinessStatus,
   addService,
  deleteService ,
- updateService 
+ updateService ,
+  getBusinessesByUserId, 
 
 };

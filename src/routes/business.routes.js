@@ -6,6 +6,14 @@ const businessController = require('../controllers/business.controller');
 const upload = require('../middlewares/upload'); 
 const verifyToken = require('../middlewares/auth.middlewares'); 
 
+
+router.get(
+  '/user/my-businesses', 
+  verifyToken, 
+  businessController.getMyBusinesses
+);
+
+
 // 1. POST: Register Business
 router.post(
   '/register',
@@ -58,6 +66,7 @@ router.put(
   upload.single('serviceImage'), 
   businessController.updateServiceInBusiness
 );
+
 
 
 module.exports = router;
