@@ -41,6 +41,11 @@ const businessSchema = new mongoose.Schema({
   businessImages: [{ type: String, required: true }], 
   nationalIdImage: { type: String, required: true },  
   ownerImage: { type: String, required: true },
+
+    isBlocked: {
+    type: Boolean,
+    default: false
+  },
   
   // Admin Verification Flow
   status: {

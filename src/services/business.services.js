@@ -106,7 +106,7 @@ const addService = async (businessId, serviceData) => {
   try {
     return await Business.findByIdAndUpdate(
       businessId,
-      { $push: { services: serviceData } }, // Use $push to add the new service to the services array
+      { $push: { services: serviceData } }, 
       { new: true }
     );
   } catch (error) {

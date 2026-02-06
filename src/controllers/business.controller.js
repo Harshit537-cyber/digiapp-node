@@ -375,7 +375,7 @@ const updateServiceInBusiness = async (req, res) => {
 
 const getMyBusinesses = async (req, res) => {
   try {
-    const userId = getUserId(req); // Aapka helper function already bana hua hai
+    const userId = getUserId(req); 
 
     if (!userId) {
       return res.status(401).json({ success: false, message: "Unauthorized access" });

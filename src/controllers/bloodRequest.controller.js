@@ -3,12 +3,12 @@ const response = require("../utils/response");
 
 const createBloodRequest = async (req, res) => {
   try {
-    console.log("Token User Data:", req.user); // Ye check karne ke liye ke token sahi hai ya nahi
+    console.log("Token User Data:", req.user); 
     
     const { patientName, bloodGroup, urgency, hospitalName, location, contactNumber, whatsappNumber, additionalInfo } = req.body;
 
     const bloodRequestData = {
-      userId: req.user.userId, // <--- Confirm karein ye value aa rahi hai
+      userId: req.user.userId, 
       patientName,
       bloodGroup,
       urgency,

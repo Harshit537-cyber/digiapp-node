@@ -17,6 +17,8 @@ const verifiedBusinessRoutes = require("./admin/routes/verifiedBusinessRoutes");
 const adminCategoryRoutes = require('../src/admin/routes/categoryRoutes');
  const userCategoryRoutes  = require('./routes/user.routes');
 
+ const adminBusinessRoutes = require("./admin/routes/adminBusinessRoutes");
+
 
 const cors = require("cors");
 
@@ -51,6 +53,9 @@ app.use("/api/admin/business", verifiedBusinessRoutes);
 
 
 app.use('/api/user', userCategoryRoutes);
+
+
+app.use("/api/admin/manage-business", adminBusinessRoutes);
 
 
 module.exports = app;
