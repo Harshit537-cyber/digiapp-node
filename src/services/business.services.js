@@ -195,7 +195,31 @@ const removeBackgroundImage = async (businessId) => {
   }
 };
 
+// Service mein nayi images add karne ke liye
+const addImagesToService = async (businessId, serviceId, imageUrls) => {
+  try {
+    return await Business.findOneAndUpdate(
+      { _id: businessId, "services._id": serviceId },
+      { $push: { "services.$.serviceImages": { $each: imageUrls } } },
+      { new: true }
+    );
+  } catch (error) {
+    throw error;
+  }
+};
 
+// Service se koi specific image remove karne ke liye
+const removeImageFromService = async (businessId, serviceId, imageUrl) => {
+  try {
+    return await Business.findOneAndUpdate(
+      { _id: businessId, "services._id": serviceId },
+      { $pull: { "services.$.serviceImages": imageUrl } },
+      { new: true }
+    );
+  } catch (error) {
+    throw error;
+  }
+};
 
 module.exports = {
   createBusiness,
@@ -210,6 +234,8 @@ module.exports = {
  updateService ,
   getBusinessesByUserId, 
   updateBackgroundImage,
-  removeBackgroundImage
+  removeBackgroundImage,
+  addImagesToService,
+  removeImageFromService
 
 };

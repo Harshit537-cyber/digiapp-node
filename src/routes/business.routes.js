@@ -83,4 +83,19 @@ router.delete(
 );
 
 
+router.patch(
+  '/:id/service/:serviceId/add-images',
+  verifyToken,
+  upload.array('serviceImages', 5), 
+  businessController.addServiceImages
+);
+
+
+router.delete(
+  '/:id/service/:serviceId/remove-image',
+  verifyToken,
+  businessController.deleteServiceImage
+);
+
+
 module.exports = router;

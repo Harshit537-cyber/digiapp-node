@@ -461,7 +461,61 @@ const deleteBackgroundImage = async (req, res) => {
   }
 };
 
+// --- Add Multiple Images to a Service ---
+const addServiceImages = async (req, res) => {
+  try {
+    const { id, serviceId } = req.params;
+    const userId = getUserId(req);
+    const files = req.files; // upload.array('serviceImages') use karenge
 
+    if (!files || files.length === 0) {
+      return res.status(400).json({ success: false, message: "No images provided" });
+    }
+
+    const business = await businessService.getBusinessById(id);
+    if (!business || business.userId.toString() !== userId.toString()) {
+      return res.status(403).json({ success: false, message: "Unauthorized or business not found" });
+    }
+
+    // Upload all images to Cloudinary
+    const imageUrls = await Promise.all(
+      files.map((file) => uploadToCloudinary(file.path))
+    );
+
+    const updatedBusiness = await businessService.addImagesToService(id, serviceId, imageUrls);
+
+    return res.status(200).json({
+      success: true,
+      message: "Images added to service successfully",
+      data: updatedBusiness.services.id(serviceId)
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: "Error adding service images", error: error.message });
+  }
+};
+
+// --- Remove a Single Image from Service ---
+const deleteServiceImage = async (req, res) => {
+  try {
+    const { id, serviceId } = req.params;
+    const { imageUrl } = req.body;
+    const userId = getUserId(req);
+
+    const business = await businessService.getBusinessById(id);
+    if (!business || business.userId.toString() !== userId.toString()) {
+      return res.status(403).json({ success: false, message: "Unauthorized action" });
+    }
+
+    await businessService.removeImageFromService(id, serviceId, imageUrl);
+
+    return res.status(200).json({
+      success: true,
+      message: "Service image removed successfully"
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: "Error removing service image", error: error.message });
+  }
+};
 
 
 module.exports = {
@@ -477,6 +531,8 @@ module.exports = {
   deleteServiceFromBusiness,
   updateServiceInBusiness,
   getMyBusinesses,
-   setBackgroundImage,
-  deleteBackgroundImage
+  setBackgroundImage,
+  deleteBackgroundImage,
+  addServiceImages,
+  deleteServiceImage
 };
