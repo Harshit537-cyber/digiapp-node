@@ -169,6 +169,34 @@ const getBusinessesByUserId = async (userId, page = 1, limit = 10) => {
 };
 
 
+// Background image update karne ke liye
+const updateBackgroundImage = async (businessId, imageUrl) => {
+  try {
+    return await Business.findByIdAndUpdate(
+      businessId,
+      { backgroundImage: imageUrl },
+      { new: true }
+    );
+  } catch (error) {
+    throw error;
+  }
+};
+
+// Background image remove karne ke liye
+const removeBackgroundImage = async (businessId) => {
+  try {
+    return await Business.findByIdAndUpdate(
+      businessId,
+      { backgroundImage: "" },
+      { new: true }
+    );
+  } catch (error) {
+    throw error;
+  }
+};
+
+
+
 module.exports = {
   createBusiness,
   getAllBusinesses,
@@ -181,5 +209,7 @@ module.exports = {
  deleteService ,
  updateService ,
   getBusinessesByUserId, 
+  updateBackgroundImage,
+  removeBackgroundImage
 
 };

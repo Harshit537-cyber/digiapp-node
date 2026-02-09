@@ -401,6 +401,69 @@ const getMyBusinesses = async (req, res) => {
 };
 
 
+// --- Update Background Image ---
+const setBackgroundImage = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = getUserId(req);
+    const bgImageFile = req.file;
+
+    if (!bgImageFile) {
+      return res.status(400).json({ success: false, message: "Please upload an image" });
+    }
+
+    const business = await businessService.getBusinessById(id);
+    if (!business) {
+      return res.status(404).json({ success: false, message: "Business not found" });
+    }
+
+    // Owner check
+    if (business.userId.toString() !== userId.toString()) {
+      return res.status(403).json({ success: false, message: "Unauthorized to change background" });
+    }
+
+    const imageUrl = await uploadToCloudinary(bgImageFile.path);
+    const updatedBusiness = await businessService.updateBackgroundImage(id, imageUrl);
+
+    return res.status(200).json({
+      success: true,
+      message: "Background image updated successfully",
+      backgroundImage: updatedBusiness.backgroundImage
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: "Error updating background image", error: error.message });
+  }
+};
+
+// --- Remove Background Image ---
+const deleteBackgroundImage = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = getUserId(req);
+
+    const business = await businessService.getBusinessById(id);
+    if (!business) {
+      return res.status(404).json({ success: false, message: "Business not found" });
+    }
+
+    if (business.userId.toString() !== userId.toString()) {
+      return res.status(403).json({ success: false, message: "Unauthorized action" });
+    }
+
+    await businessService.removeBackgroundImage(id);
+
+    return res.status(200).json({
+      success: true,
+      message: "Background image removed successfully"
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: "Error removing image", error: error.message });
+  }
+};
+
+
+
+
 module.exports = {
   registerBusiness,
   getAllBusinesses,
@@ -413,5 +476,7 @@ module.exports = {
   getBusinessServices,
   deleteServiceFromBusiness,
   updateServiceInBusiness,
-  getMyBusinesses
+  getMyBusinesses,
+   setBackgroundImage,
+  deleteBackgroundImage
 };

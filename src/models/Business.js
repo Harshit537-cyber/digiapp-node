@@ -47,6 +47,11 @@ const businessSchema = new mongoose.Schema({
     default: false
   },
   
+backgroundImage: { 
+  type: String, 
+  default: "" 
+},
+
   // Admin Verification Flow
   status: {
     type: String,

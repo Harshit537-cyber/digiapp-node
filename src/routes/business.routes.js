@@ -68,5 +68,19 @@ router.put(
 );
 
 
+router.patch(
+  '/:id/background-image',
+  verifyToken,
+  upload.single('backgroundImage'), // 'backgroundImage' field name in Form-Data
+  businessController.setBackgroundImage
+);
+
+// Remove Background Image
+router.delete(
+  '/:id/background-image',
+  verifyToken,
+  businessController.deleteBackgroundImage
+);
+
 
 module.exports = router;

@@ -4,7 +4,7 @@ const User = require('../../models/User');
 // --- GET ALL BUSINESSES ---
 exports.getAllBusiness = async (req, res) => {
     try {
-        const businesses = await Business.find().sort({ createdAt: -1 }); // Using 'createdAt' is a common convention
+        const businesses = await Business.find().sort({ createdAt: -1 }); 
 
         res.status(200).json({
             success: true,
@@ -107,6 +107,8 @@ exports.updateBusiness = async (req, res) => {
             }
         }
         
+        // IMPORTANT: This only handles general business fields and top-level file uploads.
+        // Service updates are now handled in separate endpoints.
         const updatedBusiness = await Business.findByIdAndUpdate(
             req.params.id,
             { $set: updateData }, // Use $set to avoid replacing the whole document
@@ -165,7 +167,7 @@ exports.toggleBlockBusiness = async (req, res) => {
 };
 
 
-// --- (NEW) ADD A SERVICE TO A BUSINESS ---
+// --- (SERVICE MANAGEMENT) ADD A NEW SERVICE TO A BUSINESS ---
 exports.addServiceToBusiness = async (req, res) => {
     try {
         const { businessId } = req.params;
@@ -211,8 +213,8 @@ exports.addServiceToBusiness = async (req, res) => {
 
         res.status(200).json({
             success: true,
-            message: "Service with image added successfully.",
-            data: updatedBusiness
+            message: "New Service added successfully.",
+            data: updatedBusiness.services[updatedBusiness.services.length - 1] // Return the new service object
         });
 
     } catch (error) {
@@ -220,3 +222,149 @@ exports.addServiceToBusiness = async (req, res) => {
         res.status(500).json({ success: false, message: "Server Error: " + error.message });
     }
 };
+
+
+// --- (SERVICE MANAGEMENT) UPDATE AN EXISTING SERVICE IN A BUSINESS ---
+exports.updateServiceInBusiness = async (req, res) => {
+    try {
+        const { businessId, serviceId } = req.params;
+        const { serviceTitle, serviceDetails } = req.body;
+
+        // Start with the fields to update from the body
+        let updateFields = {};
+        if (serviceTitle) updateFields['services.$.serviceTitle'] = serviceTitle;
+        if (serviceDetails) updateFields['services.$.serviceDetails'] = serviceDetails;
+
+        // Handle the image file upload
+        if (req.file) {
+            updateFields['services.$.serviceImage'] = req.file.filename;
+        }
+
+        // Check if there's anything to update
+        if (Object.keys(updateFields).length === 0) {
+            return res.status(400).json({ 
+                success: false, 
+                message: "No update fields or image provided." 
+            });
+        }
+
+        // Use arrayFilters to update a specific nested document
+        const updatedBusiness = await Business.findOneAndUpdate(
+            { "_id": businessId, "services._id": serviceId }, // Find the business AND the specific service
+            { $set: updateFields },
+            { new: true, runValidators: true }
+        );
+
+        if (!updatedBusiness) {
+            // Check if business exists or service exists
+            const businessExists = await Business.findById(businessId);
+            if (!businessExists) {
+                 return res.status(404).json({ success: false, message: "Business not found." });
+            }
+            return res.status(404).json({ success: false, message: "Service not found with that ID in the business." });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: "Service updated successfully.",
+            data: updatedBusiness.services.find(s => s._id.toString() === serviceId) // Return the updated service
+        });
+
+    } catch (error) {
+        console.error("Error updating service:", error);
+        res.status(500).json({ success: false, message: "Server Error: " + error.message });
+    }
+};
+
+// --- (SERVICE MANAGEMENT) DELETE A SERVICE FROM A BUSINESS ---
+exports.deleteServiceInBusiness = async (req, res) => {
+    try {
+        const { businessId, serviceId } = req.params;
+
+        const updatedBusiness = await Business.findByIdAndUpdate(
+            businessId,
+            {
+                $pull: {
+                    services: { _id: serviceId } // Pull the service with the specific _id
+                }
+            },
+            { new: true }
+        );
+
+        if (!updatedBusiness) {
+             return res.status(404).json({ success: false, message: "Business not found." });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: "Service deleted successfully.",
+            data: updatedBusiness // Return the updated business
+        });
+
+    } catch (error) {
+        console.error("Error deleting service:", error);
+        res.status(500).json({ success: false, message: "Server Error: " + error.message });
+    }
+};
+
+
+// --- Update Background Image ---
+exports.setBackgroundImage = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = getUserId(req);
+    const bgImageFile = req.file;
+
+    if (!bgImageFile) {
+      return res.status(400).json({ success: false, message: "Please upload an image" });
+    }
+
+    const business = await businessService.getBusinessById(id);
+    if (!business) {
+      return res.status(404).json({ success: false, message: "Business not found" });
+    }
+
+    // Owner check
+    if (business.userId.toString() !== userId.toString()) {
+      return res.status(403).json({ success: false, message: "Unauthorized to change background" });
+    }
+
+    const imageUrl = await uploadToCloudinary(bgImageFile.path);
+    const updatedBusiness = await businessService.updateBackgroundImage(id, imageUrl);
+
+    return res.status(200).json({
+      success: true,
+      message: "Background image updated successfully",
+      backgroundImage: updatedBusiness.backgroundImage
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: "Error updating background image", error: error.message });
+  }
+};
+
+// --- Remove Background Image ---
+exports.deleteBackgroundImage = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = getUserId(req);
+
+    const business = await businessService.getBusinessById(id);
+    if (!business) {
+      return res.status(404).json({ success: false, message: "Business not found" });
+    }
+
+    if (business.userId.toString() !== userId.toString()) {
+      return res.status(403).json({ success: false, message: "Unauthorized action" });
+    }
+
+    await businessService.removeBackgroundImage(id);
+
+    return res.status(200).json({
+      success: true,
+      message: "Background image removed successfully"
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: "Error removing image", error: error.message });
+  }
+};
+
