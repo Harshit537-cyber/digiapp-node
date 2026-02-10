@@ -1,23 +1,23 @@
+const fs = require("fs");
 const Business = require('../../models/Business');
 const User = require('../../models/User');
+const cloudinary = require("../../config/cloudinary"); 
 
-const { cloudinary } = require("../../middlewares/upload"); // अपना पाथ सही करें
-const streamifier = require('streamifier');
 
-// Helper function: Buffer को Cloudinary पर अपलोड करने के लिए
-const uploadToCloudinary = (fileBuffer) => {
-    return new Promise((resolve, reject) => {
-        let stream = cloudinary.uploader.upload_stream(
-            { folder: "business_images" }, // Cloudinary में फोल्डर का नाम
-            (error, result) => {
-                if (result) resolve(result.secure_url);
-                else reject(error);
-            }
-        );
-        streamifier.createReadStream(fileBuffer).pipe(stream);
+const uploadToCloudinary = async (filePath) => {
+  if (!filePath) return null;
+  try {
+    const { secure_url } = await cloudinary.uploader.upload(filePath, {
+      folder: "business_directory",
     });
+   
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    return secure_url;
+  } catch (err) {
+       if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+    throw err;
+  }
 };
-
 
 // --- GET ALL BUSINESSES ---
 exports.getAllBusiness = async (req, res) => {
@@ -55,55 +55,68 @@ exports.getBusinessById = async (req, res) => {
 
 // --- CREATE A NEW BUSINESS (BY ADMIN) ---
 exports.createBusinessByAdmin = async (req, res) => {
-    try {
-        const { userId, businessName } = req.body;
+  try {
+    const { userId, businessName } = req.body;
 
-        if (!userId) {
-            return res.status(400).json({ success: false, message: "Target User ID is required." });
-        }
-
-        const targetUser = await User.findById(userId);
-        if (!targetUser) {
-            return res.status(404).json({ success: false, message: "The target user does not exist." });
-        }
-
-        let businessData = { ...req.body };
-
-        // --- CLOUDINARY UPLOAD LOGIC ---
-        if (req.files) {
-            // 1. Multiple Business Images अपलोड करें
-            if (req.files.businessImages) {
-                const uploadPromises = req.files.businessImages.map(file => uploadToCloudinary(file.buffer));
-                businessData.businessImages = await Promise.all(uploadPromises);
-            }
-
-            // 2. National ID Image अपलोड करें
-            if (req.files.nationalIdImage) {
-                businessData.nationalIdImage = await uploadToCloudinary(req.files.nationalIdImage[0].buffer);
-            }
-
-            // 3. Owner Image अपलोड करें
-            if (req.files.ownerImage) {
-                businessData.ownerImage = await uploadToCloudinary(req.files.ownerImage[0].buffer);
-            }
-        }
-
-        // Admin द्वारा बनाया गया है तो Status Approved
-        businessData.status = 'Approved';
-
-        const newBusiness = new Business(businessData);
-        await newBusiness.save();
-
-        res.status(201).json({
-            success: true,
-            message: `Shop '${businessName}' created successfully for user ${targetUser.name}`,
-            data: newBusiness
-        });
-
-    } catch (error) {
-        console.error("Admin Shop Creation Error:", error);
-        res.status(500).json({ success: false, message: "Server Error: " + error.message });
+    // 1. Check if Target User exists
+    if (!userId) {
+      return res.status(400).json({ success: false, message: "Target User ID is required." });
     }
+    const targetUser = await User.findById(userId);
+    if (!targetUser) {
+      return res.status(404).json({ success: false, message: "The target user does not exist." });
+    }
+
+    // 2. Extract Files from req.files
+    const { businessImages, nationalIdImage, ownerImage } = req.files || {};
+
+    let businessImageUrls = [];
+    let nationalIdUrl = "";
+    let ownerImageUrl = "";
+
+    // 3. Upload Images to Cloudinary if they exist
+    if (businessImages) {
+      businessImageUrls = await Promise.all(
+        businessImages.map((file) => uploadToCloudinary(file.path))
+      );
+    }
+
+    if (nationalIdImage) {
+      nationalIdUrl = await uploadToCloudinary(nationalIdImage[0].path);
+    }
+
+    if (ownerImage) {
+      ownerImageUrl = await uploadToCloudinary(ownerImage[0].path);
+    }
+
+    // 4. Prepare Business Data
+    const businessData = {
+      ...req.body,
+      userId: userId,
+      businessImages: businessImageUrls,
+      nationalIdImage: nationalIdUrl,
+      ownerImage: ownerImageUrl,
+      status: 'Approved' // Admin बना रहा है इसलिए direct Approved
+    };
+
+    // 5. Save to Database
+    const newBusiness = new Business(businessData);
+    await newBusiness.save();
+
+    res.status(201).json({
+      success: true,
+      message: `Shop '${businessName}' created successfully for user ${targetUser.name}`,
+      data: newBusiness
+    });
+
+  } catch (error) {
+    console.error("Admin Shop Creation Error:", error);
+    res.status(500).json({ 
+      success: false, 
+      message: "An error occurred during admin business creation", 
+      error: error.message 
+    });
+  }
 };
 
 
