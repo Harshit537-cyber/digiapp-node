@@ -221,6 +221,33 @@ const removeImageFromService = async (businessId, serviceId, imageUrl) => {
   }
 };
 
+// Business ki main images array mein aur images add karna
+const addImagesToBusiness = async (businessId, imageUrls) => {
+  try {
+    return await Business.findByIdAndUpdate(
+      businessId,
+      { $push: { businessImages: { $each: imageUrls } } },
+      { new: true }
+    );
+  } catch (error) {
+    throw error;
+  }
+};
+
+// Business ki main images array se specific image delete karna
+const removeImageFromBusiness = async (businessId, imageUrl) => {
+  try {
+    return await Business.findByIdAndUpdate(
+      businessId,
+      { $pull: { businessImages: imageUrl } },
+      { new: true }
+    );
+  } catch (error) {
+    throw error;
+  }
+};
+
+
 module.exports = {
   createBusiness,
   getAllBusinesses,
@@ -236,6 +263,8 @@ module.exports = {
   updateBackgroundImage,
   removeBackgroundImage,
   addImagesToService,
-  removeImageFromService
+  removeImageFromService,
+  addImagesToBusiness,
+  removeImageFromBusiness
 
 };

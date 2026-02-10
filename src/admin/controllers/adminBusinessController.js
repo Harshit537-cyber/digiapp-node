@@ -1,6 +1,24 @@
 const Business = require('../../models/Business');
 const User = require('../../models/User');
 
+const { cloudinary } = require("../../middlewares/upload"); // अपना पाथ सही करें
+const streamifier = require('streamifier');
+
+// Helper function: Buffer को Cloudinary पर अपलोड करने के लिए
+const uploadToCloudinary = (fileBuffer) => {
+    return new Promise((resolve, reject) => {
+        let stream = cloudinary.uploader.upload_stream(
+            { folder: "business_images" }, // Cloudinary में फोल्डर का नाम
+            (error, result) => {
+                if (result) resolve(result.secure_url);
+                else reject(error);
+            }
+        );
+        streamifier.createReadStream(fileBuffer).pipe(stream);
+    });
+};
+
+
 // --- GET ALL BUSINESSES ---
 exports.getAllBusiness = async (req, res) => {
     try {
@@ -51,20 +69,26 @@ exports.createBusinessByAdmin = async (req, res) => {
 
         let businessData = { ...req.body };
 
-        // Handle file uploads from Multer
+        // --- CLOUDINARY UPLOAD LOGIC ---
         if (req.files) {
+            // 1. Multiple Business Images अपलोड करें
             if (req.files.businessImages) {
-                businessData.businessImages = req.files.businessImages.map(file => file.filename);
+                const uploadPromises = req.files.businessImages.map(file => uploadToCloudinary(file.buffer));
+                businessData.businessImages = await Promise.all(uploadPromises);
             }
+
+            // 2. National ID Image अपलोड करें
             if (req.files.nationalIdImage) {
-                businessData.nationalIdImage = req.files.nationalIdImage[0].filename;
+                businessData.nationalIdImage = await uploadToCloudinary(req.files.nationalIdImage[0].buffer);
             }
+
+            // 3. Owner Image अपलोड करें
             if (req.files.ownerImage) {
-                businessData.ownerImage = req.files.ownerImage[0].filename;
+                businessData.ownerImage = await uploadToCloudinary(req.files.ownerImage[0].buffer);
             }
         }
 
-        // Since admin creates it, set status directly to 'Approved'
+        // Admin द्वारा बनाया गया है तो Status Approved
         businessData.status = 'Approved';
 
         const newBusiness = new Business(businessData);

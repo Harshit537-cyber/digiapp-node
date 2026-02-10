@@ -466,7 +466,7 @@ const addServiceImages = async (req, res) => {
   try {
     const { id, serviceId } = req.params;
     const userId = getUserId(req);
-    const files = req.files; // upload.array('serviceImages') use karenge
+    const files = req.files; 
 
     if (!files || files.length === 0) {
       return res.status(400).json({ success: false, message: "No images provided" });
@@ -518,6 +518,84 @@ const deleteServiceImage = async (req, res) => {
 };
 
 
+
+// --- Add Extra Images to Business ---
+const addMoreBusinessImages = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = getUserId(req);
+    const files = req.files; // upload.array('businessImages')
+
+    if (!files || files.length === 0) {
+      return res.status(400).json({ success: false, message: "No images provided" });
+    }
+
+    const business = await businessService.getBusinessById(id);
+    if (!business) {
+      return res.status(404).json({ success: false, message: "Business not found" });
+    }
+
+    // Authorization Check
+    if (business.userId.toString() !== userId.toString()) {
+      return res.status(403).json({ success: false, message: "Unauthorized action" });
+    }
+
+    
+    const newImageUrls = await Promise.all(
+      files.map((file) => uploadToCloudinary(file.path))
+    );
+
+    // Database update
+    const updatedBusiness = await businessService.addImagesToBusiness(id, newImageUrls);
+
+    return res.status(200).json({
+      success: true,
+      message: "Images added successfully",
+      data: updatedBusiness.businessImages
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: "Error adding images", error: error.message });
+  }
+};
+
+// --- Remove a Specific Image from Business ---
+const deleteBusinessImage = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { imageUrl } = req.body; 
+    const userId = getUserId(req);
+
+    if (!imageUrl) {
+      return res.status(400).json({ success: false, message: "Image URL is required" });
+    }
+
+    const business = await businessService.getBusinessById(id);
+    if (!business) {
+      return res.status(404).json({ success: false, message: "Business not found" });
+    }
+
+   
+    if (business.userId.toString() !== userId.toString()) {
+      return res.status(403).json({ success: false, message: "Unauthorized action" });
+    }
+
+   
+    const updatedBusiness = await businessService.removeImageFromBusiness(id, imageUrl);
+
+    return res.status(200).json({
+      success: true,
+      message: "Image removed successfully",
+      data: updatedBusiness.businessImages
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: "Error removing image", error: error.message });
+  }
+};
+
+
+
+
+
 module.exports = {
   registerBusiness,
   getAllBusinesses,
@@ -534,5 +612,7 @@ module.exports = {
   setBackgroundImage,
   deleteBackgroundImage,
   addServiceImages,
-  deleteServiceImage
+  deleteServiceImage,
+  addMoreBusinessImages ,
+  deleteBusinessImage 
 };

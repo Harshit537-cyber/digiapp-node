@@ -98,4 +98,21 @@ router.delete(
 );
 
 
+
+
+router.patch(
+  '/:id/add-images',
+  verifyToken,
+  upload.array('businessImages', 10), 
+  businessController.addMoreBusinessImages
+);
+
+
+router.delete(
+  '/:id/remove-image',
+  verifyToken,
+  businessController.deleteBusinessImage
+);
+
+
 module.exports = router;
