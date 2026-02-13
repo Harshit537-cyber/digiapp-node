@@ -558,7 +558,7 @@ const addMoreBusinessImages = async (req, res) => {
   }
 };
 
-// --- Remove a Specific Image from Business ---
+// --- Remove a Specific Image from Business --- 
 const deleteBusinessImage = async (req, res) => {
   try {
     const { id } = req.params;

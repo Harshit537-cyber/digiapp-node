@@ -27,4 +27,7 @@ router.post('/add-service/:businessId', upload.single('serviceImage'), adminBusi
 router.put('/update-service/:businessId/:serviceId', serviceImageUpload, adminBusinessController.updateServiceInBusiness);
 router.delete('/delete-service/:businessId/:serviceId', adminBusinessController.deleteServiceInBusiness);
 
+
+router.get('/:businessId/services', adminBusinessController.getBusinessServices);
+
 module.exports = router;

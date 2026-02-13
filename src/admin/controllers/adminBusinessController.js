@@ -3,7 +3,7 @@ const Business = require('../../models/Business');
 const User = require('../../models/User');
 const cloudinary = require("../../config/cloudinary");
 
-// --- Helper Function for Cloudinary Upload ---
+
 const uploadToCloudinary = async (filePath) => {
     if (!filePath) return null;
     try {
@@ -328,6 +328,26 @@ exports.toggleBlockBusiness = async (req, res) => {
         await business.save();
 
         res.status(200).json({ success: true, message: `Status: ${business.status}`, data: business });
+    } catch (error) {
+        res.status(500).json({ success: false, message: "Server Error: " + error.message });
+    }
+};
+
+exports.getBusinessServices = async (req, res) => {
+    try {
+        const { businessId } = req.params;
+        const business = await Business.findById(businessId).select('businessName services');
+
+        if (!business) {
+            return res.status(404).json({ success: false, message: "Business not found." });
+        }
+
+        res.status(200).json({
+            success: true,
+            businessName: business.businessName,
+            count: business.services.length,
+            data: business.services
+        });
     } catch (error) {
         res.status(500).json({ success: false, message: "Server Error: " + error.message });
     }
