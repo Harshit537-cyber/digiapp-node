@@ -9,4 +9,6 @@ router.post('/toggle-save', verifyToken, savedController.toggleSave);
 
 router.get('/my-saved', verifyToken, savedController.getMySavedContent);
 
+router.get('/my-saved/search', verifyToken, savedController.searchMySavedContent);
+
 module.exports = router;
