@@ -1,32 +1,53 @@
 const express = require('express');
 const router = express.Router();
-const { adminLogin, adminRegister, getAllAdmins, updateAdmin, deleteAdmin, getDashboardStats, getAllUsersForAdmin, toggleUserStatus, getAllJobsForAdmin, adminUpdateJob, adminDeleteJob } = require('../controllers/adminController'); // adminRegister add kiya
-const verifyAdmin = require('../middlewares/adminAuth');
+const {
+    adminLogin,
+    adminRegister,
+    getAllAdmins,
+    updateAdmin,
+    deleteAdmin,
+    getDashboardStats,
+    getAllUsersForAdmin,
+    toggleUserStatus,
+    createUserByAdmin,
+    updateUserByAdmin,
+    deleteUserByAdmin,
+    getAllJobsForAdmin,
+    adminUpdateJob,
+    adminDeleteJob
+} = require('../controllers/adminController'); // Correct path relative to adminRoutes.js
+const verifyAdmin = require('../middlewares/adminAuth'); // Ensure this path is correct
+const upload = require('../../middlewares/upload'); // Correct path relative to adminRoutes.js
 
-// Public Routes
+// Public Admin Routes (for Admin authentication)
 router.post('/register', adminRegister);
 router.post('/login', adminLogin);
-router.get('/all', verifyAdmin, getAllAdmins)
 
+// Admin Management Routes (Protected by verifyAdmin)
+router.get('/all', verifyAdmin, getAllAdmins);
 router.put('/update/:id', verifyAdmin, updateAdmin);
-
 router.delete('/delete/:id', verifyAdmin, deleteAdmin);
 
+// Dashboard Routes (Protected by verifyAdmin)
 router.get('/dashboard', verifyAdmin, (req, res) => {
     res.json({ message: "Welcome to Admin Dashboard" });
 });
-
-//For dashboard
 router.get("/dashboard-stats", verifyAdmin, getDashboardStats);
 
+// User Management Routes (Protected by verifyAdmin)
 router.get('/users', verifyAdmin, getAllUsersForAdmin);
 router.patch('/user-status/:id', verifyAdmin, toggleUserStatus);
 
+// --- USER MANAGEMENT APIs (Admin Auth Required, with file uploads) ---
+// 'profilePhoto' must match the 'name' attribute of the file input field in your form-data
+router.post('/users/create', verifyAdmin, upload.single('profilePhoto'), createUserByAdmin);
+router.put('/users/update/:id', verifyAdmin, upload.single('profilePhoto'), updateUserByAdmin);
+router.delete('/users/delete/:id', verifyAdmin, deleteUserByAdmin);
 
-// ---------------------------
-
-
-
-
+// Job Management Routes (Protected by verifyAdmin, with file uploads)
+router.get('/jobs', verifyAdmin, getAllJobsForAdmin);
+// 'jobImage' must match the 'name' attribute of the file input field in your form-data
+router.put('/jobs/update/:id', verifyAdmin, upload.single('jobImage'), adminUpdateJob);
+router.delete('/jobs/delete/:id', verifyAdmin, adminDeleteJob);
 
 module.exports = router;

@@ -65,7 +65,7 @@ const getMySavedContent = async (req, res) => {
 const searchMySavedContent = async (req, res) => {
   try {
     const userId = req.user.userId || req.user.id;
-    const { searchQuery, itemType } = req.query; // Get search query and optional itemType from query parameters
+    const { searchQuery, itemType } = req.query; 
 
     // Build initial query for SavedContent
     const savedContentQuery = { userId };
