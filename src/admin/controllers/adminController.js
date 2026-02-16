@@ -466,7 +466,7 @@ exports.updateUserByAdmin = async (req, res) => {
 
     } catch (error) {
         console.error("Error in updateUserByAdmin:", error);
-        // Clean up uploaded file in case of any error
+       
         if (uploadedFilePath && fs.existsSync(uploadedFilePath)) {
             try {
                 fs.unlinkSync(uploadedFilePath);
@@ -495,7 +495,7 @@ exports.deleteUserByAdmin = async (req, res) => {
             return res.status(404).json({ message: "User not found" });
         }
 
-        // Delete profile photo from Cloudinary if it exists
+       
         if (user.profilePhoto) {
             console.log("Deleting Cloudinary profile photo for user:", user._id);
             const publicId = user.profilePhoto.split('/').pop().split('.')[0];
@@ -532,7 +532,7 @@ exports.getAllJobsForAdmin = async (req, res) => {
     }
 };
 
-// --- NEW: UPDATE JOB BY ADMIN (with image upload) ---
+
 exports.adminUpdateJob = async (req, res) => {
     console.log("----- adminUpdateJob called -----");
     console.log("Request Body:", req.body);
@@ -641,8 +641,8 @@ exports.adminDeleteJob = async (req, res) => {
             return res.status(404).json({ message: "Job not found" });
         }
 
-        // Delete job image from Cloudinary if it exists
-        if (deletedJob.jobImage) { // Assuming 'jobImage' is the field name
+        
+        if (deletedJob.jobImage) { 
             console.log("Deleting Cloudinary job image for job:", deletedJob._id);
             const publicId = deletedJob.jobImage.split('/').pop().split('.')[0];
             try {

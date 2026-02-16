@@ -32,9 +32,11 @@ const getAllJobs = async (req, res) => {
   try {
     
     const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
+    const limit = parseInt(req.query.limit) || 8; 
+    const category = req.query.category; 
 
-    const { jobs, totalJobs, totalPages } = await jobService.getAllJobs(page, limit);
+    // Service ko category pass ki
+    const { jobs, totalJobs, totalPages } = await jobService.getAllJobs(page, limit, category);
 
     res.status(200).json({
       success: true,

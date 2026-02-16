@@ -61,20 +61,23 @@ const deactivateJob = async (jobId, userId) => {
 
 
 
-const getAllJobs = async (page, limit) => {
+const getAllJobs = async (page, limit, category) => { 
   try {
-   
     const skip = (page - 1) * limit;
 
-    const query = { 
+
+    let query = { 
       status: "active", 
       expiresAt: { $gte: new Date() } 
     };
 
    
+    if (category) {
+      query.jobCategory = category;
+    }
+
     const totalJobs = await Job.countDocuments(query);
 
-   
     const jobs = await Job.find(query)
       .populate("userId", "fullName profilePhoto location")
       .sort({ createdAt: -1 })
