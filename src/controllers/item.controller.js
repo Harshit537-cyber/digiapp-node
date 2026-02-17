@@ -76,17 +76,22 @@ const postItem = async (req, res) => {
 
 
 
+
 /* ================= GET ALL ================= */
 const getAllItems = async (req, res) => {
   try {
-    const items = await itemService.getAllItems();
-    return response.success(res, "Items fetched successfully", items);
+    
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+
+    const result = await itemService.getAllItems(page, limit);
+
+    return response.success(res, "Items fetched successfully", result);
   } catch (error) {
     console.error("getAllItems error:", error);
     return response.error(res, "Server error", 500);
   }
 };
-
 
 /* ================= TOP 10 ================= */
 const getTop10LatestItems = async (req, res) => {

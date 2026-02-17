@@ -10,10 +10,29 @@ const createItem = async (data) => {
 };
 
 /* ---------------- GET ALL (FEATURED FIRST) ---------------- */
-const getAllItems = async () => {
-  return await Item.find({ isActive: true })
-    .sort({ isFeatured: -1, createdAt: -1 })
+
+const getAllItems = async (page = 1, limit = 10) => {
+  const skip = (page - 1) * limit;
+
+
+  const totalItems = await Item.countDocuments({ isActive: true });
+
+
+  const items = await Item.find({ isActive: true })
+    .sort({ isFeatured: -1, createdAt: -1 }) 
+    .skip(skip)
+    .limit(limit)
     .populate("user", "name");
+
+  return {
+    items,
+    pagination: {
+      totalItems,
+      totalPages: Math.ceil(totalItems / limit),
+      currentPage: Number(page),
+      limit: Number(limit),
+    },
+  };
 };
 
 /* ---------------- TOP 10 LATEST ---------------- */
