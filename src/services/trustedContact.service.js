@@ -1,46 +1,23 @@
 const TrustedContact = require('../models/TrustedContact');
 
-const createContact = async (data) => {
-  try {
-    const newContact = await TrustedContact.create(data);
-    return newContact;
-  } catch (error) {
-    throw error;
-  }
-};
-
-
-
-const updateContact = async (id, userId, updateData) => {
-  return await TrustedContact.findOneAndUpdate(
-    { _id: id, user: userId },
-    updateData,
-    { new: true }
-  );
-};
-
-const deleteContact = async (id, userId) => {
-  return await TrustedContact.findOneAndDelete({
-    _id: id,
-    user: userId,
-  });
-};
-
-
-const getAllContacts = async (userId) => {
-  return await TrustedContact.find({ user: userId });
-};
-
-
-const getContactById = async (id, userId) => {
-  return await TrustedContact.findOne({ _id: id, user: userId });
-};
-
-
 module.exports = {
-  createContact,
-  updateContact,
-  deleteContact,
-  getAllContacts,
-  getContactById
+  createContact: async (data) => await TrustedContact.create(data),
+  
+  updateContact: async (id, userId, updateData) => 
+    await TrustedContact.findOneAndUpdate({ _id: id, user: userId }, updateData, { new: true }),
+
+  deleteContact: async (id, userId) => 
+    await TrustedContact.findOneAndDelete({ _id: id, user: userId }),
+
+  getAllContacts: async (userId) => 
+    await TrustedContact.find({ user: userId }),
+
+  getContactById: async (id, userId) => 
+    await TrustedContact.findOne({ _id: id, user: userId }),
+
+  getIncomingRequests: async (phoneNumber) => 
+    await TrustedContact.find({ contactNumber: phoneNumber, status: 'Pending' }).populate('user'),
+
+  respondToRequest: async (id, phoneNumber, status) => 
+    await TrustedContact.findOneAndUpdate({ _id: id, contactNumber: phoneNumber }, { status }, { new: true })
 };
