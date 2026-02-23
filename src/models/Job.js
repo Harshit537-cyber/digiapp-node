@@ -22,8 +22,11 @@ const jobSchema = new mongoose.Schema(
         required: true,
       },
       coordinates: {
-        type: [Number], 
+        type: [Number],
         required: true,
+      },
+      address: {
+        type: String,
       },
     },
     images: [{ type: String }],
