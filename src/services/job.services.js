@@ -1,6 +1,7 @@
 const Job = require("../models/Job");
 const SavedJob = require("../models/SavedJob"); 
 const cloudinary = require("../config/cloudinary");
+const User = require('../models/User')
 const fs = require("fs");
 
 const createJob = async (jobData, files, userId) => {
@@ -207,6 +208,49 @@ const getMyJobs = async (userId) => {
   }
 };
 
+const getNearbyLatestJobs = async (userId) => {
+ 
+  try {
+    const user = await User.findById(userId);
+   
+    if (!user || !user.location) {
+      throw new Error("User location not found");
+    }
+
+    const jobs = await Job.aggregate([
+      {
+        $geoNear: {
+          near: {
+            type: "Point",
+            coordinates: user.location.coordinates, // [lng, lat]
+          },
+          distanceField: "distance",
+          maxDistance: 5000, // 🔥 5 KM (meters)
+          spherical: true,
+        },
+      },
+      {
+        $match: {
+          status: "active",
+          expiresAt: { $gte: new Date() },
+          userId: { $ne: user._id } // optional: exclude user's own jobs
+        },
+      },
+      {
+        $sort: { createdAt: -1 }, // latest first
+      },
+      {
+        $limit: 30, // 🔥 get 30 jobs
+      },
+    ]);
+
+    return jobs;
+
+  } catch (error) {
+    throw new Error(error.message);
+  }
+};
+
 
 const getMyActiveJobs = async (userId) => {
   try {
@@ -283,6 +327,6 @@ const getRecentJobs = async (limit = 10) => {
 
 
 
-module.exports = { createJob, getAllJobs, getJobById, updateJob, deactivateJob, activateJob ,searchJobsByTitle , getMyJobs, getMyActiveJobs, 
+module.exports = { createJob, getAllJobs, getJobById, updateJob, deactivateJob, activateJob ,searchJobsByTitle , getMyJobs, getNearbyLatestJobs, getMyActiveJobs, 
   getMyDeactivatedJobs ,toggleSaveJob, 
     getMySavedJobs , getRecentJobs};

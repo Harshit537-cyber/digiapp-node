@@ -125,6 +125,31 @@ const getMyJobs = async (req, res) => {
   }
 };
 
+const getTheNearbyLatestJob = async (req, res)=>{
+   const userId = req.user.userId;
+
+  
+  try{
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "Unauthorized: User not found" });
+    }
+
+    const jobs = await jobService.getNearbyLatestJobs(userId);
+
+    res.status(200).json({
+      success: true,
+      count: jobs.length,
+      data: jobs
+    });
+  }catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+
+};
+
 
 const getMyActiveJobs = async (req, res) => {
   try {
@@ -204,6 +229,6 @@ const getRecentJobs = async (req, res) => {
   }
 };
 
-module.exports = { postJob, getAllJobs, getJobById, updateJob ,deactivateJob , activateJob , searchJobs ,getMyJobs, getMyActiveJobs, 
+module.exports = { postJob, getAllJobs, getJobById, updateJob ,deactivateJob , activateJob , searchJobs ,getMyJobs , getTheNearbyLatestJob, getMyActiveJobs, 
   getMyDeactivatedJobs , toggleSaveJob,
     getSavedJobs, getRecentJobs };
