@@ -4,7 +4,7 @@ const jobService = require("../../services/job.services");
 // --- GET ALL JOBS (For Admin Table) ---
 exports.getAllJobsForAdmin = async (req, res) => {
     try {
-        // Filter lagaya gaya hai: jobCategory sirf "Part-time job" honi chahiye
+       
         const jobs = await Job.find({ jobCategory: "Part-time job" })
             .populate('userId', 'name role') 
             .sort({ createdAt: -1 });
@@ -107,7 +107,7 @@ exports.adminCreateJob = async (req, res) => {
             jobCategory: "Part-time job"
         };
 
-        const userId = req.user.id; 
+         const userId = req.body.userId || req.user.id; 
         const files = req.files;   
 
         

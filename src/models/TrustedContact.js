@@ -24,7 +24,7 @@ const trustedContactSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['Pending', 'Accepted', 'Rejected'],
+    enum: ['Pending', 'Accepted', 'Rejected','Blocked'],
     default: 'Pending' 
   }
 }, { timestamps: true });

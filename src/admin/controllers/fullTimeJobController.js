@@ -1,7 +1,4 @@
-const Job = require("../../models/Job");
-const jobService = require("../../services/job.services")
 
-//  GET ALL FULL-TIME JOBS
 exports.getAllFullTimeJobs = async (req, res) => {
     try {
         const jobs = await Job.find({ jobCategory: "Full-time job" })
@@ -22,13 +19,18 @@ exports.getAllFullTimeJobs = async (req, res) => {
     }
 };
 
-// 2. UPDATE FULL-TIME JOB
+
 exports.updateFullTimeJob = async (req, res) => {
     try {
         const jobId = req.params.id;
         const updateData = req.body;
 
-        // Ensure update is only applied to a Full-time job
+        if (updateData.userId) {
+           
+        } else {
+            delete updateData.userId;
+        }
+
         const updatedJob = await Job.findOneAndUpdate(
             { _id: jobId, jobCategory: "Full-time job" },
             { $set: updateData },
@@ -122,13 +124,12 @@ exports.adminCreateFullTimeJob = async (req, res) => {
             });
         }
 
-        // Job category fix karein
         const jobData = {
             ...req.body,
             jobCategory: "Full-time job"
         };
 
-        const userId = req.user.id;
+        const userId = req.body.userId || req.user.id;
         const files = req.files;
        
         const job = await jobService.createJob(jobData, files, userId);
