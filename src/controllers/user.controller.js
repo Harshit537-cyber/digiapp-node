@@ -80,7 +80,8 @@ exports.register = async (req, res) => {
 
 exports.getAllUsers = async (req, res) => {
   try {
-    const users = await userService.getAllUsers();
+    // Include role in selection for admin to identify who they are creating the job for
+    const users = await userService.getAllUsers().select('name mobile role'); 
     return response.success(res, "Users fetched successfully", users);
   } catch (err) {
     console.error(err);

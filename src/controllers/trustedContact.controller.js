@@ -139,3 +139,26 @@ exports.getContactById = async (req, res) => {
     return res.status(500).json({ success: false, message: error.message }); 
   }
 };
+
+
+exports.blockContact = async (req, res) => {
+  try {
+    const updated = await trustedContactService.blockContact(req.params.id, req.user.userId);
+    if (!updated) return res.status(404).json({ success: false, message: "Contact not found" });
+    
+    return res.status(200).json({ success: true, message: "Blocked successfully", data: updated });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.unblockContact = async (req, res) => {
+  try {
+    const updated = await trustedContactService.unblockContact(req.params.id, req.user.userId);
+    if (!updated) return res.status(404).json({ success: false, message: "Contact not found" });
+    
+    return res.status(200).json({ success: true, message: "Unblocked successfully", data: updated });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
