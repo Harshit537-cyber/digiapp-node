@@ -1,15 +1,14 @@
-
 const jwt = require("jsonwebtoken");
 const response = require("../utils/response");
 const userService = require("../services/user.services");
 const cloudinary = require("../config/cloudinary");
 const fs = require("fs");
 
-
 exports.register = async (req, res) => {
   try {
    
-    const { mobile, latitude, longitude, address, ...restBody } = req.body;
+    const body = { ...req.body }; // convert null-prototype object to normal object
+    const { mobile, latitude, longitude, address, ...restBody } = body;
 
     if (!mobile) {
       return response.error(res, "Mobile number is required", 400);
@@ -23,7 +22,7 @@ exports.register = async (req, res) => {
       return response.error(
         res,
         "User already registered with this mobile number",
-        409
+        409,
       );
     }
 
@@ -38,7 +37,6 @@ exports.register = async (req, res) => {
       fs.unlinkSync(localFilePath);
     }
 
-  
     const userData = {
       ...restBody,
       mobile,
@@ -46,29 +44,31 @@ exports.register = async (req, res) => {
       ...(address && { address }), // Add address if present
     };
 
-   
     const lat = latitude;
     const lng = longitude;
     if (lat && lng && String(lat).trim() !== "" && String(lng).trim() !== "") {
-        userData.location = {
-            type: "Point",
+      userData.location = {
+        type: "Point",
 
-            coordinates: [Number(lng), Number(lat)], 
-        };
+        coordinates: [Number(lng), Number(lat)],
+      };
     }
     const user = await userService.registerUser(userData);
 
     const token = jwt.sign(
       { userId: user._id, role: user.role },
       process.env.JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRES_IN }
+      { expiresIn: process.env.JWT_EXPIRES_IN },
     );
+
+    // 4️⃣ Store token in DB
+    user.token = token;
+    await user.save();
 
     return response.success(res, "User Registered Successfully", {
       user,
       token,
     });
-
   } catch (err) {
     console.error(err);
     if (req.file && fs.existsSync(req.file.path)) {
@@ -77,7 +77,6 @@ exports.register = async (req, res) => {
     return response.error(res, err.message || "Something went wrong", 500);
   }
 };
-
 
 exports.getAllUsers = async (req, res) => {
   try {
@@ -139,24 +138,22 @@ exports.updateUser = async (req, res) => {
       updateData.location = {
         type: "Point",
         // Ensure coordinates are numbers and in [lng, lat] order
-        coordinates: [Number(updateData.longitude), Number(updateData.latitude)],
+        coordinates: [
+          Number(updateData.longitude),
+          Number(updateData.latitude),
+        ],
       };
     } else if (updateData.latitude || updateData.longitude) {
-   
-        delete updateData.location; 
+      delete updateData.location;
     }
-    
-   
 
     if (profilePhotoUrl) {
       updateData.profilePhoto = profilePhotoUrl;
     }
 
-    
-    delete updateData.mobile; 
+    delete updateData.mobile;
     delete updateData.latitude;
     delete updateData.longitude;
-   
 
     const updatedUser = await userService.updateUserById(id, updateData);
 
@@ -165,7 +162,6 @@ exports.updateUser = async (req, res) => {
     }
 
     return response.success(res, "User updated successfully", updatedUser);
-
   } catch (err) {
     console.error(err);
     return response.error(res, err.message || "Something went wrong", 500);
