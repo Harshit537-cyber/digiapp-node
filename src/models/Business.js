@@ -73,4 +73,6 @@ const businessSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
+businessSchema.index({ location: "2dsphere" });
+
 module.exports = mongoose.model("Business", businessSchema);

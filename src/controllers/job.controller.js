@@ -1,4 +1,5 @@
 const jobService = require("../services/job.services");
+const Business = require('../models/Business')
 
 const postJob = async (req, res) => {
   try {
@@ -125,29 +126,34 @@ const getMyJobs = async (req, res) => {
   }
 };
 
-const getTheNearbyLatestJob = async (req, res)=>{
-   const userId = req.user.userId;
+const getTheNearbyLatestJob = async (req, res) => {
+  try {
+    const userId = req.user.userId;
 
-  
-  try{
     if (!userId) {
-      return res.status(401).json({ success: false, message: "Unauthorized: User not found" });
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized: User not found",
+      });
     }
 
-    const jobs = await jobService.getNearbyLatestJobs(userId);
+    const { jobs, shops, bloodRequests } = await jobService.getNearbyLatestJobs(userId);
 
     res.status(200).json({
       success: true,
-      count: jobs.length,
-      data: jobs
+      jobCount: jobs.length,
+      shopCount: shops.length,
+      jobs,
+      shops,
+      bloodRequests
     });
-  }catch (error) {
+
+  } catch (error) {
     res.status(500).json({
       success: false,
-      message: error.message
+      message: error.message,
     });
   }
-
 };
 
 

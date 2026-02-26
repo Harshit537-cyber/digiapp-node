@@ -27,9 +27,22 @@ const bloodRequestSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    // location: {
+    //   type: String,
+    //   required: true,
+    // },
     location: {
-      type: String,
-      required: true,
+      type: {
+        type: String,
+        required: true,
+      },
+      coordinates: {
+        type: [Number],
+        required: true,
+      },
+      address: {
+        type: String,
+      },
     },
     contactNumber: {
       type: String,
@@ -51,5 +64,5 @@ const bloodRequestSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
-
+bloodRequestSchema.index({ location: "2dsphere" });
 module.exports = mongoose.model("BloodRequest", bloodRequestSchema);

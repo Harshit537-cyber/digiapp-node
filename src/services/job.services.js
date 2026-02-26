@@ -1,7 +1,9 @@
 const Job = require("../models/Job");
+const Business = require('../models/Business')
 const SavedJob = require("../models/SavedJob"); 
 const cloudinary = require("../config/cloudinary");
 const User = require('../models/User')
+const BloodRequest = require('../models/BloodRequest')
 const fs = require("fs");
 
 const createJob = async (jobData, files, userId) => {
@@ -209,42 +211,75 @@ const getMyJobs = async (userId) => {
 };
 
 const getNearbyLatestJobs = async (userId) => {
- 
   try {
     const user = await User.findById(userId);
-   
+
     if (!user || !user.location) {
       throw new Error("User location not found");
     }
 
-    const jobs = await Job.aggregate([
-      {
-        $geoNear: {
-          near: {
-            type: "Point",
-            coordinates: user.location.coordinates, // [lng, lat]
+    const userCoordinates = user.location.coordinates;
+
+    const [jobs, shops, bloodRequests] = await Promise.all([
+      Job.aggregate([
+        {
+          $geoNear: {
+            near: { type: "Point", coordinates: userCoordinates },
+            distanceField: "distance",
+            maxDistance: 5000,
+            spherical: true,
           },
-          distanceField: "distance",
-          maxDistance: 5000, // 🔥 5 KM (meters)
-          spherical: true,
         },
-      },
-      {
-        $match: {
-          status: "active",
-          expiresAt: { $gte: new Date() },
-          userId: { $ne: user._id } // optional: exclude user's own jobs
+        {
+          $match: {
+            status: "active",
+            expiresAt: { $gte: new Date() },
+            userId: { $ne: user._id },
+          },
         },
-      },
-      {
-        $sort: { createdAt: -1 }, // latest first
-      },
-      {
-        $limit: 30, // 🔥 get 30 jobs
-      },
+        { $sort: { createdAt: -1 } },
+        { $limit: 30 },
+      ]),
+
+      Business.aggregate([
+        {
+          $geoNear: {
+            near: { type: "Point", coordinates: userCoordinates },
+            distanceField: "distance",
+            maxDistance: 5000,
+            spherical: true,
+          },
+        },
+        {
+          $match: {
+            status: "active",
+          },
+        },
+        { $sort: { createdAt: -1 } },
+        { $limit: 20 },
+      ]),
+
+      BloodRequest.aggregate([
+        {
+          $geoNear: {
+            near: { type: "Point", coordinates: userCoordinates },
+            distanceField: "distance",
+            maxDistance: 5000,
+            spherical: true,
+          },
+        },
+        // {
+        //   $match: {
+        //     // status: "Active",
+        //    // userId: { $ne: user._id },
+        //   },
+        // },
+        { $sort: { createdAt: -1 } },
+        { $limit: 20 },
+      ]),
     ]);
 
-    return jobs;
+    return { jobs, shops, bloodRequests };
 
   } catch (error) {
     throw new Error(error.message);
