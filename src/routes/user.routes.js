@@ -62,6 +62,9 @@ router.post(
   userController.register
 );
 
+
+
+
 // Get all users
 router.get(
   "/users",

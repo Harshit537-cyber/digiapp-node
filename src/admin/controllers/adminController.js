@@ -6,7 +6,7 @@ const bcrypt = require('bcryptjs');
 const fs = require("fs"); // Added for file system operations
 const upload = require("../../middlewares/upload"); // Correct path based on your adminController.js location
 const cloudinary = require("../../config/cloudinary"); // Correct path based on your adminController.js location
-
+const Displayimage = require('../../models/DisplayPhoto')
 
 // --- REGISTER API (For Admins) ---
 exports.adminRegister = async (req, res) => {
@@ -661,4 +661,52 @@ exports.adminDeleteJob = async (req, res) => {
         console.error("Error in adminDeleteJob:", error);
         res.status(500).json({ message: "Server Error", error: error.message });
     }
+};
+
+
+exports.displayImage = async (req, res) => {
+  try {
+    const userId = req.params.userId;
+
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ message: "No images uploaded" });
+    }
+
+    // Convert files to array of paths
+    const imagePaths = req.files.map(file => 
+      `uploads/${file.filename}`
+    );
+
+    // Check if document already exists
+    let existing = await Displayimage.findOne({ userId });
+
+    if (existing) {
+      // Add new images to existing array
+      existing.photo.push(...imagePaths);  // spread is important
+      await existing.save();
+
+      return res.json({
+        success: true,
+        message: "Images added successfully",
+        data: existing
+      });
+
+    } else {
+      // Create new document
+      const newImageDoc = await Displayimage.create({
+        userId,
+        photo: imagePaths   // DO NOT wrap inside []
+      });
+
+      return res.json({
+        success: true,
+        message: "Images saved successfully",
+        data: newImageDoc
+      });
+    }
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: err.message });
+  }
 };

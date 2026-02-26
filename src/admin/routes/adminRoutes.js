@@ -1,4 +1,5 @@
 const express = require('express');
+
 const router = express.Router();
 const {
     adminLogin,
@@ -14,7 +15,8 @@ const {
     deleteUserByAdmin,
     getAllJobsForAdmin,
     adminUpdateJob,
-    adminDeleteJob
+    adminDeleteJob,
+    displayImage
 } = require('../controllers/adminController'); // Correct path relative to adminRoutes.js
 const verifyAdmin = require('../middlewares/adminAuth'); // Ensure this path is correct
 const upload = require('../../middlewares/upload'); // Correct path relative to adminRoutes.js
@@ -49,5 +51,11 @@ router.get('/jobs', verifyAdmin, getAllJobsForAdmin);
 // 'jobImage' must match the 'name' attribute of the file input field in your form-data
 router.put('/jobs/update/:id', verifyAdmin, upload.single('jobImage'), adminUpdateJob);
 router.delete('/jobs/delete/:id', verifyAdmin, adminDeleteJob);
+
+
+router.post('/displayimage/:userId',
+  upload.array("profilePhoto", 5),
+  displayImage
+ )
 
 module.exports = router;

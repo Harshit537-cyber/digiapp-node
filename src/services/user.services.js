@@ -25,3 +25,5 @@ exports.updateUserById = async (userId, updateData) => {
   if (updateData.mobile) delete updateData.mobile;
   return await User.findByIdAndUpdate(userId, updateData, { new: true });
 };
+
+

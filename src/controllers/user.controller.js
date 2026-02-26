@@ -6,7 +6,6 @@ const fs = require("fs");
 
 exports.register = async (req, res) => {
   try {
-   
     const body = { ...req.body }; // convert null-prototype object to normal object
     const { mobile, latitude, longitude, address, ...restBody } = body;
 
@@ -81,7 +80,7 @@ exports.register = async (req, res) => {
 exports.getAllUsers = async (req, res) => {
   try {
     // Include role in selection for admin to identify who they are creating the job for
-    const users = await userService.getAllUsers().select('name mobile role'); 
+    const users = await userService.getAllUsers().select("name mobile role");
     return response.success(res, "Users fetched successfully", users);
   } catch (err) {
     console.error(err);
@@ -167,3 +166,5 @@ exports.updateUser = async (req, res) => {
     return response.error(res, err.message || "Something went wrong", 500);
   }
 };
+
+
