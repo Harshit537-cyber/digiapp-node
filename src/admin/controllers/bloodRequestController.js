@@ -2,8 +2,37 @@ const BloodRequest = require("../../models/BloodRequest");
 
 exports.createBloodRequest = async (req, res) => {
     try {
-        const newRequest = new BloodRequest(req.body);
+        const { userId, adminId, lat, lng, address, ...otherData } = req.body;
+
+        if (!userId && !adminId) {
+            return res.status(400).json({ 
+                success: false, 
+                message: "Provide either userId or adminId" 
+            });
+        }
+
+        if (!lat || !lng) {
+            return res.status(400).json({ 
+                success: false, 
+                message: "Latitude and Longitude are required" 
+            });
+        }
+
+        const location = {
+            type: "Point",
+            coordinates: [parseFloat(lng), parseFloat(lat)],
+            address: address || ""
+        };
+
+        const newRequest = new BloodRequest({
+            ...otherData,
+            userId: userId || null,
+            adminId: adminId || null,
+            location
+        });
+
         const savedRequest = await newRequest.save();
+        
         res.status(201).json({ 
             success: true, 
             data: savedRequest 
@@ -55,17 +84,33 @@ exports.getBloodRequestById = async (req, res) => {
 
 exports.updateBloodRequest = async (req, res) => {
     try {
+        const { userId, adminId, lat, lng, address, ...otherData } = req.body;
+        let updatePayload = { ...otherData };
+
+        if (userId) updatePayload.userId = userId;
+        if (adminId) updatePayload.adminId = adminId;
+
+        if (lat && lng) {
+            updatePayload.location = {
+                type: "Point",
+                coordinates: [parseFloat(lng), parseFloat(lat)],
+                address: address || ""
+            };
+        }
+
         const updatedRequest = await BloodRequest.findByIdAndUpdate(
             req.params.id,
-            req.body,
+            updatePayload,
             { new: true, runValidators: true }
         );
+
         if (!updatedRequest) {
             return res.status(404).json({ 
                 success: false, 
                 message: "Blood request not found" 
             });
         }
+
         res.status(200).json({ 
             success: true, 
             data: updatedRequest 
@@ -95,6 +140,47 @@ exports.deleteBloodRequest = async (req, res) => {
         res.status(500).json({ 
             success: false, 
             message: error.message 
+        });
+    }
+};
+
+
+exports.getNearbyBloodRequests = async (req, res) => {
+    try {
+        const { lat, lng, radius } = req.query; 
+
+        if (!lat || !lng) {
+            return res.status(400).json({ 
+                success: false, 
+                message: "Please provide lat and lng" 
+            });
+        }
+
+      
+        const distanceInKm = radius ? parseFloat(radius) : 3;
+        const distanceInMeters = distanceInKm * 1000;
+        const requests = await BloodRequest.find({
+            location: {
+                $near: {
+                    $geometry: {
+                        type: "Point",
+                        coordinates: [parseFloat(lng), parseFloat(lat)]
+                    },
+                    $maxDistance: distanceInMeters 
+                }
+            }
+        });
+
+        res.status(200).json({
+            success: true,
+            count: requests.length,
+            radius_km: distanceInKm,
+            data: requests
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: error.message
         });
     }
 };
