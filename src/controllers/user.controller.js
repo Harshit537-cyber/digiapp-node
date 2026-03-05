@@ -3,11 +3,13 @@ const response = require("../utils/response");
 const userService = require("../services/user.services");
 const cloudinary = require("../config/cloudinary");
 const couponService = require('../services/coupon.services');
+const User = require('../models/User');
+const Coupon = require('../models/Coupon');
 const fs = require("fs");
 
 exports.register = async (req, res) => {
   try {
-    const body = { ...req.body }; // convert null-prototype object to normal object
+    const body = { ...req.body }; 
     const { mobile, latitude, longitude, address, ...restBody } = body;
 
     if (!mobile) {
@@ -41,7 +43,7 @@ exports.register = async (req, res) => {
       ...restBody,
       mobile,
       profilePhoto: profilePhotoUrl,
-      ...(address && { address }), // Add address if present
+      ...(address && { address }), 
     };
 
     const lat = latitude;
@@ -133,11 +135,11 @@ exports.updateUser = async (req, res) => {
 
     const updateData = { ...req.body };
 
-    // Update location only if both latitude and longitude are provided
+    
     if (updateData.latitude && updateData.longitude) {
       updateData.location = {
         type: "Point",
-        // Ensure coordinates are numbers and in [lng, lat] order
+    
         coordinates: [
           Number(updateData.longitude),
           Number(updateData.latitude),
@@ -191,3 +193,49 @@ exports.applyCoupon = async (req, res) => {
         res.status(400).json({ success: false, message: error.message });
     }
 };
+
+
+
+exports.getWalletDetails = async (req, res) => {
+    try {
+        const userId = req.user.userId;
+        const user = await User.findById(userId).select('credits name mobile');
+
+        if (!user) return res.status(404).json({ success: false, message: "User not found" });
+
+        res.status(200).json({
+            success: true,
+            data: {
+                availableBalance: user.credits || 0,
+                userName: user.name,
+                userMobile: user.mobile
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+
+exports.getAvailableCoupons = async (req, res) => {
+    try {
+        const userId = req.user.userId;
+
+        
+        const coupons = await Coupon.find({
+            isActive: true,
+            expiryDate: { $gt: new Date() },
+            "usedBy.user": { $ne: userId } 
+        }).select('code credits expiryDate');
+
+        res.status(200).json({
+            success: true,
+            message: "Available offers fetched successfully",
+            count: coupons.length,
+            coupons
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+

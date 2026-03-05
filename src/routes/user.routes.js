@@ -8,7 +8,15 @@ const cat = require("../controllers/category.controller");
 
 // -------------------- USER ROUTES --------------------
 
+
+
 router.post('/apply-coupon', verifyToken, userController.applyCoupon);
+
+router.get('/wallet', verifyToken, userController.getWalletDetails);
+
+
+router.get('/available-coupons', verifyToken, userController.getAvailableCoupons);
+
 
 // Register new user (profile photo + location)
 router.post(

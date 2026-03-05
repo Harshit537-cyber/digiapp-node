@@ -2,24 +2,44 @@ const Coupon = require('../models/Coupon');
 const User = require('../models/User');
 
 exports.applyCouponService = async (userId, couponCode) => {
-    // 1. Coupon check
-    const coupon = await Coupon.findOne({ code: couponCode.toUpperCase(), isActive: true });
-    if (!coupon) throw new Error("Invalid or Expired Coupon Code");
+    const coupon = await Coupon.findOne({ 
+        code: couponCode.toUpperCase(), 
+        isActive: true 
+    });
 
-    // 2. User check
+    if (!coupon) {
+        throw new Error("Invalid or Expired Coupon Code");
+    }
+
+    if (new Date() > coupon.expiryDate) {
+        throw new Error("This coupon has expired");
+    }
+
+    if (coupon.usedBy.length >= coupon.usageLimit) {
+        throw new Error("Coupon usage limit reached");
+    }
+
     const user = await User.findById(userId);
-    if (!user) throw new Error("User record not found in database");
+    if (!user) {
+        throw new Error("User record not found in database");
+    }
 
-    // 3. Already used check
-    if (coupon.usedBy.includes(userId)) throw new Error("You have already used this coupon");
+    const isAlreadyUsed = coupon.usedBy.some(record => record.user.equals(userId));
+    if (isAlreadyUsed) {
+        throw new Error("You have already used this coupon");
+    }
 
-    // 4. Update Credits (Safe handling if credits is undefined)
     user.credits = (user.credits || 0) + coupon.credits;
-    await user.save();
+    
+    coupon.usedBy.push({ 
+        user: userId, 
+        usedAt: new Date() 
+    });
 
-    // 5. Mark as used
-    coupon.usedBy.push(userId);
-    await coupon.save();
+    await Promise.all([user.save(), coupon.save()]);
 
-    return { totalCredits: user.credits, addedCredits: coupon.credits };
+    return { 
+        totalCredits: user.credits, 
+        addedCredits: coupon.credits 
+    };
 };
