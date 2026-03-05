@@ -2,6 +2,7 @@ const jwt = require("jsonwebtoken");
 const response = require("../utils/response");
 const userService = require("../services/user.services");
 const cloudinary = require("../config/cloudinary");
+const couponService = require('../services/coupon.services');
 const fs = require("fs");
 
 exports.register = async (req, res) => {
@@ -168,12 +169,16 @@ exports.updateUser = async (req, res) => {
 };
 
 
-const couponService = require('../services/coupon.services');
 
 exports.applyCoupon = async (req, res) => {
     try {
-        const userId = req.user.id; // Auth middleware se milega
+        
+        const userId = req.user.userId; 
         const { couponCode } = req.body;
+
+        if (!userId) {
+            return res.status(401).json({ success: false, message: "User not authenticated" });
+        }
 
         const result = await couponService.applyCouponService(userId, couponCode);
 
