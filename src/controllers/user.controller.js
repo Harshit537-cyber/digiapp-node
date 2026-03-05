@@ -168,3 +168,21 @@ exports.updateUser = async (req, res) => {
 };
 
 
+const couponService = require('../services/coupon.services');
+
+exports.applyCoupon = async (req, res) => {
+    try {
+        const userId = req.user.id; // Auth middleware se milega
+        const { couponCode } = req.body;
+
+        const result = await couponService.applyCouponService(userId, couponCode);
+
+        res.status(200).json({
+            success: true,
+            message: `Congratulations! ${result.addedCredits} credits added.`,
+            newBalance: result.totalCredits
+        });
+    } catch (error) {
+        res.status(400).json({ success: false, message: error.message });
+    }
+};

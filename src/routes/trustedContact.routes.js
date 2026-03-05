@@ -12,7 +12,7 @@ router.post("/add", verifyToken, upload.single("image"), trustedContactControlle
 
 router.get("/all", verifyToken, trustedContactController.getAllContacts);
 
-router.get("/requests/incoming", verifyToken, trustedContactController.getIncomingRequests); // <--- Isse upar rakhein
+router.get("/requests/incoming", verifyToken, trustedContactController.getIncomingRequests); 
 
 
 router.patch("/block/:id", verifyToken, trustedContactController.blockContact);
