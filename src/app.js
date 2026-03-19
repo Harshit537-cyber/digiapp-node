@@ -20,6 +20,8 @@ const adminCategoryRoutes = require('../src/admin/routes/categoryRoutes');
 
  const adminBusinessRoutes = require("./admin/routes/adminBusinessRoutes");
 
+ const adminCouponRoutes  = require('./admin/routes/coupon.routes');
+
 
 const cors = require("cors");
 
@@ -60,6 +62,8 @@ app.use('/api/user', userCategoryRoutes);
 app.use("/api/admin/manage-business", adminBusinessRoutes);
 
 app.use('/api/saved', saveJobsAll);
+
+app.use('/api/admin/coupon', adminCouponRoutes); 
 
 
 module.exports = app;

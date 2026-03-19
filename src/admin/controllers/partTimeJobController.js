@@ -6,14 +6,14 @@ const fs = require("fs");
 // Helper: Cloudinary par images upload karne ke liye
 const uploadFilesToCloudinary = async (files) => {
     if (!files || files.length === 0) return [];
-    const uploadPromises = files.map(file => 
+    const uploadPromises = files.map(file =>
         cloudinary.uploader.upload(file.path, { folder: "jobs" })
     );
     const results = await Promise.all(uploadPromises);
-    
-   
-    files.forEach(file => fs.unlinkSync(file.path)); 
-    
+
+
+    files.forEach(file => fs.unlinkSync(file.path));
+
     return results.map(result => result.secure_url);
 };
 
@@ -51,7 +51,7 @@ exports.adminCreateJob = async (req, res) => {
         const lng = body.location?.coordinates?.[0] || body["location[coordinates][0]"];
         const lat = body.location?.coordinates?.[1] || body["location[coordinates][1]"];
         const address = body.location?.address || body["location[address]"];
-        
+
         let salary = { min: 0, max: 0 };
         if (body.salaryRange) salary = typeof body.salaryRange === "string" ? JSON.parse(body.salaryRange) : body.salaryRange;
 
@@ -99,7 +99,7 @@ exports.adminUpdateJob = async (req, res) => {
 
         // 3. Salary Handling
         if (body.salaryRange && typeof body.salaryRange === "string") {
-            try { updateData.salaryRange = JSON.parse(body.salaryRange); } catch (e) {}
+            try { updateData.salaryRange = JSON.parse(body.salaryRange); } catch (e) { }
         }
 
         // Cleanup flat keys
@@ -124,6 +124,38 @@ exports.adminDeleteJob = async (req, res) => {
         const job = await Job.findOneAndDelete({ _id: req.params.id, jobCategory: "Part-time job" });
         if (!job) return res.status(404).json({ success: false, message: "Job not found" });
         res.status(200).json({ success: true, message: "Job deleted successfully" });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+exports.getAllJobsForAdmin = async (req, res) => {
+    try {
+        const { lat, lng, radius, title } = req.query;
+        let query = { jobCategory: "Part-time job" };
+        if (title) {
+            query.title = { $regex: title, $options: "i" };
+        }
+        if (lat && lng) {
+            const latitude = parseFloat(lat);
+            const longitude = parseFloat(lng);
+            const distanceInKm = parseFloat(radius) || 10;
+            const radiusInRadians = distanceInKm / 6378.1;
+            query.location = {
+                $geoWithin: {
+                    $centerSphere: [[longitude, latitude], radiusInRadians]
+                }
+            };
+        }
+        const jobs = await Job.find(query)
+            .populate("userId", "name role")
+            .sort({ createdAt: -1 });
+
+        res.status(200).json({
+            success: true,
+            count: jobs.length,
+            data: jobs
+        });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }

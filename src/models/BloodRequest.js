@@ -2,11 +2,15 @@ const mongoose = require("mongoose");
 
 const bloodRequestSchema = new mongoose.Schema(
   {
-
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true,
+      default: null,
+    },
+    adminId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Admin",
+      default: null,
     },
     patientName: {
       type: String,
@@ -15,8 +19,7 @@ const bloodRequestSchema = new mongoose.Schema(
     },
     bloodGroup: {
       type: String,
-
-      enum: ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"],
+      enum:["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"],
     },
     urgency: {
       type: String,
@@ -27,13 +30,10 @@ const bloodRequestSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    // location: {
-    //   type: String,
-    //   required: true,
-    // },
     location: {
       type: {
         type: String,
+        enum: ["Point"],
         required: true,
       },
       coordinates: {
@@ -64,5 +64,7 @@ const bloodRequestSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
 bloodRequestSchema.index({ location: "2dsphere" });
+
 module.exports = mongoose.model("BloodRequest", bloodRequestSchema);
