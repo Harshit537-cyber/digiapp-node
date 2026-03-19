@@ -30,16 +30,26 @@ const postItem = async (req, res) => {
     const body = {};
     for (const key in req.body) body[key.trim()] = req.body[key];
 
-    // ✅ UPDATED: Separate fields for location are now expected from the request body
-    const { 
-        title, details, category, price, 
-        latitude, longitude, address, // New expected fields
-        call, chat, isFeatured 
+    const {
+      title,
+      details,
+      category,
+      price,
+      call,
+      chat,
+      isFeatured
     } = body;
 
-    // ✅ UPDATED: Validation to check all required fields
-    if (!details || !latitude || !longitude || !address) {
-      return response.error(res, "Details, Latitude, Longitude, and Address are required", 400);
+    const longitude = body["location[coordinates][0]"];
+    const latitude = body["location[coordinates][1]"];
+    const address = body["location[address]"];
+
+    if (!title || !details || !latitude || !longitude) {
+      return response.error(
+        res,
+        "Title, Details, Latitude and Longitude are required",
+        400
+      );
     }
 
     const imageUrls = await uploadImages(req.files);
@@ -49,24 +59,26 @@ const postItem = async (req, res) => {
       details: details?.trim(),
       category,
       price: Number(price) || 0,
-      
-      // ✅ FIX: Construct the location object as per Mongoose Schema
+
       location: {
-        lat: Number(latitude),
-        lng: Number(longitude),
-        address: address?.trim(),
+        type: "Point",
+        coordinates: [Number(longitude), Number(latitude)],
+        address: address?.trim()
       },
 
       preferredCommunication: {
         call: String(call) === "true",
         chat: String(chat) === "true"
       },
+
       isFeatured: String(isFeatured) === "true",
+
       images: imageUrls,
       user: req.user.userId
     });
 
     return response.success(res, "Item posted successfully", item);
+
   } catch (error) {
     console.error("postItem error:", error);
     return response.error(res, error.message, 500);

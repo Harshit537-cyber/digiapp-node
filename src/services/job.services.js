@@ -1,9 +1,9 @@
 const Job = require("../models/Job");
-const Business = require('../models/Business')
-const SavedJob = require("../models/SavedJob"); 
+const Business = require("../models/Business");
+const SavedJob = require("../models/SavedJob");
 const cloudinary = require("../config/cloudinary");
-const User = require('../models/User')
-const BloodRequest = require('../models/BloodRequest')
+const User = require("../models/User");
+const BloodRequest = require("../models/BloodRequest");
 const fs = require("fs");
 
 const createJob = async (jobData, files, userId) => {
@@ -11,7 +11,9 @@ const createJob = async (jobData, files, userId) => {
     const imageUrls = [];
     if (files && files.length > 0) {
       for (const file of files) {
-        const result = await cloudinary.uploader.upload(file.path, { folder: "job_tasks" });
+        const result = await cloudinary.uploader.upload(file.path, {
+          folder: "job_tasks",
+        });
         imageUrls.push(result.secure_url);
         if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
       }
@@ -24,8 +26,11 @@ const createJob = async (jobData, files, userId) => {
 
     // Helper to parse JSON safely (Frontend sends strings in FormData)
     const safeParse = (data) => {
-      try { return typeof data === 'string' ? JSON.parse(data) : data; } 
-      catch (e) { return undefined; }
+      try {
+        return typeof data === "string" ? JSON.parse(data) : data;
+      } catch (e) {
+        return undefined;
+      }
     };
 
     const newJob = new Job({
@@ -35,12 +40,16 @@ const createJob = async (jobData, files, userId) => {
       expiresAt,
       // Parsing nested objects
       budget: jobData.budget ? safeParse(jobData.budget) : undefined,
-      salaryRange: jobData.salaryRange ? safeParse(jobData.salaryRange) : undefined,
-      preferredCommunication: Array.isArray(jobData.preferredCommunication) 
-        ? jobData.preferredCommunication 
-        : (jobData.preferredCommunication ? [jobData.preferredCommunication] : []),
+      salaryRange: jobData.salaryRange
+        ? safeParse(jobData.salaryRange)
+        : undefined,
+      preferredCommunication: Array.isArray(jobData.preferredCommunication)
+        ? jobData.preferredCommunication
+        : jobData.preferredCommunication
+          ? [jobData.preferredCommunication]
+          : [],
       vacancies: jobData.vacancies ? Number(jobData.vacancies) : undefined,
-      isFeatured: jobData.isFeatured === 'true' || jobData.isFeatured === true
+      isFeatured: jobData.isFeatured === "true" || jobData.isFeatured === true,
     });
 
     return await newJob.save();
@@ -49,11 +58,10 @@ const createJob = async (jobData, files, userId) => {
   }
 };
 
-
 const deactivateJob = async (jobId, userId) => {
   const job = await Job.findById(jobId);
   if (!job) throw new Error("Job not found");
-  
+
   if (job.userId.toString() !== userId.toString()) {
     throw new Error("Unauthorized: You can only deactivate your own posts");
   }
@@ -62,19 +70,15 @@ const deactivateJob = async (jobId, userId) => {
   return await job.save();
 };
 
-
-
-const getAllJobs = async (page, limit, category) => { 
+const getAllJobs = async (page, limit, category) => {
   try {
     const skip = (page - 1) * limit;
 
-
-    let query = { 
-      status: "active", 
-      expiresAt: { $gte: new Date() } 
+    let query = {
+      status: "active",
+      expiresAt: { $gte: new Date() },
     };
 
-   
     if (category) {
       query.jobCategory = category;
     }
@@ -84,8 +88,8 @@ const getAllJobs = async (page, limit, category) => {
     const jobs = await Job.find(query)
       .populate("userId", "fullName profilePhoto location")
       .sort({ createdAt: -1 })
-      .skip(skip)   
-      .limit(limit); 
+      .skip(skip)
+      .limit(limit);
 
     const totalPages = Math.ceil(totalJobs / limit);
 
@@ -96,7 +100,10 @@ const getAllJobs = async (page, limit, category) => {
 };
 
 const getJobById = async (jobId) => {
-  const job = await Job.findById(jobId).populate("userId", "fullName profilePhoto mobile");
+  const job = await Job.findById(jobId).populate(
+    "userId",
+    "fullName profilePhoto mobile",
+  );
   if (!job) throw new Error("Job not found");
   return job;
 };
@@ -104,20 +111,31 @@ const getJobById = async (jobId) => {
 const updateJob = async (jobId, updateData, files, userId) => {
   const job = await Job.findById(jobId);
   if (!job) throw new Error("Job not found");
-  if (job.userId.toString() !== userId.toString()) throw new Error("Unauthorized access");
+  if (job.userId.toString() !== userId.toString())
+    throw new Error("Unauthorized access");
 
   let updatedImages = job.images;
   if (files && files.length > 0) {
-   
   }
 
   // Parse fields if they exist in updateData
-  if(updateData.budget) updateData.budget = typeof updateData.budget === 'string' ? JSON.parse(updateData.budget) : updateData.budget;
-  if(updateData.salaryRange) updateData.salaryRange = typeof updateData.salaryRange === 'string' ? JSON.parse(updateData.salaryRange) : updateData.salaryRange;
+  if (updateData.budget)
+    updateData.budget =
+      typeof updateData.budget === "string"
+        ? JSON.parse(updateData.budget)
+        : updateData.budget;
+  if (updateData.salaryRange)
+    updateData.salaryRange =
+      typeof updateData.salaryRange === "string"
+        ? JSON.parse(updateData.salaryRange)
+        : updateData.salaryRange;
 
-  return await Job.findByIdAndUpdate(jobId, { ...updateData, images: updatedImages }, { new: true });
+  return await Job.findByIdAndUpdate(
+    jobId,
+    { ...updateData, images: updatedImages },
+    { new: true },
+  );
 };
-
 
 const activateJob = async (jobId, userId) => {
   try {
@@ -142,16 +160,12 @@ const activateJob = async (jobId, userId) => {
 
     // Check job owner
     if (!job.userId) {
-      throw new Error(
-        "Database error: This job post doesn't have an owner ID"
-      );
+      throw new Error("Database error: This job post doesn't have an owner ID");
     }
 
     // Authorization check
     if (job.userId.toString() !== userId.toString()) {
-      throw new Error(
-        "Unauthorized: You can only activate your own job posts"
-      );
+      throw new Error("Unauthorized: You can only activate your own job posts");
     }
 
     // Prevent re-activation
@@ -170,23 +184,21 @@ const activateJob = async (jobId, userId) => {
     // Save job
     const updatedJob = await job.save();
     return updatedJob;
-
   } catch (error) {
     console.error("Activate Job Error:", error.message);
 
-   
-    throw new Error(error.message || "Something went wrong while activating job");
+    throw new Error(
+      error.message || "Something went wrong while activating job",
+    );
   }
 };
 
-
 const searchJobsByTitle = async (searchQuery) => {
   try {
-    
     const jobs = await Job.find({
-      title: { $regex: searchQuery, $options: "i" }, 
-      status: "active", 
-      expiresAt: { $gte: new Date() } 
+      title: { $regex: searchQuery, $options: "i" },
+      status: "active",
+      expiresAt: { $gte: new Date() },
     }).populate("userId", "fullName profilePhoto location");
 
     return jobs;
@@ -195,11 +207,10 @@ const searchJobsByTitle = async (searchQuery) => {
   }
 };
 
-
 const getMyJobs = async (userId) => {
   try {
     const jobs = await Job.find({ userId })
-      .populate('userId', 'fullName location profilePhoto') 
+      .populate("userId", "fullName location profilePhoto")
       .sort({ createdAt: -1 });
 
     const total = await Job.countDocuments({ userId });
@@ -210,92 +221,165 @@ const getMyJobs = async (userId) => {
   }
 };
 
-const getNearbyLatestJobs = async (userId) => {
+const getNearbyLatestJobs = async (latitude, longitude) => {
   try {
-    const user = await User.findById(userId);
+    const userCoordinates = [Number(longitude), Number(latitude)];
 
-    if (!user || !user.location) {
-      throw new Error("User location not found");
+    /* ================= JOBS ================= */
+
+    let jobs = await Job.aggregate([
+      {
+        $geoNear: {
+          near: { type: "Point", coordinates: userCoordinates },
+          distanceField: "distance",
+          maxDistance: 5000,
+          spherical: true,
+        },
+      },
+      {
+        $match: {
+          status: "active",
+          expiresAt: { $gte: new Date() },
+        },
+      },
+      {
+        $addFields: {
+          distanceInKm: {
+            $round: [{ $divide: ["$distance", 1000] }, 2],
+          },
+        },
+      },
+      {
+        $sort: { createdAt: -1, distance: 1 },
+      },
+      { $limit: 30 },
+    ]);
+
+    /* Fill remaining jobs */
+    if (jobs.length < 30) {
+      const remaining = 30 - jobs.length;
+
+      const extraJobs = await Job.find({
+        status: "active",
+        _id: { $nin: jobs.map((j) => j._id) },
+      })
+        .sort({ isFeatured: -1, createdAt: -1 })
+        .limit(remaining);
+
+      jobs.push(...extraJobs);
     }
 
-    const userCoordinates = user.location.coordinates;
+    /* ================= SHOPS ================= */
 
-    const [jobs, shops, bloodRequests] = await Promise.all([
-      Job.aggregate([
-        {
-          $geoNear: {
-            near: { type: "Point", coordinates: userCoordinates },
-            distanceField: "distance",
-            maxDistance: 5000,
-            spherical: true,
+    let shops = await Business.aggregate([
+      {
+        $geoNear: {
+          near: { type: "Point", coordinates: userCoordinates },
+          distanceField: "distance",
+          maxDistance: 10000, // 10 KM
+          spherical: true,
+        },
+      },
+
+      // distance in KM
+      {
+        $addFields: {
+          distanceInKm: {
+            $round: [{ $divide: ["$distance", 1000] }, 2],
           },
         },
+      },
+
+      // nearest first
+      { $sort: { distance: 1 } },
+
+      // max nearby shops
+      { $limit: 25 },
+    ]);
+
+    /* ================= 2️⃣ ADD PRIORITY SHOPS ================= */
+
+    if (shops.length < 25) {
+      const remaining = 25 - shops.length;
+
+      const extraShops = await Business.aggregate([
         {
           $match: {
-            status: "active",
-            expiresAt: { $gte: new Date() },
-            userId: { $ne: user._id },
+            _id: { $nin: shops.map((s) => s._id) }, // avoid duplicates
           },
         },
-        { $sort: { createdAt: -1 } },
-        { $limit: 30 },
-      ]),
 
-      Business.aggregate([
+        // ⭐ Badge Priority
         {
-          $geoNear: {
-            near: { type: "Point", coordinates: userCoordinates },
-            distanceField: "distance",
-            maxDistance: 5000,
-            spherical: true,
+          $addFields: {
+            badgePriority: {
+              $switch: {
+                branches: [
+                  { case: { $eq: ["$badge", "Trusted"] }, then: 3 },
+                  { case: { $eq: ["$badge", "Normal"] }, then: 2 },
+                  { case: { $eq: ["$badge", "Trial"] }, then: 1 },
+                ],
+                default: 0,
+              },
+            },
           },
         },
-        {
-          $match: {
-            status: "active",
-          },
-        },
-        { $sort: { createdAt: -1 } },
-        { $limit: 20 },
-      ]),
 
-      BloodRequest.aggregate([
+        // Trusted → Normal → Trial
         {
-          $geoNear: {
-            near: { type: "Point", coordinates: userCoordinates },
-            distanceField: "distance",
-            maxDistance: 5000,
-            spherical: true,
+          $sort: {
+            badgePriority: -1,
+            createdAt: -1,
           },
         },
-        // {
-        //   $match: {
-        //     // status: "Active",
-        //    // userId: { $ne: user._id },
-        //   },
-        // },
-        { $sort: { createdAt: -1 } },
-        { $limit: 20 },
-      ]),
+
+        { $limit: remaining },
+      ]);
+
+      shops = [...shops, ...extraShops];
+    }
+
+    /* ================= BLOOD REQUEST ================= */
+
+    const bloodRequests = await BloodRequest.aggregate([
+      {
+        $addFields: {
+          urgencyPriority: {
+            $switch: {
+              branches: [
+                { case: { $eq: ["$urgency", "emergency"] }, then: 3 },
+                { case: { $eq: ["$urgency", "urgent"] }, then: 2 },
+                { case: { $eq: ["$urgency", "normal"] }, then: 1 },
+              ],
+              default: 0,
+            },
+          },
+        },
+      },
+      {
+        $sort: {
+          urgencyPriority: -1,
+          createdAt: -1,
+        },
+      },
+      { $limit: 25 },
     ]);
 
     return { jobs, shops, bloodRequests };
-
   } catch (error) {
     throw new Error(error.message);
   }
 };
 
-
 const getMyActiveJobs = async (userId) => {
   try {
-    const jobs = await Job.find({ 
-      userId, 
-      status: "active", 
-      expiresAt: { $gte: new Date() }
+    const jobs = await Job.find({
+      userId,
+      status: "active",
+      expiresAt: { $gte: new Date() },
     })
-    .populate('userId', 'fullName location profilePhoto')
-    .sort({ createdAt: -1 });
+      .populate("userId", "fullName location profilePhoto")
+      .sort({ createdAt: -1 });
 
     return jobs;
   } catch (error) {
@@ -305,19 +389,18 @@ const getMyActiveJobs = async (userId) => {
 
 const getMyDeactivatedJobs = async (userId) => {
   try {
-    const jobs = await Job.find({ 
-      userId, 
-      status: "closed" 
+    const jobs = await Job.find({
+      userId,
+      status: "closed",
     })
-    .populate('userId', 'fullName location profilePhoto')
-    .sort({ createdAt: -1 });
+      .populate("userId", "fullName location profilePhoto")
+      .sort({ createdAt: -1 });
 
     return jobs;
   } catch (error) {
     throw new Error(error.message);
   }
 };
-
 
 const toggleSaveJob = async (userId, jobId) => {
   const existingSave = await SavedJob.findOne({ userId, jobId });
@@ -332,26 +415,25 @@ const toggleSaveJob = async (userId, jobId) => {
   }
 };
 
-
 const getMySavedJobs = async (userId) => {
   const savedJobs = await SavedJob.find({ userId })
     .populate({
       path: "jobId",
-      populate: { path: "userId", select: "fullName profilePhoto" } 
+      populate: { path: "userId", select: "fullName profilePhoto" },
     })
     .sort({ savedAt: -1 });
 
-  return savedJobs.map(item => item.jobId); 
+  return savedJobs.map((item) => item.jobId);
 };
 
 const getRecentJobs = async (limit = 10) => {
   try {
     const jobs = await Job.find({
       status: "active",
-      expiresAt: { $gte: new Date() }
+      expiresAt: { $gte: new Date() },
     })
       .populate("userId", "fullName profilePhoto location")
-      .sort({ createdAt: -1 })   // 🔥 MOST IMPORTANT LINE
+      .sort({ createdAt: -1 }) // 🔥 MOST IMPORTANT LINE
       .limit(limit);
 
     return jobs;
@@ -360,8 +442,19 @@ const getRecentJobs = async (limit = 10) => {
   }
 };
 
-
-
-module.exports = { createJob, getAllJobs, getJobById, updateJob, deactivateJob, activateJob ,searchJobsByTitle , getMyJobs, getNearbyLatestJobs, getMyActiveJobs, 
-  getMyDeactivatedJobs ,toggleSaveJob, 
-    getMySavedJobs , getRecentJobs};
+module.exports = {
+  createJob,
+  getAllJobs,
+  getJobById,
+  updateJob,
+  deactivateJob,
+  activateJob,
+  searchJobsByTitle,
+  getMyJobs,
+  getNearbyLatestJobs,
+  getMyActiveJobs,
+  getMyDeactivatedJobs,
+  toggleSaveJob,
+  getMySavedJobs,
+  getRecentJobs,
+};

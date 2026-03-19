@@ -128,24 +128,26 @@ const getMyJobs = async (req, res) => {
 
 const getTheNearbyLatestJob = async (req, res) => {
   try {
-    const userId = req.user.userId;
-
-    if (!userId) {
-      return res.status(401).json({
+    const { latitude, longitude } = req.query;
+    console.log(' lat',latitude, " long ",  longitude)
+    if (!latitude || !longitude) {
+      return res.status(400).json({
         success: false,
-        message: "Unauthorized: User not found",
+        message: "Latitude and Longitude are required",
       });
     }
 
-    const { jobs, shops, bloodRequests } = await jobService.getNearbyLatestJobs(userId);
+    const { jobs, shops, bloodRequests } =
+      await jobService.getNearbyLatestJobs(latitude, longitude);
 
     res.status(200).json({
       success: true,
       jobCount: jobs.length,
       shopCount: shops.length,
+      bloodRequestCount: bloodRequests.length,
       jobs,
       shops,
-      bloodRequests
+      bloodRequests,
     });
 
   } catch (error) {

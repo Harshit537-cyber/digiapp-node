@@ -7,11 +7,25 @@ const itemSchema = new mongoose.Schema({
   price: { type: Number, default: 0 },
   images: [{ type: String }],
 
+  // location: {
+  //   address: { type: String, required: true },
+  //   lat: { type: Number, required: true },
+  //   lng: { type: Number, required: true }
+  // },
+
   location: {
-    address: { type: String, required: true },
-    lat: { type: Number, required: true },
-    lng: { type: Number, required: true }
-  },
+      type: {
+        type: String,
+        required: true,
+      },
+      coordinates: {
+        type: [Number],
+        required: true,
+      },
+      address: {
+        type: String,
+      },
+    },
 
   preferredCommunication: {
     call: { type: Boolean, default: false },
