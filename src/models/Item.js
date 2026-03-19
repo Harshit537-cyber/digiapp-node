@@ -5,7 +5,7 @@ const itemSchema = new mongoose.Schema({
   details: { type: String, required: true },
   category: { type: String, required: true },
   subCategory: { type: String },                    
-  subSubCategory: { type: String },
+ 
  
   price: { type: Number, default: 0 },
   images: [{ type: String }],

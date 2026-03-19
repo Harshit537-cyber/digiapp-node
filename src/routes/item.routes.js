@@ -18,9 +18,11 @@ router.get('/search', itemController.searchItems);
 /* ================= AUTH ROUTES ================= */
 router.get('/my-items', verifyToken, itemController.getMyItems);
 router.get('/my-items/search', verifyToken, itemController.searchMyItems);
+router.get("/geCategories", verifyToken, itemController.getCategoriesData)
 
 router.get("/search/save-Items", verifyToken, itemController.searchSavedItems)
 router.get('/saved-items', verifyToken, itemController.getSavedItems);
+
 router.post('/save/:itemId', verifyToken, itemController.saveItem);
 router.delete('/unsave/:itemId', verifyToken, itemController.unsaveItem);
 
