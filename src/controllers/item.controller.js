@@ -34,6 +34,8 @@ const postItem = async (req, res) => {
       title,
       details,
       category,
+      subCategory, 
+      subSubCategory,
       price,
       call,
       chat,
@@ -45,6 +47,7 @@ const postItem = async (req, res) => {
     const address = body["location[address]"];
 
     if (!title || !details || !latitude || !longitude) {
+      console.log(title, Details, Longitude)
       return response.error(
         res,
         "Title, Details, Latitude and Longitude are required",
@@ -58,6 +61,8 @@ const postItem = async (req, res) => {
       title: title?.trim(),
       details: details?.trim(),
       category: category?.trim(),
+      subCategory: subCategory?.trim() || null,
+      subSubCategory: subSubCategory?.trim() || null,
       price: Number(price) || 0,
 
       location: {

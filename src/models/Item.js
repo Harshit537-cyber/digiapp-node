@@ -4,7 +4,9 @@ const itemSchema = new mongoose.Schema({
   title: { type: String, required: true },
   details: { type: String, required: true },
   category: { type: String, required: true },
-  // Nayi field: Sub Category ke liye
+  subCategory: { type: String },                    
+  subSubCategory: { type: String },
+ 
   price: { type: Number, default: 0 },
   images: [{ type: String }],
 
