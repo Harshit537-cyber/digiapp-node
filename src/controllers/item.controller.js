@@ -57,7 +57,7 @@ const postItem = async (req, res) => {
     const item = await itemService.createItem({
       title: title?.trim(),
       details: details?.trim(),
-      category,
+      category: category?.trim(),
       price: Number(price) || 0,
 
       location: {
@@ -87,7 +87,7 @@ const postItem = async (req, res) => {
 
 
 
-
+ 
 
 /* ================= GET ALL ================= */
 const getAllItems = async (req, res) => {

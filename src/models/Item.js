@@ -3,7 +3,8 @@ const mongoose = require('mongoose');
 const itemSchema = new mongoose.Schema({
   title: { type: String, required: true },
   details: { type: String, required: true },
-  category: { type: String, required: true }, // no enum
+  category: { type: String, required: true },
+  // Nayi field: Sub Category ke liye
   price: { type: Number, default: 0 },
   images: [{ type: String }],
 
