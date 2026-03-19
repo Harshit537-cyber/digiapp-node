@@ -1,10 +1,8 @@
-const mongoose = require('mongoose'); 
-const itemService = require('../services/item.services');
-const response = require('../utils/response');
+const mongoose = require("mongoose");
+const itemService = require("../services/item.services");
+const response = require("../utils/response");
 const cloudinary = require("../config/cloudinary");
 const fs = require("fs");
-
-
 
 /* ================= IMAGE UPLOAD ================= */
 const uploadImages = async (files) => {
@@ -13,7 +11,9 @@ const uploadImages = async (files) => {
 
   for (const file of files) {
     try {
-      const result = await cloudinary.uploader.upload(file.path, { folder: "items" });
+      const result = await cloudinary.uploader.upload(file.path, {
+        folder: "items",
+      });
       urls.push(result.secure_url);
     } finally {
       if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
@@ -22,33 +22,28 @@ const uploadImages = async (files) => {
   return urls;
 };
 
-
-
 /* ================= CREATE ================= */
 const postItem = async (req, res) => {
   try {
+    console.log(req.body);
     const body = {};
     for (const key in req.body) body[key.trim()] = req.body[key];
 
-    const {
-      title,
-      details,
-      category,
-      price,
-      call,
-      chat,
-      isFeatured
-    } = body;
+    const { title, details, category, price, call, chat, isFeatured,location } = body;
 
-    const longitude = body["location[coordinates][0]"];
-    const latitude = body["location[coordinates][1]"];
-    const address = body["location[address]"];
+    // const longitude = body["location[coordinates][0]"];
+    // const latitude = body["location[coordinates][1]"];
+    // const address = body["location[address]"];
+    const longitude = location?.coordinates?.[0];
+    const latitude = location?.coordinates?.[1];
+    const address = location?.address;
 
+    // console.log(title, details, latitude, longitude, address);
     if (!title || !details || !latitude || !longitude) {
       return response.error(
         res,
         "Title, Details, Latitude and Longitude are required",
-        400
+        400,
       );
     }
 
@@ -63,36 +58,30 @@ const postItem = async (req, res) => {
       location: {
         type: "Point",
         coordinates: [Number(longitude), Number(latitude)],
-        address: address?.trim()
+        address: address?.trim(),
       },
 
       preferredCommunication: {
         call: String(call) === "true",
-        chat: String(chat) === "true"
+        chat: String(chat) === "true",
       },
 
       isFeatured: String(isFeatured) === "true",
 
       images: imageUrls,
-      user: req.user.userId
+      user: req.user.userId,
     });
 
     return response.success(res, "Item posted successfully", item);
-
   } catch (error) {
     console.error("postItem error:", error);
     return response.error(res, error.message, 500);
   }
 };
 
-
-
-
-
 /* ================= GET ALL ================= */
 const getAllItems = async (req, res) => {
   try {
-    
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
 
@@ -115,7 +104,6 @@ const getTop10LatestItems = async (req, res) => {
   }
 };
 
-
 const getItemById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -134,7 +122,6 @@ const getItemById = async (req, res) => {
   }
 };
 
-
 /* ================= UPDATE ================= */
 const updateItem = async (req, res) => {
   try {
@@ -151,34 +138,39 @@ const updateItem = async (req, res) => {
     if (req.files?.length) imageUrls = await uploadImages(req.files);
 
     const updateData = { ...req.body };
-    
+
     // Clear the old location field to prevent accidental string update
-    delete updateData.location; 
+    delete updateData.location;
 
     // ✅ FIX: Construct new location object only if all required fields are present
     if (updateData.latitude && updateData.longitude && updateData.address) {
       updateData.location = {
         lat: Number(updateData.latitude),
         lng: Number(updateData.longitude),
-        address: updateData.address?.trim()
+        address: updateData.address?.trim(),
       };
-      
+
       // Remove temporary fields from the body copy before passing to Mongoose
       delete updateData.latitude;
       delete updateData.longitude;
       delete updateData.address;
     }
-    
+
     // Add images
     updateData.images = imageUrls;
-    
+
     // Handle preferredCommunication fields which Mongoose expects as nested updates
-    if (updateData.call !== undefined) updateData['preferredCommunication.call'] = String(updateData.call) === 'true';
-    if (updateData.chat !== undefined) updateData['preferredCommunication.chat'] = String(updateData.chat) === 'true';
-    
+    if (updateData.call !== undefined)
+      updateData["preferredCommunication.call"] =
+        String(updateData.call) === "true";
+    if (updateData.chat !== undefined)
+      updateData["preferredCommunication.chat"] =
+        String(updateData.chat) === "true";
+
     // Handle isFeatured
-    if (updateData.isFeatured !== undefined) updateData.isFeatured = String(updateData.isFeatured) === 'true';
-    
+    if (updateData.isFeatured !== undefined)
+      updateData.isFeatured = String(updateData.isFeatured) === "true";
+
     // Remove original call/chat/isFeatured before passing to service to prevent conflict
     delete updateData.call;
     delete updateData.chat;
@@ -192,7 +184,6 @@ const updateItem = async (req, res) => {
     return response.error(res, error.message, 500);
   }
 };
-
 
 /* ================= DELETE ================= */
 const deleteItem = async (req, res) => {
@@ -243,7 +234,6 @@ const searchItems = async (req, res) => {
   }
 };
 
-
 /* ================= MY ITEMS ================= */
 const getMyItems = async (req, res) => {
   try {
@@ -256,21 +246,25 @@ const getMyItems = async (req, res) => {
   }
 };
 
-
 const searchMyItems = async (req, res) => {
   try {
     if (!req.query.q) return response.error(res, "Search query required", 400);
-    const items = await itemService.searchUserItemsByTitle(req.user.userId, req.query.q);
+    const items = await itemService.searchUserItemsByTitle(
+      req.user.userId,
+      req.query.q,
+    );
     return response.success(res, "Filtered items", items);
   } catch (error) {
     return response.error(res, error.message, 500);
   }
 };
 
-
 const saveItem = async (req, res) => {
   try {
-    const saved = await itemService.saveItem(req.user.userId, req.params.itemId);
+    const saved = await itemService.saveItem(
+      req.user.userId,
+      req.params.itemId,
+    );
     return response.success(res, "Item saved successfully", saved);
   } catch (error) {
     return response.error(res, error.message, 500);
@@ -299,14 +293,13 @@ const searchSavedItems = async (req, res) => {
   try {
     const items = await itemService.searchSavedItems(
       req.user.userId,
-      req.query.q
+      req.query.q,
     );
     return response.success(res, "Saved search results", items);
   } catch (error) {
     return response.error(res, error.message, 500);
   }
 };
-
 
 module.exports = {
   postItem,
@@ -323,5 +316,5 @@ module.exports = {
   saveItem,
   unsaveItem,
   getSavedItems,
-  searchSavedItems
+  searchSavedItems,
 };
