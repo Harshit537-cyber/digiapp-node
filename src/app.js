@@ -1,6 +1,5 @@
 const express = require("express");
 const connectDB = require("./config/db");
-
 const userRoutes = require("./routes/user.routes");
 const bloodRequestRoutes = require("./routes/bloodRequest.routes");
 const trustedContactRoutes = require("./routes/trustedContact.routes");
@@ -12,7 +11,7 @@ const fullTimeJobRoutes = require('./admin/routes/fullTimeJobRoutes');
 const partTimeJobRoutes = require('./admin/routes/partTimeJobRoutes');
 const bloodRoutes = require("./admin/routes/bloodRequestRoutes");
 const saveJobsAll = require("./routes/saved.routes")
-
+const chatRoutes = require("./routes/chat.routes")
 const verifiedBusinessRoutes = require("./admin/routes/verifiedBusinessRoutes"); 
 
 const adminCategoryRoutes = require('../src/admin/routes/categoryRoutes');
@@ -44,7 +43,7 @@ app.use("/api/trusted-contact", trustedContactRoutes);
 app.use("/api/business", businessRoutes);
 app.use("/api/items", itemRoutes);
 app.use("/api/admin", adminRoutes);
-
+app.use("/api/chat", chatRoutes);
 app.use("/api/admin", adminRoutes);
 app.use('/api/admin/part-time', partTimeJobRoutes);
 app.use('/api/admin/full-time', fullTimeJobRoutes);
