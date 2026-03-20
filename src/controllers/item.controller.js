@@ -3,7 +3,7 @@ const itemService = require("../services/item.services");
 const response = require("../utils/response");
 const cloudinary = require("../config/cloudinary");
 const fs = require("fs");
-const Item = require("../models/Item"); 
+const Item = require("../models/Item");
 
 
 /* ================= IMAGE UPLOAD ================= */
@@ -31,7 +31,7 @@ const postItem = async (req, res) => {
     const body = {};
     for (const key in req.body) body[key.trim()] = req.body[key];
 
-    const { title, details, category, subCategory,price, call, chat, isFeatured,location } = body;
+    const { title, details, category, subCategory, price, call, chat, isFeatured, location } = body;
 
     // const longitude = body["location[coordinates][0]"];
     // const latitude = body["location[coordinates][1]"];
@@ -57,7 +57,7 @@ const postItem = async (req, res) => {
       details: details?.trim(),
       category: category?.trim(),
       subCategory: subCategory?.trim() || null,
-     
+
       price: Number(price) || 0,
 
       location: {
@@ -90,7 +90,10 @@ const getAllItems = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
 
-    const result = await itemService.getAllItems(page, limit);
+    const category = req.query.category;
+    const subCategory = req.query.subCategory;
+    
+    const result = await itemService.getAllItems(page, limit, category, subCategory);
 
     return response.success(res, "Items fetched successfully", result);
   } catch (error) {
@@ -308,11 +311,9 @@ const searchSavedItems = async (req, res) => {
 
 const getCategoriesData = async (req, res) => {
   try {
-    const { category } = req.query; // Query parameter check karein
-
+    const { category } = req.query;
     if (category) {
-      // --- CASE 1: Agar user ne category select ki hai ---
-      // Sirf us category ki unique sub-categories nikaalo
+
       const subCategories = await Item.distinct("subCategory", {
         category: category.trim(),
         subCategory: { $ne: null, $exists: true }
@@ -324,8 +325,6 @@ const getCategoriesData = async (req, res) => {
       });
 
     } else {
-      // --- CASE 2: Agar user ne koi category select nahi ki (Initial Load) ---
-      // Database mein jitni bhi unique main categories hain unki list nikaalo
       const allMainCategories = await Item.distinct("category", {
         category: { $ne: null, $exists: true }
       });

@@ -10,14 +10,22 @@ const createItem = async (data) => {
 };
 
 /* ---------------- GET ALL (FEATURED FIRST) ---------------- */
-const getAllItems = async (page = 1, limit = 10) => {
+const getAllItems = async (page = 1, limit = 10, category, subCategory) => {
   const skip = (page - 1) * limit;
 
+ let query = { isActive: true };
 
-  const totalItems = await Item.countDocuments({ isActive: true });
+ if (category) {
+    query.category = category;
+  }
 
+  if (subCategory) {
+    query.subCategory = subCategory;
+  }
 
-  const items = await Item.find({ isActive: true })
+  const totalItems = await Item.countDocuments(query);
+
+  const items = await Item.find(query)
     .sort({ isFeatured: -1, createdAt: -1 }) 
     .skip(skip)
     .limit(limit)
