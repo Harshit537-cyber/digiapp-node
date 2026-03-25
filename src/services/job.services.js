@@ -271,17 +271,22 @@ const getNearbyLatestJobs = async (latitude, longitude) => {
 
     /* ================= SHOPS ================= */
 
-    let shops = await Business.aggregate([
+    // COMMON STAGES (reuse in both pipelines)
+    const priorityStages = [
       {
-        $geoNear: {
-          near: { type: "Point", coordinates: userCoordinates },
-          distanceField: "distance",
-          maxDistance: 10000, // 10 KM
-          spherical: true,
+        $addFields: {
+          badgePriority: {
+            $switch: {
+              branches: [
+                { case: { $eq: ["$badge", "Trusted"] }, then: 3 },
+                { case: { $eq: ["$badge", "Normal"] }, then: 2 },
+                { case: { $eq: ["$badge", "Trial"] }, then: 1 },
+              ],
+              default: 0,
+            },
+          },
         },
       },
-
-      // distance in KM
       {
         $addFields: {
           distanceInKm: {
@@ -289,43 +294,60 @@ const getNearbyLatestJobs = async (latitude, longitude) => {
           },
         },
       },
+    ];
 
-      // nearest first
-      { $sort: { distance: 1 } },
+    // ================= 1️⃣ NEARBY =================
+    let shops = await Business.aggregate([
+      {
+        $geoNear: {
+          near: { type: "Point", coordinates: userCoordinates },
+          distanceField: "distance",
+          maxDistance: 10000,
+          spherical: true,
+        },
+      },
 
-      // max nearby shops
+      // { $match: { status: "active" } },
+      {
+        $match: {
+          status: { $in: ["active", "Approved"] },
+        },
+      },
+
+      ...priorityStages,
+
+      {
+        $sort: {
+          badgePriority: -1,
+          distance: 1,
+          createdAt: -1,
+        },
+      },
+
       { $limit: 25 },
     ]);
 
-    /* ================= 2️⃣ ADD PRIORITY SHOPS ================= */
-
+    // ================= 2️⃣ FILL REMAINING =================
     if (shops.length < 25) {
       const remaining = 25 - shops.length;
 
       const extraShops = await Business.aggregate([
         {
           $match: {
-            _id: { $nin: shops.map((s) => s._id) }, // avoid duplicates
+            status: "active",
+            _id: { $nin: shops.map((s) => s._id) },
           },
         },
 
-        // ⭐ Badge Priority
+        // fake distance so sort still works
         {
           $addFields: {
-            badgePriority: {
-              $switch: {
-                branches: [
-                  { case: { $eq: ["$badge", "Trusted"] }, then: 3 },
-                  { case: { $eq: ["$badge", "Normal"] }, then: 2 },
-                  { case: { $eq: ["$badge", "Trial"] }, then: 1 },
-                ],
-                default: 0,
-              },
-            },
+            distance: 999999999,
           },
         },
 
-        // Trusted → Normal → Trial
+        ...priorityStages,
+
         {
           $sort: {
             badgePriority: -1,
@@ -337,6 +359,14 @@ const getNearbyLatestJobs = async (latitude, longitude) => {
       ]);
 
       shops = [...shops, ...extraShops];
+
+      // ✅ FINAL SORT (VERY IMPORTANT)
+      shops.sort((a, b) => {
+        if (b.badgePriority !== a.badgePriority) {
+          return b.badgePriority - a.badgePriority; // Trusted first
+        }
+        return a.distance - b.distance; // nearest first
+      });
     }
 
     /* ================= BLOOD REQUEST ================= */
@@ -347,9 +377,9 @@ const getNearbyLatestJobs = async (latitude, longitude) => {
           urgencyPriority: {
             $switch: {
               branches: [
-                { case: { $eq: ["$urgency", "emergency"] }, then: 3 },
-                { case: { $eq: ["$urgency", "urgent"] }, then: 2 },
-                { case: { $eq: ["$urgency", "normal"] }, then: 1 },
+                { case: { $eq: ["$urgency", "Critical"] }, then: 3 },
+                { case: { $eq: ["$urgency", "High"] }, then: 2 },
+                { case: { $eq: ["$urgency", "Medium"] }, then: 1 },
               ],
               default: 0,
             },
@@ -363,6 +393,31 @@ const getNearbyLatestJobs = async (latitude, longitude) => {
         },
       },
       { $limit: 25 },
+    ]);
+
+    return { jobs, shops, bloodRequests };
+  } catch (error) {
+    throw new Error(error.message);
+  }
+};
+
+const getGuestHomeData = async () => {
+  try {
+    const [jobs, shops, bloodRequests] = await Promise.all([
+      Job.find({ status: "Active" })
+        .sort({ createdAt: -1 })
+        .limit(30),
+
+      Business.find({
+        status: { $in: ["active", "Approved"] },
+        isBlocked: false,
+      })
+        .sort({ createdAt: -1 })
+        .limit(20),
+
+      BloodRequest.find({ status: "Active" })
+        .sort({ createdAt: -1 })
+        .limit(25),
     ]);
 
     return { jobs, shops, bloodRequests };
@@ -457,4 +512,5 @@ module.exports = {
   toggleSaveJob,
   getMySavedJobs,
   getRecentJobs,
+  getGuestHomeData
 };

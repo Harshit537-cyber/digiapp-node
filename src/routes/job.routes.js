@@ -10,7 +10,8 @@ const upload = require("../middlewares/upload");
 
 router.get("/search", jobController.searchJobs);
 router.get("/my-jobs", verifyToken, jobController.getMyJobs);
-router.get('/near-by-job', verifyToken, jobController.getTheNearbyLatestJob )
+router.get('/near-by-after-login', verifyToken, jobController.getTheNearbyLatestJob );
+router.get('/near-by-homeapi', jobController.homeAPI)
 
 
 router.get("/my-active", verifyToken, jobController.getMyActiveJobs);

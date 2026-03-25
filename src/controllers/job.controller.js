@@ -158,6 +158,26 @@ const getTheNearbyLatestJob = async (req, res) => {
   }
 };
 
+const homeAPI = async (req, res) => {
+  try {
+    const { jobs, shops, bloodRequests } =
+      await jobService.getGuestHomeData();
+
+    res.status(200).json({
+      success: true,
+      type: "guest",
+      jobs,
+      shops,
+      bloodRequests,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
 
 const getMyActiveJobs = async (req, res) => {
   try {
@@ -239,4 +259,4 @@ const getRecentJobs = async (req, res) => {
 
 module.exports = { postJob, getAllJobs, getJobById, updateJob ,deactivateJob , activateJob , searchJobs ,getMyJobs , getTheNearbyLatestJob, getMyActiveJobs, 
   getMyDeactivatedJobs , toggleSaveJob,
-    getSavedJobs, getRecentJobs };
+    getSavedJobs, getRecentJobs, homeAPI };

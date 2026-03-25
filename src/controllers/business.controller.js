@@ -31,10 +31,12 @@ const registerBusiness = async (req, res) => {
     if (!userId) {
       return res.status(401).json({ success: false, message: "User authentication failed" });
     }
+    console.log(req.body)
    
     const { businessName, details, category, location, address, ownerName, mobileNumber, whatsappNumber } = req.body;
     const { businessImages, nationalId, ownerImage } = req.files || {};
-     console.log('bussiness id : ', businessImages, nationalId, ownerImage )
+     console.log('bussiness id : ', businessImages, nationalId, ownerImage );
+     console.log(businessImages,nationalId,ownerImage)
 
     if (!businessImages || !nationalId || !ownerImage) {
       return res.status(400).json({ success: false, message: "Please upload all required images (Business, ID, and Owner)" });
