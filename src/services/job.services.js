@@ -404,7 +404,7 @@ const getNearbyLatestJobs = async (latitude, longitude) => {
 const getGuestHomeData = async () => {
   try {
     const [jobs, shops, bloodRequests] = await Promise.all([
-      Job.find({ status: "Active" })
+      Job.find({ status: "active" })
         .sort({ createdAt: -1 })
         .limit(30),
 
