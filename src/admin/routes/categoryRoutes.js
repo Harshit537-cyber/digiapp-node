@@ -20,6 +20,8 @@ router.post(
   categoryCtrl.createCategory
 );
 
+router.post("/create-subCategory", adminAuth,categoryCtrl.createSubCategory);
+
 // Get all categories OR filter by type
 // Example: /all?type=jobs
 router.get(
@@ -27,6 +29,7 @@ router.get(
   adminAuth,
   categoryCtrl.getAllCategories
 );
+
 
 // Delete category by ID
 router.delete(

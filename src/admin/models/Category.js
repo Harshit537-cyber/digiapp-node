@@ -2,7 +2,7 @@
 const mongoose = require('mongoose');
 
 const categorySchema = new mongoose.Schema({
-  name: { type: String, required: true },
+  name: { type: String, default : " " },
 
   type: {
     type: String,
@@ -10,7 +10,18 @@ const categorySchema = new mongoose.Schema({
     required: true
   },
 
-  image: { type: String, required: true },
+  image: { type: String },
+
+ category: { 
+    type: String, 
+    default: "" 
+  },
+
+  subCategory: { 
+    type: [String], 
+    default: [] 
+  },
+
 
   status: { type: Boolean, default: true },
 

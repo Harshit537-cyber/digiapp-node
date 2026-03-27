@@ -69,7 +69,7 @@ const fs = require('fs');
 
 exports.createCategory = async (req, res) => {
   try {
-    const { name, type } = req.body;
+    const { name, type, category } = req.body;
 
  
     if (!name || !type) {
@@ -111,9 +111,10 @@ exports.createCategory = async (req, res) => {
     });
 
     
-    const category = await Category.create({
+    const newCategory = await Category.create({
       name,
       type,
+      category,
       image: uploadResponse.secure_url,
       createdBy: req.user?.id // safe access
     });
@@ -126,7 +127,7 @@ exports.createCategory = async (req, res) => {
     res.status(201).json({
       success: true,
       message: "Category created successfully",
-      data: category
+      data: newCategory
     });
 
   } catch (error) {
@@ -138,6 +139,42 @@ exports.createCategory = async (req, res) => {
   }
 };
 
+exports.createSubCategory = async (req, res) => {
+  try {
+    const { category, subCategory } = req.body;
+
+    // 1. Parent category dhoondhein uska 'type' lene ke liye
+    const mainCategory = await Category.findOne({ category: category });
+    if (!mainCategory) {
+      return res.status(404).json({ success: false, message: "Main Category not found" });
+    }
+
+    // 2. Find and Update logic
+    // Hum wo document dhoondhenge jisme 'category' field parent ke naam ke barabar ho
+    const updatedDoc = await Category.findOneAndUpdate(
+      { category: category }, // Filter
+      { 
+        $set: { 
+          name: category, 
+          type: mainCategory.type, 
+          createdBy: req.user?.id 
+        },
+        $push: { subCategory: subCategory } // Array mein Naya item add karega
+      },
+      { new: true, upsert: true } // Agar document nahi hai toh naya bana dega
+    );
+
+    res.status(201).json({
+      success: true,
+      message: "Sub-category added successfully",
+      data: updatedDoc
+    });
+
+  } catch (error) {
+    console.error("Error logic:", error.message);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
 
 exports.getAllCategories = async (req, res) => {
   try {
