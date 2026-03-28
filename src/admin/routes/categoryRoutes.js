@@ -30,7 +30,12 @@ router.get(
   categoryCtrl.getAllCategories
 );
 
+router.put("/update/:id",upload.single('image'), categoryCtrl.updateCategory);
 
+router.put("/update-subCategory", adminAuth,categoryCtrl.updateSubCategory);
+
+
+router.delete("/delete-subCategory", adminAuth,categoryCtrl.deleteSubCategory)
 // Delete category by ID
 router.delete(
   '/delete/:id',
