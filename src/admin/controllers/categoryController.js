@@ -280,7 +280,26 @@ exports.getAllCategories = async (req, res) => {
   }
 };
 
+exports.getSubcategoriesBySection = async (req, res) => {
+  try {
+    const { categoryName } = req.query;
 
+    // Find the document where the name matches
+    const categoryDoc = await Category.findOne({ name: categoryName });
+
+    // If category exists, send the subCategory array, otherwise send empty array
+    res.status(200).json({
+      success: true,
+      data: categoryDoc ? categoryDoc.subCategory : []
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
 exports.deleteCategory = async (req, res) => {
   try {
     const { id } = req.params;
