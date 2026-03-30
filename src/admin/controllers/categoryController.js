@@ -265,18 +265,15 @@ exports.deleteSubCategory = async (req, res) => {
 
 exports.getAllCategories = async (req, res) => {
   try {
-    const categories = await Category.find().sort({ createdAt: -1 });
+    const categories = await Category.distinct("category", { category: { $ne: "" } });
 
     res.status(200).json({
       success: true,
+      count: categories.length,
       data: categories
     });
-
   } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
+    res.status(500).json({ success: false, message: error.message });
   }
 };
 
