@@ -75,6 +75,11 @@ const UserSchema = new Schema(
      
     },
 
+    fcmToken: { // NEW FIELD for Firebase Notifications
+      type: String,
+      default: null
+    },
+
     isVerified: {
       type: Boolean,
       default: false

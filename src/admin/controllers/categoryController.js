@@ -265,21 +265,14 @@ exports.deleteSubCategory = async (req, res) => {
 
 exports.getAllCategories = async (req, res) => {
   try {
-    const { type } = req.query;
-
-    const filter = type ? { type } : {};
-
-    const categories = await Category.find(filter)
-      .sort({ createdAt: -1 });
+    const categories = await Category.find().sort({ createdAt: -1 });
 
     res.status(200).json({
       success: true,
-      count: categories.length,
       data: categories
     });
 
   } catch (error) {
-    console.error("Get Categories Error:", error.message);
     res.status(500).json({
       success: false,
       message: error.message

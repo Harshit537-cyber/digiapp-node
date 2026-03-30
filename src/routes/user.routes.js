@@ -12,6 +12,11 @@ const cat = require("../controllers/category.controller");
 
 router.post('/apply-coupon', verifyToken, userController.applyCoupon);
 
+router.post("/update-fcm-token", userController.updateFcmToken);
+
+
+router.post("/test-notification",  userController.sendNotificationTest)
+
 router.get('/wallet', verifyToken, userController.getWalletDetails);
 
 
