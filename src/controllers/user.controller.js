@@ -6,6 +6,7 @@ const couponService = require('../services/coupon.services');
 const User = require('../models/User');
 const Coupon = require('../models/Coupon');
 const fs = require("fs");
+const { sendPushToUser } = require("../services/notification.service")
 
 exports.register = async (req, res) => {
   try {
@@ -241,3 +242,34 @@ exports.getAvailableCoupons = async (req, res) => {
     }
 };
 
+
+exports.updateFcmToken = async (req, res) => {
+  try {
+    const { userId, fcmToken } = req.body;
+
+    if (!userId || !fcmToken) {
+      return res.status(400).json({ message: "UserId and fcmToken are required" });
+    }
+
+    // Update the fcmToken field specifically
+    await User.findByIdAndUpdate(userId, { fcmToken: fcmToken });
+
+    res.status(200).json({ success: true, message: "FCM Token updated" });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};
+
+
+
+exports.sendNotificationTest = async (req, res) => {
+  try {
+    const { userId, title, message } = req.body;
+    
+    const result = await sendPushToUser(userId, title, message);
+    
+    res.status(200).json({ success: true, result });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+};

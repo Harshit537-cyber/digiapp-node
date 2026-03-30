@@ -176,31 +176,127 @@ exports.createSubCategory = async (req, res) => {
   }
 };
 
+
+exports.updateSubCategory = async (req, res) => {
+  try {
+    const { category, oldSubCategory, newSubCategory } = req.body;
+
+    if (!category || !oldSubCategory || !newSubCategory) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Main category, old sub-category, and new sub-category name are required" 
+      });
+    }
+
+   
+    const updatedDoc = await Category.findOneAndUpdate(
+      { 
+        category: category, 
+        subCategory: oldSubCategory 
+      },
+      { 
+        $set: { 
+          "subCategory.$": newSubCategory, 
+          updatedBy: req.user?.id 
+        } 
+      },
+      { new: true } 
+    );
+
+   
+    if (!updatedDoc) {
+      return res.status(404).json({ 
+        success: false, 
+        message: "Main Category or specific Sub-category not found" 
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Sub-category updated successfully",
+      data: updatedDoc
+    });
+
+  } catch (error) {
+    console.error("Update Error:", error.message);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+
+
+exports.deleteSubCategory = async (req, res) => {
+  try {
+    const { category, subCategoryToDelete } = req.body;
+    if (!category || !subCategoryToDelete) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Main category and sub-category to delete are required" 
+      });
+    }
+
+
+    const updatedDoc = await Category.findOneAndUpdate(
+      { category: category }, 
+      { 
+        $pull: { subCategory: subCategoryToDelete } 
+      },
+      { new: true }
+    );
+
+    if (!updatedDoc) {
+      return res.status(404).json({ 
+        success: false, 
+        message: "Main Category not found" 
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Sub-category deleted successfully",
+      data: updatedDoc
+    });
+
+  } catch (error) {
+    console.error("Delete Error:", error.message);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 exports.getAllCategories = async (req, res) => {
   try {
-    const { type } = req.query;
-
-    const filter = type ? { type } : {};
-
-    const categories = await Category.find(filter)
-      .sort({ createdAt: -1 });
+    const categories = await Category.distinct("category", { category: { $ne: "" } });
 
     res.status(200).json({
       success: true,
       count: categories.length,
       data: categories
     });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.getSubcategoriesBySection = async (req, res) => {
+  try {
+    const { categoryName } = req.query;
+
+    // Find the document where the name matches
+    const categoryDoc = await Category.findOne({ name: categoryName });
+
+    // If category exists, send the subCategory array, otherwise send empty array
+    res.status(200).json({
+      success: true,
+      data: categoryDoc ? categoryDoc.subCategory : []
+    });
 
   } catch (error) {
-    console.error("Get Categories Error:", error.message);
     res.status(500).json({
       success: false,
       message: error.message
     });
   }
 };
-
-
 exports.deleteCategory = async (req, res) => {
   try {
     const { id } = req.params;
@@ -233,76 +329,60 @@ exports.deleteCategory = async (req, res) => {
 exports.updateCategory = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, type } = req.body;
+    
+    // 1. Destructure fields
+    const { name, type, category: categoryField } = req.body;
+    
+    // Debugging ke liye (categoryField check karein)
+    console.log("Input Data:", { name, type, categoryField });
 
-    
-    let category = await Category.findById(id);
-    if (!category) {
-    
-      if (req.file && fs.existsSync(req.file.path)) {
-        fs.unlinkSync(req.file.path);
-      }
-      return res.status(404).json({
-        success: false,
-        message: "Category not found"
-      });
+    // 2. Find Category
+    let categoryDoc = await Category.findById(id); // Naam categoryDoc rakha taaki confusion na ho
+    if (!categoryDoc) {
+      if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+      return res.status(404).json({ success: false, message: "Category not found" });
     }
 
-   
+    // 3. Validation
     if (type) {
       const allowedTypes = ['jobs', 'sale', 'shop'];
       if (!allowedTypes.includes(type)) {
         if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
-        return res.status(400).json({
-          success: false,
-          message: "Type must be jobs, sale or shop"
-        });
+        return res.status(400).json({ success: false, message: "Type must be jobs, sale or shop" });
       }
     }
 
-    // 3. Check for duplicate name/type (excluding current category)
+    // 4. Duplicate Check
     if (name || type) {
-      const checkName = name || category.name;
-      const checkType = type || category.type;
+      const checkName = name || categoryDoc.name;
+      const checkType = type || categoryDoc.type;
       const exists = await Category.findOne({ 
         name: checkName, 
         type: checkType, 
         _id: { $ne: id } 
       });
-      
       if (exists) {
         if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
-        return res.status(400).json({
-          success: false,
-          message: "Another category with this name and type already exists"
-        });
+        return res.status(400).json({ success: false, message: "Duplicate exists" });
       }
     }
 
-    // 4. Handle Image Update (If new image is uploaded)
+    // 5. Image Update
     if (req.file) {
-      // Upload new image to Cloudinary
-      const uploadResponse = await cloudinary.uploader.upload(req.file.path, {
-        folder: 'category_icons'
-      });
-
-      // Purani image ka URL update karein
-      category.image = uploadResponse.secure_url;
-
-      // Local temporary file delete karein
-      if (fs.existsSync(req.file.path)) {
-        fs.unlinkSync(req.file.path);
-      }
-
-      
+      const uploadResponse = await cloudinary.uploader.upload(req.file.path, { folder: 'category_icons' });
+      categoryDoc.image = uploadResponse.secure_url;
+      if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
     }
 
-    // 5. Update other fields
-    category.name = name || category.name;
-    category.type = type || category.type;
+    // 6. Final Updates
+    categoryDoc.name = name || categoryDoc.name;
+    categoryDoc.type = type || categoryDoc.type;
+    
+    if (categoryField !== undefined) {
+      categoryDoc.category = categoryField;
+    }
 
-    // Save updated category
-    const updatedCategory = await category.save();
+    const updatedCategory = await categoryDoc.save();
 
     res.status(200).json({
       success: true,
@@ -311,14 +391,8 @@ exports.updateCategory = async (req, res) => {
     });
 
   } catch (error) {
-    // Error aane par agar koi file upload hui thi to delete karein
-    if (req.file && fs.existsSync(req.file.path)) {
-      fs.unlinkSync(req.file.path);
-    }
-    console.error("Update Category Error:", error.message);
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
+    if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+    console.error("Update Error:", error);
+    res.status(500).json({ success: false, message: error.message });
   }
 };
