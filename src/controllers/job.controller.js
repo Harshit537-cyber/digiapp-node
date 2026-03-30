@@ -195,6 +195,9 @@ const getMyJobs = async (req, res) => {
   }
 };
 
+
+
+
 const getTheNearbyLatestJob = async (req, res) => {
   try {
     const { latitude, longitude } = req.query;
@@ -228,6 +231,9 @@ const getTheNearbyLatestJob = async (req, res) => {
     });
   }
 };
+
+
+
 
 const homeAPI = async (req, res) => {
   try {
@@ -329,6 +335,32 @@ const getRecentJobs = async (req, res) => {
   }
 };
 
+
+const handleGetJobs = async (req, res) => {
+  try {
+    // Params se category le rahe hain (e.g. /get-jobs/LOCAL_JOB)
+    const { jobCategory } = req.params; 
+    
+    // Check if user is logged in
+    const isLoggedIn = !!req.user;
+
+    const jobs = await jobService.getJobsList(isLoggedIn, jobCategory);
+
+    res.status(200).json({
+      success: true,
+      isLoggedIn: isLoggedIn,
+      count: jobs.length,
+      data: jobs,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Server Error",
+      error: error.message,
+    });
+  }
+};
+
 module.exports = { postJob, getAllJobs, getJobById, updateJob ,deactivateJob , activateJob , searchJobs ,getMyJobs , getTheNearbyLatestJob, getMyActiveJobs, 
-  getMyDeactivatedJobs , toggleSaveJob,
-    getSavedJobs, getRecentJobs, homeAPI };
+  getMyDeactivatedJobs , toggleSaveJob,handleGetJobs,
+    getSavedJobs, getRecentJobs, homeAPI};
