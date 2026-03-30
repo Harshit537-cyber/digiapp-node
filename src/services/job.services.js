@@ -5,7 +5,7 @@ const cloudinary = require("../config/cloudinary");
 const User = require("../models/User");
 const BloodRequest = require("../models/BloodRequest");
 const fs = require("fs");
-
+const transactionSchema = require('../models/Transitionmodel')
 const createJob = async (jobData, files, userId) => {
   try {
     const imageUrls = [];
@@ -56,6 +56,31 @@ const createJob = async (jobData, files, userId) => {
   } catch (error) {
     throw new Error(error.message);
   }
+};
+
+const deductCredits = async (userId, amount, reason, referenceId) => {
+  const user = await User.findById(userId);
+
+  if (!user) throw new Error("User not found");
+
+  if (user.credits < amount) {
+    throw new Error("Insufficient credits");
+  }
+
+  console.log('user.credits :',user.credits)
+  user.credits -= amount;
+  await user.save();
+
+  await transactionSchema.create({
+    userId,
+    type: "DEBIT",
+    amount,
+    reason,
+    balanceAfter: user.credits,
+    referenceId
+  });
+
+  return user;
 };
 
 const deactivateJob = async (jobId, userId) => {
@@ -224,8 +249,10 @@ const getMyJobs = async (userId) => {
 const getNearbyLatestJobs = async (latitude, longitude) => {
   try {
     const userCoordinates = [Number(longitude), Number(latitude)];
-
+const now = new Date()
     /* ================= JOBS ================= */
+
+    const totalJobsCount = await Job.countDocuments({}); 
 
     let jobs = await Job.aggregate([
       {
@@ -395,7 +422,8 @@ const getNearbyLatestJobs = async (latitude, longitude) => {
       { $limit: 25 },
     ]);
 
-    return { jobs, shops, bloodRequests };
+
+    return { totalJobsCount,jobs, shops, bloodRequests };
   } catch (error) {
     throw new Error(error.message);
   }
@@ -403,7 +431,7 @@ const getNearbyLatestJobs = async (latitude, longitude) => {
 
 const getGuestHomeData = async () => {
   try {
-    const [jobs, shops, bloodRequests] = await Promise.all([
+    const [jobs, shops, bloodRequests, totalJobs] = await Promise.all([
       Job.find({ status: "active" })
         .sort({ createdAt: -1 })
         .limit(30),
@@ -418,9 +446,13 @@ const getGuestHomeData = async () => {
       BloodRequest.find({ status: "Active" })
         .sort({ createdAt: -1 })
         .limit(25),
+
+
+         Job.countDocuments({ status: "active" }) 
     ]);
 
-    return { jobs, shops, bloodRequests };
+    
+    return { jobs, shops, bloodRequests , totalJobs };
   } catch (error) {
     throw new Error(error.message);
   }
@@ -512,5 +544,6 @@ module.exports = {
   toggleSaveJob,
   getMySavedJobs,
   getRecentJobs,
-  getGuestHomeData
+  getGuestHomeData,
+  deductCredits
 };

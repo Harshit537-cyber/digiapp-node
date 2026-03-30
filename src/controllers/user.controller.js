@@ -12,6 +12,7 @@ exports.register = async (req, res) => {
   try {
     const body = { ...req.body }; 
     const { mobile, latitude, longitude, address, ...restBody } = body;
+    console.log(mobile, latitude, longitude, address, restBody )
 
     if (!mobile) {
       return response.error(res, "Mobile number is required", 400);
@@ -45,6 +46,7 @@ exports.register = async (req, res) => {
       mobile,
       profilePhoto: profilePhotoUrl,
       ...(address && { address }), 
+      credits:100
     };
 
     const lat = latitude;
