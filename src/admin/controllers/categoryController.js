@@ -72,10 +72,10 @@ exports.createCategory = async (req, res) => {
     const { name, type, category } = req.body;
 
  
-    if ( !type) {
+    if (!name || !type) {
       return res.status(400).json({
         success: false,
-        message: "type are required"
+        message: "Name and type are required"
       });
     }
 
