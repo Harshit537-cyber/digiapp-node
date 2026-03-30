@@ -167,6 +167,7 @@ const homeAPI = async (req, res) => {
       success: true,
       type: "guest",
       jobs,
+      totalJobs: jobs.length,
       shops,
       bloodRequests,
     });
