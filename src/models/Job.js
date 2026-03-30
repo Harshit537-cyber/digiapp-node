@@ -9,7 +9,7 @@ const jobSchema = new mongoose.Schema(
     },
     jobCategory: {
       type: String,
-      enum: ["Local task", "Part-time job", "Full-time job"],
+      enum: ["LOCAL_JOB", "PART_TIME_JOB", "FULL_TIME_JOB"],
       required: true,
     },
 

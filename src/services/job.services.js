@@ -5,7 +5,7 @@ const cloudinary = require("../config/cloudinary");
 const User = require("../models/User");
 const BloodRequest = require("../models/BloodRequest");
 const fs = require("fs");
-
+const transactionSchema = require('../models/Transitionmodel')
 const createJob = async (jobData, files, userId) => {
   try {
     const imageUrls = [];
@@ -56,6 +56,31 @@ const createJob = async (jobData, files, userId) => {
   } catch (error) {
     throw new Error(error.message);
   }
+};
+
+const deductCredits = async (userId, amount, reason, referenceId) => {
+  const user = await User.findById(userId);
+
+  if (!user) throw new Error("User not found");
+
+  if (user.credits < amount) {
+    throw new Error("Insufficient credits");
+  }
+
+  console.log('user.credits :',user.credits)
+  user.credits -= amount;
+  await user.save();
+
+  await transactionSchema.create({
+    userId,
+    type: "DEBIT",
+    amount,
+    reason,
+    balanceAfter: user.credits,
+    referenceId
+  });
+
+  return user;
 };
 
 const deactivateJob = async (jobId, userId) => {
@@ -512,5 +537,6 @@ module.exports = {
   toggleSaveJob,
   getMySavedJobs,
   getRecentJobs,
-  getGuestHomeData
+  getGuestHomeData,
+  deductCredits
 };

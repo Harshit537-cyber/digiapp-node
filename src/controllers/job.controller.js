@@ -1,20 +1,89 @@
 const jobService = require("../services/job.services");
 const Business = require('../models/Business')
-
+const transactionSchema = require('../models/Transitionmodel')
+const mongoose = require('mongoose');
+const User = require('../models/User')
 const postJob = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
   try {
-    const creatorId = req.user.userId; 
-    if (!creatorId) return res.status(401).json({ success: false, message: "Please login again." });
+    const creatorId = req.user.userId;
 
-    const job = await jobService.createJob(req.body, req.files, creatorId);
+    if (!creatorId) {
+      return res.status(401).json({
+        success: false,
+        message: "Please login again."
+      });
+    }
 
-    res.status(201).json({
+    const { jobCategory } = req.body;
+
+    const jobConfig = {
+      LOCAL_JOB: { credits: 10, label: "LOCAL_JOB" },
+      PART_TIME_JOB: { credits: 25, label: "PART_TIME_JOB" },
+      FULL_TIME_JOB: { credits: 25, label: "FULL_TIME_JOB" }
+    };
+
+    const config = jobConfig[jobCategory];
+
+    if (!config) {
+      throw new Error("Invalid job type");
+    }
+
+    req.body.jobCategory = config.label;
+
+    // 🔍 Check user & balance FIRST
+    const user = await User.findById(creatorId).session(session);
+
+    if (!user) throw new Error("User not found");
+
+    if (user.credits < config.credits) {
+      throw new Error("Insufficient credits");
+    }
+
+    // ✅ Create job (WITH session)
+    const job = await jobService.createJob(
+      req.body,
+      req.files,
+      creatorId,
+      session
+    );
+
+    // 🔻 Deduct credits
+    user.credits -= config.credits;
+    await user.save({ session });
+
+    // 🧾 Transaction log
+    await transactionSchema.create([{
+      userId: creatorId,
+      type: "DEBIT",
+      amount: config.credits,
+      reason: "POST_JOB",
+      referenceId: job._id,
+      balanceAfter: user.credits
+    }], { session });
+
+    // ✅ Commit
+    await session.commitTransaction();
+    session.endSession();
+
+    return res.status(201).json({
       success: true,
-      message: `${req.body.jobCategory} posted successfully`,
+      message: `${config.label} posted successfully`,
       data: job
     });
+
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    await session.abortTransaction();
+    session.endSession();
+
+    console.error("POST JOB ERROR 👉", error);
+
+    return res.status(500).json({
+      success: false,
+      message: error.message
+    });
   }
 };
 
