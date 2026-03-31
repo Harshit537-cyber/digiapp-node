@@ -249,8 +249,10 @@ const getMyJobs = async (userId) => {
 const getNearbyLatestJobs = async (latitude, longitude) => {
   try {
     const userCoordinates = [Number(longitude), Number(latitude)];
-
+const now = new Date()
     /* ================= JOBS ================= */
+
+    const totalJobsCount = await Job.countDocuments({}); 
 
     let jobs = await Job.aggregate([
       {
@@ -420,7 +422,8 @@ const getNearbyLatestJobs = async (latitude, longitude) => {
       { $limit: 25 },
     ]);
 
-    return { jobs, shops, bloodRequests };
+
+    return { totalJobsCount,jobs, shops, bloodRequests };
   } catch (error) {
     throw new Error(error.message);
   }
@@ -428,7 +431,7 @@ const getNearbyLatestJobs = async (latitude, longitude) => {
 
 const getGuestHomeData = async () => {
   try {
-    const [jobs, shops, bloodRequests] = await Promise.all([
+    const [jobs, shops, bloodRequests, totalJobs] = await Promise.all([
       Job.find({ status: "active" })
         .sort({ createdAt: -1 })
         .limit(30),
@@ -443,9 +446,13 @@ const getGuestHomeData = async () => {
       BloodRequest.find({ status: "Active" })
         .sort({ createdAt: -1 })
         .limit(25),
+
+
+         Job.countDocuments({ status: "active" }) 
     ]);
 
-    return { jobs, shops, bloodRequests };
+    
+    return { jobs, shops, bloodRequests , totalJobs };
   } catch (error) {
     throw new Error(error.message);
   }
@@ -522,6 +529,29 @@ const getRecentJobs = async (limit = 10) => {
   }
 };
 
+const getJobsList = async (isLoggedIn, requestedCategory) => {
+  try {
+    let filter = { status: "active" };
+
+    if (!isLoggedIn) {
+      // Logic: User login nahi hai, toh sirf LOCAL_JOB filter lagao
+      filter.jobCategory = "LOCAL_JOB";
+    } else {
+      // Logic: User login hai, toh in teen categories se match hote results dikhao
+      filter.jobCategory = { 
+        $in: ["LOCAL_JOB", "PART_TIME_JOB", "FULL_TIME_JOB"] 
+      };
+    }
+
+    // Database se data fetch karein
+    const jobs = await Job.find(filter).sort({ createdAt: -1 });
+    return jobs;
+  } catch (error) {
+    throw new Error(error.message);
+  }
+};
+
+
 module.exports = {
   createJob,
   getAllJobs,
@@ -538,5 +568,6 @@ module.exports = {
   getMySavedJobs,
   getRecentJobs,
   getGuestHomeData,
-  deductCredits
+  deductCredits,
+   getJobsList
 };
