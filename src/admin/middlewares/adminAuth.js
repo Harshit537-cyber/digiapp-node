@@ -2,13 +2,19 @@ const jwt = require('jsonwebtoken');
 
 const verifyAdmin = (req, res, next) => {
     const token = req.header('Authorization')?.split(' ')[1];
+    console.log('tpken : ',token)
 
     if (!token) {
         return res.status(401).json({ message: "No token, authorization denied" });
     }
 
+
     try {
+        console.log
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        console.log(
+            'decoded : ',decoded
+        )
         
         // Role check (Case-insensitive check karein taaki admin/ADMIN dono chalein)
         if (decoded.role.toLowerCase() !== 'admin') {

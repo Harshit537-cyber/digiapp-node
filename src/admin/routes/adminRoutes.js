@@ -53,7 +53,7 @@ router.put('/jobs/update/:id', verifyAdmin, upload.single('jobImage'), adminUpda
 router.delete('/jobs/delete/:id', verifyAdmin, adminDeleteJob);
 
 
-router.post('/displayimage/:userId',
+router.post('/displayimage/:userId', verifyAdmin,
   upload.array("profilePhoto", 5),
   displayImage
  )

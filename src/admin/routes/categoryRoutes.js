@@ -26,7 +26,7 @@ router.post("/create-subCategory", adminAuth,categoryCtrl.createSubCategory);
 // Example: /all?type=jobs
 router.get(
   '/all',
-  adminAuth,
+  
   categoryCtrl.getAllCategories
 );
 
