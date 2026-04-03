@@ -534,6 +534,7 @@ const getRecentJobs = async (limit = 10) => {
   } catch (error) {
     throw new Error(error.message);
   }
+  
 };
 
 const getJobsList = async (isLoggedIn, requestedCategory) => {
