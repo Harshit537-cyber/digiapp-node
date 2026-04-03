@@ -8,7 +8,7 @@ const cat = require("../controllers/category.controller");
 
 // -------------------- USER ROUTES --------------------
 
-
+router.get('/dispplay-Image', userController.homeScreenImages)
 
 router.post('/apply-coupon', verifyToken, userController.applyCoupon);
 

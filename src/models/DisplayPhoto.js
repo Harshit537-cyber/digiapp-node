@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 
-const displayimage = new mongoose.Schema({
-  userId: {
+const Displayimage = new mongoose.Schema({
+  adminId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
     required: true,
@@ -11,4 +11,4 @@ const displayimage = new mongoose.Schema({
 
 
 
-module.exports = mongoose.model("Displayimage", displayimage);
+module.exports = mongoose.model("Displayimage", Displayimage);

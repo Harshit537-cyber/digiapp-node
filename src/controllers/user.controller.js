@@ -6,7 +6,8 @@ const couponService = require('../services/coupon.services');
 const User = require('../models/User');
 const Coupon = require('../models/Coupon');
 const fs = require("fs");
-const { sendPushToUser } = require("../services/notification.service")
+const { sendPushToUser } = require("../services/notification.service");
+const Displayimage = require('../models/DisplayPhoto')
 
 exports.register = async (req, res) => {
   try {
@@ -273,3 +274,19 @@ exports.sendNotificationTest = async (req, res) => {
     res.status(500).json({ success: false, error: error.message });
   }
 };
+
+
+exports.homeScreenImages = async (req, res)=>{
+  try{
+   const images = await Displayimage.find().select("photo");
+    res.status(200).json({
+      success : true,
+      images,
+      message: "fetched home screen images successfully"
+    })
+
+  }catch(error){
+    res.status(500).json({ success: false, error: error.message });
+    
+  }
+}

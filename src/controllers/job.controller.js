@@ -17,7 +17,7 @@ const postJob = async (req, res) => {
       });
     }
 
-    const { jobCategory } = req.body;
+    const { jobCategory, isFeatured } = req.body;
 
     const jobConfig = {
       LOCAL_JOB: { credits: 10, label: "LOCAL_JOB" },
@@ -33,12 +33,16 @@ const postJob = async (req, res) => {
 
     req.body.jobCategory = config.label;
 
+    // ⭐ Calculate total credits based on isFeatured
+    const FEATURED_CREDITS = 10;
+    const totalCredits = isFeatured ? config.credits + FEATURED_CREDITS : config.credits;
+
     // 🔍 Check user & balance FIRST
     const user = await User.findById(creatorId).session(session);
 
     if (!user) throw new Error("User not found");
 
-    if (user.credits < config.credits) {
+    if (user.credits < totalCredits) {
       throw new Error("Insufficient credits");
     }
 
@@ -51,15 +55,15 @@ const postJob = async (req, res) => {
     );
 
     // 🔻 Deduct credits
-    user.credits -= config.credits;
+    user.credits -= totalCredits;
     await user.save({ session });
 
     // 🧾 Transaction log
     await transactionSchema.create([{
       userId: creatorId,
       type: "DEBIT",
-      amount: config.credits,
-      reason: "POST_JOB",
+      amount: totalCredits,
+      reason: isFeatured ? "POST_FEATURED_JOB" : "POST_JOB",
       referenceId: job._id,
       balanceAfter: user.credits
     }], { session });
@@ -237,16 +241,21 @@ const getTheNearbyLatestJob = async (req, res) => {
 
 const homeAPI = async (req, res) => {
   try {
-    const { jobs, shops, bloodRequests , totalJobs} =
+    const { jobs, shops, bloodRequests , totalJobs, totalBloodRequest, totalShop, totalItem} =
       await jobService.getGuestHomeData();
 
     res.status(200).json({
       success: true,
        totalJobs: totalJobs || 0,
+       totalBloodRequest,
+         totalShop,
+      totalItem,
       type: "guest",
       jobs,
       shops,
-      bloodRequests,
+      bloodRequests
+    
+      
     });
   } catch (error) {
     res.status(500).json({

@@ -666,7 +666,8 @@ exports.adminDeleteJob = async (req, res) => {
 
 exports.displayImage = async (req, res) => {
   try {
-    const userId = req.params.userId;
+    const {adminId} = req.params;
+    console.log('admin Id : ',adminId)
 
     if (!req.files || req.files.length === 0) {
       return res.status(400).json({ message: "No images uploaded" });
@@ -678,7 +679,7 @@ exports.displayImage = async (req, res) => {
     );
 
     // Check if document already exists
-    let existing = await Displayimage.findOne({ userId });
+    let existing = await Displayimage.findOne({ adminId });
 
     if (existing) {
       // Add new images to existing array
@@ -694,7 +695,7 @@ exports.displayImage = async (req, res) => {
     } else {
       // Create new document
       const newImageDoc = await Displayimage.create({
-        userId,
+        adminId,
         photo: imagePaths   // DO NOT wrap inside []
       });
 

@@ -4,8 +4,9 @@ const SavedJob = require("../models/SavedJob");
 const cloudinary = require("../config/cloudinary");
 const User = require("../models/User");
 const BloodRequest = require("../models/BloodRequest");
+const itemSchema = require('../models/Item')
 const fs = require("fs");
-const transactionSchema = require('../models/Transitionmodel')
+const transactionSchema = require("../models/Transitionmodel");
 const createJob = async (jobData, files, userId) => {
   try {
     const imageUrls = [];
@@ -67,7 +68,7 @@ const deductCredits = async (userId, amount, reason, referenceId) => {
     throw new Error("Insufficient credits");
   }
 
-  console.log('user.credits :',user.credits)
+  console.log("user.credits :", user.credits);
   user.credits -= amount;
   await user.save();
 
@@ -77,7 +78,7 @@ const deductCredits = async (userId, amount, reason, referenceId) => {
     amount,
     reason,
     balanceAfter: user.credits,
-    referenceId
+    referenceId,
   });
 
   return user;
@@ -249,10 +250,10 @@ const getMyJobs = async (userId) => {
 const getNearbyLatestJobs = async (latitude, longitude) => {
   try {
     const userCoordinates = [Number(longitude), Number(latitude)];
-const now = new Date()
+    const now = new Date();
     /* ================= JOBS ================= */
 
-    const totalJobsCount = await Job.countDocuments({}); 
+    const totalJobsCount = await Job.countDocuments({});
 
     let jobs = await Job.aggregate([
       {
@@ -422,8 +423,7 @@ const now = new Date()
       { $limit: 25 },
     ]);
 
-
-    return { totalJobsCount,jobs, shops, bloodRequests };
+    return { totalJobsCount, jobs, shops, bloodRequests };
   } catch (error) {
     throw new Error(error.message);
   }
@@ -431,10 +431,16 @@ const now = new Date()
 
 const getGuestHomeData = async () => {
   try {
-    const [jobs, shops, bloodRequests, totalJobs] = await Promise.all([
-      Job.find({ status: "active" })
-        .sort({ createdAt: -1 })
-        .limit(30),
+    const [
+      jobs,
+      shops,
+      bloodRequests,
+      totalJobs,
+      totalBloodRequest,
+      totalShop,
+      totalItem,
+    ] = await Promise.all([
+      Job.find({ status: "active" }).sort({ createdAt: -1 }).limit(30),
 
       Business.find({
         status: { $in: ["active", "Approved"] },
@@ -443,16 +449,17 @@ const getGuestHomeData = async () => {
         .sort({ createdAt: -1 })
         .limit(20),
 
-      BloodRequest.find({ status: "Active" })
-        .sort({ createdAt: -1 })
-        .limit(25),
+      BloodRequest.find({ status: "Active" }).sort({ createdAt: -1 }).limit(25),
 
-
-         Job.countDocuments({ status: "active" }) 
+      Job.countDocuments({ status: "active" }),
+      BloodRequest.countDocuments({ status: "Active" }),
+      Business.countDocuments({ status: "active" }),
+      itemSchema.countDocuments({
+        expiryDate: { $gt: new Date() }, // only future dates
+      }),
     ]);
 
-    
-    return { jobs, shops, bloodRequests , totalJobs };
+    return { jobs, shops, bloodRequests, totalJobs, totalBloodRequest, totalShop, totalItem };
   } catch (error) {
     throw new Error(error.message);
   }
@@ -538,8 +545,8 @@ const getJobsList = async (isLoggedIn, requestedCategory) => {
       filter.jobCategory = "LOCAL_JOB";
     } else {
       // Logic: User login hai, toh in teen categories se match hote results dikhao
-      filter.jobCategory = { 
-        $in: ["LOCAL_JOB", "PART_TIME_JOB", "FULL_TIME_JOB"] 
+      filter.jobCategory = {
+        $in: ["LOCAL_JOB", "PART_TIME_JOB", "FULL_TIME_JOB"],
       };
     }
 
@@ -550,7 +557,6 @@ const getJobsList = async (isLoggedIn, requestedCategory) => {
     throw new Error(error.message);
   }
 };
-
 
 module.exports = {
   createJob,
@@ -569,5 +575,5 @@ module.exports = {
   getRecentJobs,
   getGuestHomeData,
   deductCredits,
-   getJobsList
+  getJobsList,
 };

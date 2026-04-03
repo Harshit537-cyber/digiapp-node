@@ -25,7 +25,8 @@ const transactionSchema = new mongoose.Schema({
       "MARKETPLACE_POST",
       "ADMIN_ADD",
       "ADMIN_DEDUCT",
-      "COUPON"
+      "COUPON",
+      'POST_FEATURED_JOB'
     ],
   },
   balanceAfter: {
