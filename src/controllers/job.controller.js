@@ -1,4 +1,5 @@
 const jobService = require("../services/job.services");
+const Job = require("../models/Job")
 const Business = require('../models/Business')
 const transactionSchema = require('../models/Transitionmodel')
 const mongoose = require('mongoose');
@@ -338,17 +339,30 @@ const getRecentJobs = async (req, res) => {
 
 const handleGetJobs = async (req, res) => {
   try {
-    // Params se category le rahe hain (e.g. /get-jobs/LOCAL_JOB)
-    const { jobCategory } = req.params; 
-    
-    // Check if user is logged in
-    const isLoggedIn = !!req.user;
+    const { jobCategory } = req.query; 
+    const isLoggedIn = !!req.user; // Check if user exists
 
-    const jobs = await jobService.getJobsList(isLoggedIn, jobCategory);
+    let filter = {};
+
+    if (!isLoggedIn) {
+
+      filter.jobCategory = "LOCAL_JOB";
+    } else {
+      
+      if (jobCategory && jobCategory !== "ALL") {
+      
+        filter.jobCategory = jobCategory;
+      } 
+      
+    }
+
+    // Database se jobs find karein
+    const jobs = await Job.find(filter).sort({ createdAt: -1 });
 
     res.status(200).json({
       success: true,
       isLoggedIn: isLoggedIn,
+      appliedFilter: filter.jobCategory || "ALL",
       count: jobs.length,
       data: jobs,
     });
@@ -360,6 +374,7 @@ const handleGetJobs = async (req, res) => {
     });
   }
 };
+
 
 module.exports = { postJob, getAllJobs, getJobById, updateJob ,deactivateJob , activateJob , searchJobs ,getMyJobs , getTheNearbyLatestJob, getMyActiveJobs, 
   getMyDeactivatedJobs , toggleSaveJob,handleGetJobs,

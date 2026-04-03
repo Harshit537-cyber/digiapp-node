@@ -127,7 +127,7 @@ exports.updateUser = async (req, res) => {
 
     let profilePhotoUrl = null;
 
-    if (req.file) {
+    if (req.file) {cl
       const localFilePath = req.file.path;
       const uploadResult = await cloudinary.uploader.upload(localFilePath, {
         folder: "user_profiles",
