@@ -340,7 +340,7 @@ const getRecentJobs = async (req, res) => {
 const handleGetJobs = async (req, res) => {
   try {
     const { jobCategory } = req.query; 
-    const isLoggedIn = !!req.user; // Check if user exists
+    const isLoggedIn = !!req.user; 
 
     let filter = {};
 
@@ -349,10 +349,17 @@ const handleGetJobs = async (req, res) => {
       filter.jobCategory = "LOCAL_JOB";
     } else {
       
-      if (jobCategory && jobCategory !== "ALL") {
+      if (jobCategory ) {
       
         filter.jobCategory = jobCategory;
-      } 
+      } else  {
+        return res.status(200).json({
+          success: true,
+          isLoggedIn: isLoggedIn,
+          count: 0,
+          data: [], 
+        });
+      }
       
     }
 
@@ -362,7 +369,6 @@ const handleGetJobs = async (req, res) => {
     res.status(200).json({
       success: true,
       isLoggedIn: isLoggedIn,
-      appliedFilter: filter.jobCategory || "ALL",
       count: jobs.length,
       data: jobs,
     });
