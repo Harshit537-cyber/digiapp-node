@@ -265,8 +265,7 @@ exports.deleteSubCategory = async (req, res) => {
 
 exports.getAllCategories = async (req, res) => {
   try {
-    const categories = await Category.distinct("category", { category: { $ne: "" } });
-
+   const categories = await Category.find({});
     res.status(200).json({
       success: true,
       count: categories.length,
