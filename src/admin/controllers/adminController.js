@@ -8,6 +8,8 @@ const upload = require("../../middlewares/upload"); // Correct path based on you
 const cloudinary = require("../../config/cloudinary"); // Correct path based on your adminController.js location
 const Displayimage = require("../../models/DisplayPhoto");
 const BloodRequest = require("../../models/BloodRequest");
+const Business = require("../../models/Business");
+const Item = require("../../models/Item")
 // --- REGISTER API (For Admins) ---
 exports.adminRegister = async (req, res) => {
   try {
@@ -165,7 +167,8 @@ exports.getDashboardStats = async (req, res) => {
 
     // 6. Full Time Jobs Count
     const fullTimeJobs = await Job.countDocuments({ jobCategory: "FULL_TIME_JOB" });
-
+     const totalBusinesses = await Business.countDocuments();
+     const totalItems = await Item.countDocuments();
     // 7. Total Blood Requests Count
     const totalBloodRequests = await BloodRequest.countDocuments();
 
@@ -182,6 +185,8 @@ exports.getDashboardStats = async (req, res) => {
         partTimeJobs,         
         fullTimeJobs,         
         totalBloodRequests,   
+        totalBusinesses,
+        totalItems,
       },
     });
   } catch (error) {
