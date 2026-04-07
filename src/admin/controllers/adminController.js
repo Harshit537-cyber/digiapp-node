@@ -7,7 +7,7 @@ const fs = require("fs"); // Added for file system operations
 const upload = require("../../middlewares/upload"); // Correct path based on your adminController.js location
 const cloudinary = require("../../config/cloudinary"); // Correct path based on your adminController.js location
 const Displayimage = require("../../models/DisplayPhoto");
-
+const BloodRequest = require("../../models/BloodRequest");
 // --- REGISTER API (For Admins) ---
 exports.adminRegister = async (req, res) => {
   try {
@@ -160,6 +160,15 @@ exports.getDashboardStats = async (req, res) => {
       updatedAt: { $gte: thirtyDaysAgo },
     });
 
+
+       const partTimeJobs = await Job.countDocuments({ jobCategory: "PART_TIME_JOB" });
+
+    // 6. Full Time Jobs Count
+    const fullTimeJobs = await Job.countDocuments({ jobCategory: "FULL_TIME_JOB" });
+
+    // 7. Total Blood Requests Count
+    const totalBloodRequests = await BloodRequest.countDocuments();
+
     const totalDownloads = 0; // Placeholder
 
     res.status(200).json({
@@ -170,6 +179,9 @@ exports.getDashboardStats = async (req, res) => {
         activeNow,
         monthlyActive,
         totalDownloads,
+        partTimeJobs,         
+        fullTimeJobs,         
+        totalBloodRequests,   
       },
     });
   } catch (error) {
