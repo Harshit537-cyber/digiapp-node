@@ -29,4 +29,42 @@ const getAllItems = async (req, res) => {
     }
 };
 
-module.exports = {getAllItems};
+const updateItem = async (req, res) => {
+    try {
+        const { title, category, price, isActive, isFeatured } = req.body;
+
+        const updatedItem = await Item.findByIdAndUpdate(
+            req.params.id, 
+            { 
+                title, 
+                category, 
+                price, 
+                isActive, 
+                isFeatured 
+            }, 
+            { new: true, runValidators: true }
+        );
+
+        if (!updatedItem) {
+            return res.status(404).json({
+                success: false,
+                message: "Item not found"
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: "Item updated successfully",
+            data: updatedItem
+        });
+
+    } catch (error) {
+        res.status(400).json({
+            success: false,
+            message: "Update failed",
+            error: error.message
+        });
+    }
+};
+
+module.exports = {getAllItems, updateItem};
