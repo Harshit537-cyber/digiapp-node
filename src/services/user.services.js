@@ -28,7 +28,7 @@ exports.registerUser = async (userData) => {
 };
 
 exports.getAllUsers = async () => {
-  return await User.find();
+  return await User.find().select("fullName mobile role");
 };
 
 exports.deleteUserById = async (userId) => {
