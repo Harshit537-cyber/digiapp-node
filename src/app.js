@@ -48,7 +48,7 @@ app.use("/api/admin", adminRoutes);
 app.use('/api/admin/part-time', partTimeJobRoutes);
 app.use('/api/admin/full-time', fullTimeJobRoutes);
 app.use("/api/admin", bloodRoutes);
-
+app.use("/api/admin/users", require("../src/admin/routes/userRoutes"));
 
 app.use('/api/admin/category', adminCategoryRoutes);
 
