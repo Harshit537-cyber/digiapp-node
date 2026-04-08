@@ -5,8 +5,8 @@ const { getAllItems, updateItem, deleteItem } = require("../controllers/itemsCon
 const router = express.Router();
 
 router.get("/Items", verifyAdmin, getAllItems);
+router.delete("/delete/:id", verifyAdmin, deleteItem);
 
 router.put("/update/:id", verifyAdmin, updateItem);
 
-router.delete("/delete/:id", verifyAdmin, deleteItem);
 module.exports = router;
