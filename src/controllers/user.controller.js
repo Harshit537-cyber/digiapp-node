@@ -278,11 +278,12 @@ exports.sendNotificationTest = async (req, res) => {
 
 exports.homeScreenImages = async (req, res)=>{
   try{
+
    const images = await Displayimage.find().select("photo");
     res.status(200).json({
       success : true,
       images,
-      message: "fetched home screen images successfully"
+      message: "fetched successfully"
     })
 
   }catch(error){
