@@ -9,13 +9,7 @@ const itemSchema = new mongoose.Schema({
  
   price: { type: Number, default: 0 },
   images: [{ type: String }],
-
-  // location: {
-  //   address: { type: String, required: true },
-  //   lat: { type: Number, required: true },
-  //   lng: { type: Number, required: true }
-  // },
-
+  
   location: {
       type: {
         type: String,
