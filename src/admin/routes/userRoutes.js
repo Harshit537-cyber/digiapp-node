@@ -1,10 +1,10 @@
 const express = require("express");
 const verifyAdmin = require("../middlewares/adminAuth");
 const upload = require("../../middlewares/upload");
-const { updateProfile, getAllUsers, deleteUser } = require("../controllers/userController");
+const { updateProfile, getAllUsers, deleteUser, searchUserByName } = require("../controllers/userController");
 const router = express.Router();
 
-
+router.get("/search", verifyAdmin , searchUserByName);
 router.get("/all-users",verifyAdmin,getAllUsers);
 router.put("/update-profile/:id", verifyAdmin, upload.single("profilePhoto"), updateProfile);
 router.delete("/delete/:id", verifyAdmin, deleteUser);

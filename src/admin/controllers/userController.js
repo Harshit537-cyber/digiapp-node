@@ -122,4 +122,26 @@ const deleteUser = async (req, res) => {
     return response.error(res, err.message || "Internal Server Error", 500);
   }
 };
-module.exports = {getAllUsers, updateProfile, deleteUser};
+
+
+
+const searchUserByName = async (req, res) => {
+  try {
+    const { name } = req.query; 
+
+    if (!name) {
+      return response.error(res, "Please provide a name to search", 400);
+    }
+    const users = await User.find({
+      fullName: { $regex: name, $options: "i" }
+    }).select("-token -fcmToken -__v"); 
+
+    return response.success(res, `Found ${users.length} users`, users);
+  } catch (err) {
+    console.error(err);
+    return response.error(res, err.message || "Something went wrong", 500);
+  }
+}; 
+
+
+module.exports = {getAllUsers, updateProfile, deleteUser, searchUserByName};
