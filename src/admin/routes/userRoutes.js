@@ -6,5 +6,5 @@ const router = express.Router();
 
 
 router.get("/all-users",verifyAdmin,getAllUsers);
-router.put("/update-profile", verifyAdmin, upload.single("profilePhoto"), updateProfile);
+router.put("/update-profile/:id", verifyAdmin, upload.single("profilePhoto"), updateProfile);
 module.exports = router;
