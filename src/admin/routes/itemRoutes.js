@@ -8,5 +8,5 @@ router.get("/Items", verifyAdmin, getAllItems);
 
 router.put("/update/:id", verifyAdmin, updateItem);
 
-
+router.delete("/delete/:id", verifyAdmin, deleteItem)
 module.exports = router;
