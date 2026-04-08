@@ -29,7 +29,6 @@ const updateProfile = async (req, res) => {
     const body = { ...req.body };
     const { mobile, latitude, longitude, address, ...restBody } = body;
 
-    // 1. Find the user first to get the old profile photo public_id
     const user = await User.findById(id);
     if (!user) {
       if (req.file) fs.unlinkSync(req.file.path);
@@ -38,13 +37,10 @@ const updateProfile = async (req, res) => {
 
     let profilePhotoUrl = user.profilePhoto;
 
-    // 2. If a new file is uploaded
     if (req.file) {
-      // --- OPTIONAL: DELETE OLD IMAGE FROM CLOUDINARY ---
+  
       if (user.profilePhoto) {
-        // Extract public_id from the URL (e.g., 'user_profiles/v12345/image_name')
         const publicId = user.profilePhoto.split("/").pop().split(".")[0];
-        // We add the folder name because you used 'user_profiles' folder in register
         await cloudinary.uploader.destroy(`user_profiles/${publicId}`).catch(err => console.log("Old photo delete failed:", err));
       }
 
@@ -96,4 +92,34 @@ const updateProfile = async (req, res) => {
   }
 };
 
-module.exports = {getAllUsers, updateProfile};
+
+const deleteUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // 1. Find user in the database
+    const user = await User.findById(id);
+
+    if (!user) {
+      return response.error(res, "User not found", 404);
+    }
+
+    // 2. If user has a photo, delete it from Cloudinary first
+    if (user.profilePhoto) {
+      try {
+        const publicId = user.profilePhoto.split("/").pop().split(".")[0];
+        
+        await cloudinary.uploader.destroy(`user_profiles/${publicId}`);
+      } catch (cloudErr) {
+        console.error("Cloudinary deletion failed:", cloudErr);
+      }
+    }
+    await User.findByIdAndDelete(id);
+
+    return response.success(res, "User deleted from database and Cloudinary successfully", null);
+  } catch (err) {
+    console.error(err);
+    return response.error(res, err.message || "Internal Server Error", 500);
+  }
+};
+module.exports = {getAllUsers, updateProfile, deleteUser};
