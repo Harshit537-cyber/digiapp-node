@@ -1,6 +1,6 @@
 const Item = require("../../models/Item");
 
-exports.getAllItems = async (req, res) => {
+const getAllItems = async (req, res) => {
     try {
         
         const page = parseInt(req.query.page) || 1;
