@@ -79,6 +79,32 @@ exports.adminLogin = async (req, res) => {
   }
 };
 
+// Search Admins
+exports.searchAdmins = async (req, res) => {
+    try {
+        const { query } = req.query; 
+
+        if (!query) {
+            return res.status(400).json({ message: "Search term is required" });
+        }
+
+        // Search logic using $or
+        const admins = await Admin.find({
+            $or: [
+                { name: { $regex: query, $options: 'i' } },  // Match name case-insensitive
+                { email: { $regex: query, $options: 'i' } } // Match email case-insensitive
+            ]
+        }).select('-password'); // Security: Don't send passwords back
+
+        res.status(200).json({
+            count: admins.length,
+            admins
+        });
+    } catch (error) {
+        res.status(500).json({ message: "Search failed", error: error.message });
+    }
+};
+
 exports.getAllAdmins = async (req, res) => {
   try {
     const admins = await Admin.find().select("-password");

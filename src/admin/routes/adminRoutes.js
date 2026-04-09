@@ -16,7 +16,8 @@ const {
     getAllJobsForAdmin,
     adminUpdateJob,
     adminDeleteJob,
-    displayImage
+    displayImage,
+    searchAdmins
 } = require('../controllers/adminController'); // Correct path relative to adminRoutes.js
 const verifyAdmin = require('../middlewares/adminAuth'); // Ensure this path is correct
 const upload = require('../../middlewares/upload'); // Correct path relative to adminRoutes.js
@@ -35,6 +36,10 @@ router.get('/dashboard', verifyAdmin, (req, res) => {
     res.json({ message: "Welcome to Admin Dashboard" });
 });
 router.get("/dashboard-stats", verifyAdmin, getDashboardStats);
+
+// Search Admin
+
+router.get("/search-admin", verifyAdmin, searchAdmins);
 
 // User Management Routes (Protected by verifyAdmin)
 router.get('/users', verifyAdmin, getAllUsersForAdmin);
