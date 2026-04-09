@@ -13,7 +13,7 @@ const Item = require("../../models/Item")
 // --- REGISTER API (For Admins) ---
 exports.adminRegister = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password , name} = req.body;
 
     const existingAdmin = await Admin.findOne({ email });
     if (existingAdmin) {
@@ -25,6 +25,7 @@ exports.adminRegister = async (req, res) => {
 
     const newAdmin = new Admin({
       email,
+      name,
       password: hashedPassword,
       role: "admin",
     });

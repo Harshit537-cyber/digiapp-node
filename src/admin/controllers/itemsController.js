@@ -1,5 +1,49 @@
 const Item = require("../../models/Item");
 
+const createItem = async (req, res) => {
+    try {
+       
+        const { 
+            title, 
+            price, 
+            category, 
+            isActive, 
+            isFeatured,
+            details, 
+            user, 
+            location 
+        } = req.body;
+
+        const newItem = new Item({
+            title,
+            price,
+            category,
+            isActive,
+            isFeatured,
+            details,   
+            user,      
+            location   
+        });
+
+        // Save to database
+        const savedItem = await newItem.save();
+
+        res.status(201).json({
+            success: true,
+            message: "Item created successfully",
+            data: savedItem
+        });
+
+    } catch (error) {
+        res.status(400).json({
+            success: false,
+            message: "Failed to create item",
+            error: error.message
+        });
+    }
+};
+
+
 const getAllItems = async (req, res) => {
     try {
         
@@ -12,13 +56,28 @@ const getAllItems = async (req, res) => {
             .limit(limit);
 
         const total = await Item.countDocuments({});
+        const activeCount = await Item.countDocuments({ isActive: true });
+        const featuredCount = await Item.countDocuments({ isFeatured: true });
+        const priceAggregation = await Item.aggregate([
+            {
+                $group: {
+                    _id: null,
+                    totalPrice: { $sum: "$price" }
+                }
+            }
+        ]);
 
+        const totalSum = priceAggregation.length > 0 ? priceAggregation[0].totalPrice : 0;
         res.status(200).json({
             success: true,
             totalItems: total,
+            activeItems: activeCount,        
+            featuredItems: featuredCount,    
+            totalPriceSum: totalSum, 
             currentPage: page,
             totalPages: Math.ceil(total / limit),
             data: items
+
         });
     } catch (error) {
         res.status(500).json({
@@ -95,4 +154,4 @@ const deleteItem = async (req, res) => {
 };
 
 
-module.exports = {getAllItems, updateItem, deleteItem};
+module.exports = {getAllItems, updateItem, deleteItem, createItem};
