@@ -6,12 +6,22 @@ const response = require("../../utils/response")
 
  const getAllUsers = async (req, res) => {
   try {
-    const users = await User.find({}).select("-token -fcmToken -__v");
+   const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+
+    const skip = (page - 1) * limit;
+ const totalUsers = await User.countDocuments();
+    const users = await User.find({}).select("-token -fcmToken -__v")
+    .skip(skip)
+      .limit(limit);
 
     res.status(200).json({
       success: true,
+      currentPage: page,
+      totalPages: Math.ceil(totalUsers / limit),
       count: users.length,
       data: users,
+      totalUsers: totalUsers
     });
   } catch (error) {
     res.status(500).json({
