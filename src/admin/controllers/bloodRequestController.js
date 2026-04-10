@@ -145,6 +145,40 @@ exports.deleteBloodRequest = async (req, res) => {
 };
 
 
+
+exports.getBloodRequestsByUrgency = async (req, res) => {
+    try {
+        const { urgency } = req.query;
+
+        
+        if (!urgency) {
+            return res.status(400).json({
+                success: false,
+                message: "Please provide an urgency level (Low, Medium, or Critical)"
+            });
+        }
+
+       
+        const requests = await BloodRequest.find({
+            urgency: { $regex: new RegExp(`^${urgency}$`, "i") }
+        });
+
+        // 4. Return the data
+        res.status(200).json({
+            success: true,
+            results: requests.length,
+            data: requests
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: "Error fetching data",
+            error: error.message
+        });
+    }
+};
+
 exports.getNearbyBloodRequests = async (req, res) => {
     try {
         const { lat, lng, radius } = req.query; 

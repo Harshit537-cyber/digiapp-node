@@ -4,6 +4,7 @@ const bloodController = require("../controllers/bloodRequestController");
 const verifyAdmin = require("../middlewares/adminAuth");
 
 router.get("/blood-requests/nearby", verifyAdmin, bloodController.getNearbyBloodRequests);
+router.get("/blood-requests-urgency", verifyAdmin, bloodController.getBloodRequestsByUrgency)
 router.post("/blood-requests/create", verifyAdmin, bloodController.createBloodRequest); 
 router.get("/blood-requests", verifyAdmin, bloodController.getAllBloodRequests); 
 router.get("/blood-requests/:id", verifyAdmin, bloodController.getBloodRequestById); 
