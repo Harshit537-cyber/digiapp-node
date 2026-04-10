@@ -265,9 +265,28 @@ exports.deleteSubCategory = async (req, res) => {
 
 exports.getAllCategories = async (req, res) => {
   try {
-   const categories = await Category.find({});
+
+      const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+
+    // 2. Calculate the number of documents to skip
+    const skip = (page - 1) * limit;
+   const categories = await Category.find({}).skip(skip)
+      .limit(limit);
+
+       const totalCategories = await Category.countDocuments();
+    const totalPages = Math.ceil(totalCategories / limit);
+
+
     res.status(200).json({
       success: true,
+
+      pagination: {
+        totalItems: totalCategories,
+        totalPages: totalPages,
+        currentPage: page,
+        limit: limit
+      },
       count: categories.length,
       data: categories
     });

@@ -3,7 +3,7 @@ const verifyAdmin = require("../middlewares/adminAuth");
 const { getAllItems, updateItem, deleteItem } = require("../controllers/itemsController");
 
 const router = express.Router();
-
+// router.post("/create", verifyAdmin, createItems);
 router.get("/Items", verifyAdmin, getAllItems);
 
 router.put("/update/:id", verifyAdmin, updateItem);

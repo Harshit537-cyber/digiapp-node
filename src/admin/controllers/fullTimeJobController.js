@@ -73,7 +73,7 @@ exports.adminCreateFullTimeJob = async (req, res) => {
             whatsappNumber: getSingleValue(body.whatsappNumber),
             experience: getSingleValue(body.experience),
             qualification: getSingleValue(body.qualification),
-            jobCategory: "Full-time job",
+            jobCategory: "FULL_TIME_JOB",
             images: imageUrls,
             salaryRange: salary,
             location: {
@@ -123,7 +123,7 @@ exports.updateFullTimeJob = async (req, res) => {
         keysToDelete.forEach(key => delete updateData[key]);
 
         const updatedJob = await Job.findOneAndUpdate(
-            { _id: req.params.id, jobCategory: "Full-time job" },
+            { _id: req.params.id, jobCategory: "FULL_TIME_JOB" },
             { $set: updateData },
             { new: true, runValidators: true }
         );

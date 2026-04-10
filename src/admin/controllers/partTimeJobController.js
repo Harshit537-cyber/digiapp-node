@@ -58,7 +58,7 @@ exports.adminCreateJob = async (req, res) => {
         const jobData = {
             ...body,
             userId,
-            jobCategory: "Part-time job",
+            jobCategory: "PART_TIME_JOB",
             images: imageUrls,
             salaryRange: salary,
             location: {
@@ -107,7 +107,7 @@ exports.adminUpdateJob = async (req, res) => {
         keysToDelete.forEach(key => delete updateData[key]);
 
         const updatedJob = await Job.findOneAndUpdate(
-            { _id: req.params.id, jobCategory: "Part-time job" },
+            { _id: req.params.id, jobCategory: "PART_TIME_JOB" },
             { $set: updateData },
             { new: true, runValidators: true }
         );
