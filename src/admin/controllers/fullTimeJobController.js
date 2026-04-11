@@ -28,11 +28,34 @@ exports.getAllFullTimeJobs = async (req, res) => {
 
 exports.getFullTimeJobById = async (req, res) => {
     try {
-        const job = await Job.findOne({ _id: req.params.id, jobCategory: "Full-time job" })
+        console.log("Searching for ID:", req.params.id);
+        
+        // Step 1: Try to find the job by ID ONLY first
+        const jobByIdOnly = await Job.findById(req.params.id);
+        
+        if (!jobByIdOnly) {
+            return res.status(404).json({ 
+                success: false, 
+                message: "ID does not exist in database at all" 
+            });
+        }
+
+        console.log("Job found in DB, its category is:", jobByIdOnly.jobCategory);
+
+        // Step 2: Now check if the category matches
+        if (jobByIdOnly.jobCategory !== "FULL_TIME_JOB") {
+            return res.status(400).json({ 
+                success: false, 
+                message: `Category mismatch. DB has: ${jobByIdOnly.jobCategory}, but you searched for: FULL_TIME_JOB` 
+            });
+        }
+
+        const job = await Job.findOne({ _id: req.params.id, jobCategory: "FULL_TIME_JOB" })
             .populate("userId", "name email");
-        if (!job) return res.status(404).json({ success: false, message: "Job not found" });
+
         res.status(200).json({ success: true, data: job });
     } catch (error) {
+        console.error("Error:", error);
         res.status(500).json({ success: false, message: error.message });
     }
 };
