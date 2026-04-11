@@ -33,3 +33,45 @@ Job.find({ jobCategory: "LOCAL_JOB" }).sort({ createdAt: -1 }),
     });
   }
 };
+
+
+exports.createLocalJob = async (req, res) => {
+  try {
+    const { adminId } = req.params;
+    
+    
+    const { title, details, budget, status, isFeatured, jobCategory } = req.body;
+
+    const newJob = new Job({
+      userId: adminId,            
+      jobCategory:jobCategory,   
+      title,
+      details,
+      budget,                     
+      status,
+      isFeatured,
+      
+      
+      location: {
+        type: "Point",
+        coordinates: [0, 0], 
+        address: "Default Local Address",
+      },
+      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), 
+    });
+
+    const savedJob = await newJob.save();
+
+    res.status(201).json({
+      success: true,
+      message: "Local Job created successfully",
+      data: savedJob,
+    });
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      message: "Failed to create local job",
+      error: error.message,
+    });
+  }
+};
