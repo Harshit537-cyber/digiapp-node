@@ -51,6 +51,7 @@ app.use("/api/admin", bloodRoutes);
 app.use("/api/admin/users", require("../src/admin/routes/userRoutes"));
 app.use("/api/admin/items", require("../src/admin/routes/itemRoutes"));
 app.use('/api/admin/category', adminCategoryRoutes);
+app.use("/api/admin/localJobs", require("../src/admin/routes/localJobsRoutes"));
 
 app.use("/api/admin/business", verifiedBusinessRoutes); 
 
