@@ -17,7 +17,7 @@ const uploadFilesToCloudinary = async (files) => {
 
 exports.getAllFullTimeJobs = async (req, res) => {
     try {
-        const jobs = await Job.find({ jobCategory: "Full-time job" })
+        const jobs = await Job.find({ jobCategory: "FULL_TIME_JOB" })
             .populate("userId", "name email")
             .sort({ createdAt: -1 });
         res.status(200).json({ success: true, count: jobs.length, data: jobs });

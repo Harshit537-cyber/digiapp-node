@@ -19,7 +19,7 @@ const uploadFilesToCloudinary = async (files) => {
 
 exports.getAllJobsForAdmin = async (req, res) => {
     try {
-        const jobs = await Job.find({ jobCategory: "Part-time job" })
+        const jobs = await Job.find({ jobCategory: "PART_TIME_JOB" })
             .populate("userId", "name role")
             .sort({ createdAt: -1 });
         res.status(200).json({ success: true, count: jobs.length, data: jobs });
@@ -30,7 +30,7 @@ exports.getAllJobsForAdmin = async (req, res) => {
 
 exports.getJobByIdForAdmin = async (req, res) => {
     try {
-        const job = await Job.findOne({ _id: req.params.id, jobCategory: "Part-time job" })
+        const job = await Job.findOne({ _id: req.params.id, jobCategory: "PART_TIME_JOB" })
             .populate("userId", "name role email");
         if (!job) return res.status(404).json({ success: false, message: "Job not found" });
         res.status(200).json({ success: true, data: job });
