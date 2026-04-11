@@ -29,8 +29,6 @@ exports.getAllFullTimeJobs = async (req, res) => {
 exports.getFullTimeJobById = async (req, res) => {
     try {
         console.log("Searching for ID:", req.params.id);
-        
-        // Step 1: Try to find the job by ID ONLY first
         const jobByIdOnly = await Job.findById(req.params.id);
         
         if (!jobByIdOnly) {
@@ -42,7 +40,6 @@ exports.getFullTimeJobById = async (req, res) => {
 
         console.log("Job found in DB, its category is:", jobByIdOnly.jobCategory);
 
-        // Step 2: Now check if the category matches
         if (jobByIdOnly.jobCategory !== "FULL_TIME_JOB") {
             return res.status(400).json({ 
                 success: false, 
@@ -160,14 +157,41 @@ exports.updateFullTimeJob = async (req, res) => {
 
 exports.deleteFullTimeJob = async (req, res) => {
     try {
-        const job = await Job.findOneAndDelete({ _id: req.params.id, jobCategory: "Full-time job" });
-        if (!job) return res.status(404).json({ success: false, message: "Job not found" });
-        res.status(200).json({ success: true, message: "Job deleted successfully" });
+        const { id } = req.params;
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ 
+                success: false, 
+                message: "Invalid Job ID format" 
+            });
+        }
+
+        const job = await Job.findOneAndDelete({ 
+            _id: id, 
+            jobCategory: "FULL_TIME_JOB" 
+            
+        });
+
+        if (!job) {
+            return res.status(404).json({ 
+                success: false, 
+                message: "Job not found or you don't have permission to delete it" 
+            });
+        }
+        res.status(200).json({ 
+            success: true, 
+            message: "Full-time job deleted successfully",
+            deletedJobId: id 
+        });
+
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        console.error("Error in deleteFullTimeJob:", error.message);
+        
+        res.status(500).json({ 
+            success: false, 
+            message: "Internal Server Error" 
+        });
     }
 };
-
 
 
   
