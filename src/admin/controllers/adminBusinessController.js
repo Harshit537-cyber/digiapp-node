@@ -22,10 +22,25 @@ const uploadToCloudinary = async (filePath) => {
 // --- GET ALL BUSINESSES ---
 exports.getAllBusiness = async (req, res) => {
     try {
-        const businesses = await Business.find().sort({ createdAt: -1 });
+const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+
+
+         const total = await Business.countDocuments();
+
+        const businesses = await Business.find().sort({ createdAt: -1 })
+        .skip(skip)
+            .limit(limit);
         res.status(200).json({
             success: true,
             count: businesses.length,
+              pagination: {
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit)
+            },
             data: businesses
         });
     } catch (error) {
