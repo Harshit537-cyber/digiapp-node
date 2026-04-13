@@ -17,10 +17,27 @@ const uploadFilesToCloudinary = async (files) => {
 
 exports.getAllFullTimeJobs = async (req, res) => {
     try {
+           const page = Math.max(1, parseInt(req.query.page) || 1);
+        const limit = Math.max(1, parseInt(req.query.limit) || 10);
+        const skip = (page - 1) * limit;
+
+ const total = await Job.countDocuments({ jobCategory: "FULL_TIME_JOB" });
+
         const jobs = await Job.find({ jobCategory: "FULL_TIME_JOB" })
             .populate("userId", "name email")
-            .sort({ createdAt: -1 });
-        res.status(200).json({ success: true, count: jobs.length, data: jobs });
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit);
+            
+        res.status(200).json({ success: true, 
+            count: jobs.length, 
+             pagination: {
+                total,
+                page,
+                limit,
+                totalPages: Math.ceil(total / limit)
+            },
+            data: jobs });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }

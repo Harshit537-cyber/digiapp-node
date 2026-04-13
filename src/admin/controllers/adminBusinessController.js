@@ -198,8 +198,6 @@ exports.addServiceToBusiness = async (req, res) => {
                     services: { 
                         serviceTitle, 
                         serviceDetails,
-                        // DHAYAN DEIN: Yahan 'serviceImages' (plural) use karein 
-                        // kyunki aapke schema/response mein yahi naam hai.
                         serviceImages: [serviceImageUrl] 
                     }
                 }
