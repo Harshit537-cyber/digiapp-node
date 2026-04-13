@@ -1,6 +1,7 @@
 const BloodRequest = require("../../models/BloodRequest");
 
 exports.createBloodRequest = async (req, res) => {
+    console.log("Received Body:", req.body)
     try {
         const { userId, adminId, lat, lng, address, ...otherData } = req.body;
 
@@ -11,12 +12,12 @@ exports.createBloodRequest = async (req, res) => {
             });
         }
 
-        if (!lat || !lng) {
-            return res.status(400).json({ 
-                success: false, 
-                message: "Latitude and Longitude are required" 
-            });
-        }
+       if (lat === undefined || lng === undefined || lat === null || lng === null) {
+    return res.status(400).json({ 
+        success: false, 
+        message: "Latitude and Longitude are required" 
+    });
+}
 
         const location = {
             type: "Point",
