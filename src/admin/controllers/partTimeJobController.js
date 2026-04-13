@@ -132,7 +132,7 @@ exports.adminDeleteJob = async (req, res) => {
 exports.getAllJobsForAdmin = async (req, res) => {
     try {
         const { lat, lng, radius, title } = req.query;
-        let query = { jobCategory: "Part-time job" };
+        let query = { jobCategory: "PART_TIME_JOB" };
         if (title) {
             query.title = { $regex: title, $options: "i" };
         }
