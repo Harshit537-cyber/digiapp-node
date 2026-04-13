@@ -131,12 +131,6 @@ exports.updateFullTimeJob = async (req, res) => {
                 address: address || ""
             };
         }
-
-        // const rawSalary = getSingleValue(body.salaryRange);
-        // if (rawSalary && typeof rawSalary === "string") {
-        //     try { updateData.salaryRange = JSON.parse(rawSalary); } catch (e) {}
-        // }
-
   const rawSalary = getSingleValue(body.salaryRange);
         if (rawSalary) {
             try {
