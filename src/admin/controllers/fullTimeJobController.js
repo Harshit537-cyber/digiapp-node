@@ -132,9 +132,19 @@ exports.updateFullTimeJob = async (req, res) => {
             };
         }
 
-        const rawSalary = getSingleValue(body.salaryRange);
-        if (rawSalary && typeof rawSalary === "string") {
-            try { updateData.salaryRange = JSON.parse(rawSalary); } catch (e) {}
+        // const rawSalary = getSingleValue(body.salaryRange);
+        // if (rawSalary && typeof rawSalary === "string") {
+        //     try { updateData.salaryRange = JSON.parse(rawSalary); } catch (e) {}
+        // }
+
+  const rawSalary = getSingleValue(body.salaryRange);
+        if (rawSalary) {
+            try {
+                updateData.salaryRange = typeof rawSalary === "string" ? JSON.parse(rawSalary) : rawSalary;
+            } catch (e) {
+                console.error("Salary parsing error:", e);
+                delete updateData.salaryRange;
+            }
         }
 
         if (updateData.vacancies) updateData.vacancies = Number(getSingleValue(updateData.vacancies));

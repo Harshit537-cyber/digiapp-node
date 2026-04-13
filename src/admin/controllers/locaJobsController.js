@@ -3,74 +3,117 @@ const Job = require("../../models/Job");
 
 
 exports.getLocalJobs = async (req, res) => {
-  try {
-    const [localJobs,totalLocalJobs, 
-      activeLocalJobs, 
-      featuredLocalJobs] = await Promise.all([
+    try {
+        const [localJobs, totalLocalJobs,
+            activeLocalJobs,
+            featuredLocalJobs] = await Promise.all([
 
-Job.find({ jobCategory: "LOCAL_JOB" }).sort({ createdAt: -1 }),
+                Job.find({ jobCategory: "LOCAL_JOB" }).sort({ createdAt: -1 }),
 
-      Job.countDocuments({ jobCategory: "LOCAL_JOB" }),
+                Job.countDocuments({ jobCategory: "LOCAL_JOB" }),
 
-      Job.countDocuments({ jobCategory: "LOCAL_JOB", status: "active" }),
+                Job.countDocuments({ jobCategory: "LOCAL_JOB", status: "active" }),
 
-      Job.countDocuments({ jobCategory: "LOCAL_JOB", isFeatured: true }),
+                Job.countDocuments({ jobCategory: "LOCAL_JOB", isFeatured: true }),
 
-      ]);
-    res.status(200).json({
-      success: true,
-      count: localJobs.length,
-        totalCount: totalLocalJobs,
-      activeCount: activeLocalJobs,
-      featuredCount: featuredLocalJobs,
-      data: localJobs,
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: "Server Error while fetching local jobs",
-      error: error.message,
-    });
-  }
+            ]);
+        res.status(200).json({
+            success: true,
+            count: localJobs.length,
+            totalCount: totalLocalJobs,
+            activeCount: activeLocalJobs,
+            featuredCount: featuredLocalJobs,
+            data: localJobs,
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: "Server Error while fetching local jobs",
+            error: error.message,
+        });
+    }
 };
 
 
 exports.createLocalJob = async (req, res) => {
+    try {
+        const { adminId } = req.params;
+
+
+        const { title, details, budget, status, isFeatured, jobCategory } = req.body;
+
+        const newJob = new Job({
+            userId: adminId,
+            jobCategory: jobCategory,
+            title,
+            details,
+            budget,
+            status,
+            isFeatured,
+
+
+            location: {
+                type: "Point",
+                coordinates: [0, 0],
+                address: "Default Local Address",
+            },
+            expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+        });
+
+        const savedJob = await newJob.save();
+
+        res.status(201).json({
+            success: true,
+            message: "Local Job created successfully",
+            data: savedJob,
+        });
+    } catch (error) {
+        res.status(400).json({
+            success: false,
+            message: "Failed to create local job",
+            error: error.message,
+        });
+    }
+};
+
+
+
+exports.updateLocalJob = async (req, res) => {
   try {
-    const { adminId } = req.params;
-    
-    
-    const { title, details, budget, status, isFeatured, jobCategory } = req.body;
+    const { jobId, adminId } = req.params;
+    let job = await Job.findOne({ _id: jobId, userId: adminId, jobCategory: "LOCAL_JOB" });
 
-    const newJob = new Job({
-      userId: adminId,            
-      jobCategory:jobCategory,   
-      title,
-      details,
-      budget,                     
-      status,
-      isFeatured,
-      
-      
-      location: {
-        type: "Point",
-        coordinates: [0, 0], 
-        address: "Default Local Address",
-      },
-      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), 
-    });
+    if (!job) {
+      return res.status(404).json({
+        success: false,
+        message: "Local job not found or you are not authorized to update it",
+      });
+    }
 
-    const savedJob = await newJob.save();
+    const fieldsToUpdate = {
+      title: req.body.title,
+      details: req.body.details,
+      budget: req.body.budget,
+      status: req.body.status,
+      isFeatured: req.body.isFeatured,
+      location: req.body.location || job.location,
+    };
 
-    res.status(201).json({
+    const updatedJob = await Job.findByIdAndUpdate(
+      jobId,
+      { $set: fieldsToUpdate },
+      { new: true, runValidators: true }
+    );
+
+    res.status(200).json({
       success: true,
-      message: "Local Job created successfully",
-      data: savedJob,
+      message: "Local job updated successfully",
+      data: updatedJob,
     });
   } catch (error) {
     res.status(400).json({
       success: false,
-      message: "Failed to create local job",
+      message: "Failed to update local job",
       error: error.message,
     });
   }
