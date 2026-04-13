@@ -121,7 +121,7 @@ exports.adminUpdateJob = async (req, res) => {
 
 exports.adminDeleteJob = async (req, res) => {
     try {
-        const job = await Job.findOneAndDelete({ _id: req.params.id, jobCategory: "Part-time job" });
+        const job = await Job.findOneAndDelete({ _id: req.params.id, jobCategory: "PART_TIME_JOB" });
         if (!job) return res.status(404).json({ success: false, message: "Job not found" });
         res.status(200).json({ success: true, message: "Job deleted successfully" });
     } catch (error) {
@@ -131,7 +131,13 @@ exports.adminDeleteJob = async (req, res) => {
 
 exports.getAllJobsForAdmin = async (req, res) => {
     try {
-        const { lat, lng, radius, title } = req.query;
+        const { lat, lng, radius, title , page = 1 , limit = 10} = req.query;
+
+        const pageNum = parseInt(page);
+        const limitNum = parseInt(limit);
+        const skip = (pageNum - 1) * limitNum;
+
+
         let query = { jobCategory: "PART_TIME_JOB" };
         if (title) {
             query.title = { $regex: title, $options: "i" };
@@ -147,13 +153,25 @@ exports.getAllJobsForAdmin = async (req, res) => {
                 }
             };
         }
+
+        const totalJobs = await Job.countDocuments(query);
+
+
         const jobs = await Job.find(query)
             .populate("userId", "name role")
-            .sort({ createdAt: -1 });
+            .sort({ createdAt: -1 })
+              .skip(skip)
+            .limit(limitNum);
 
         res.status(200).json({
             success: true,
             count: jobs.length,
+             pagination: {
+                totalJobs,
+                totalPages: Math.ceil(totalJobs / limitNum),
+                currentPage: pageNum,
+                pageSize: jobs.length
+            },
             data: jobs
         });
     } catch (error) {
