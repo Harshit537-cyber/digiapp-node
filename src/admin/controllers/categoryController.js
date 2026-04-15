@@ -430,3 +430,32 @@ exports.updateCategory = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+exports.searchCategory = async (req, res) => {
+  try {
+    const { q } = req.query; 
+
+    if (!q) {
+      return res.status(400).json({
+        success: false,
+        message: "Search query is required"
+      });
+    }
+
+    const results = await Category.find({
+      category: { $regex: q, $options: 'i' }
+    }).populate('createdBy', 'name email'); 
+
+    res.status(200).json({
+      success: true,
+      count: results.length,
+      data: results
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Error performing search",
+      error: error.message
+    });
+  }
+};
