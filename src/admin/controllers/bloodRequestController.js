@@ -155,7 +155,7 @@ exports.getBloodRequestsByUrgency = async (req, res) => {
         if (!urgency) {
             return res.status(400).json({
                 success: false,
-                message: "Please provide an urgency level (Low, Medium, or Critical)"
+                message: "Please provide an urgency level "
             });
         }
 
