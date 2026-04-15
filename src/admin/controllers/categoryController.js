@@ -443,7 +443,7 @@ exports.searchCategory = async (req, res) => {
     }
 
     const results = await Category.find({
-      category: { $regex: q, $options: 'i' }
+      name: { $regex: q, $options: 'i' }
     }).populate('createdBy', 'name email'); 
 
     res.status(200).json({
