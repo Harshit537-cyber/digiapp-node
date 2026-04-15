@@ -118,10 +118,11 @@ exports.getAllAdmins = async (req, res) => {
 
   const totalAdmins = await Admin.countDocuments();
     res.status(200).json({
-      admins, 
-      page,
+       page,
       limit,
-      totalAdmins
+      totalAdmins,
+      admins
+     
   });
   } catch (error) {
     console.error("Error in getAllAdmins:", error);
