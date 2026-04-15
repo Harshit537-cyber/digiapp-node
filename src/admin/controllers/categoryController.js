@@ -297,17 +297,19 @@ exports.getAllCategories = async (req, res) => {
 // getAllCategoriesForDropdown
 exports.getAllCategoriesForDropdown = async (req, res) => {
   try {
-    const categories = await Category.find({}).select('category -_id');
+    const categories = await Category.distinct('category');
     
+    // Optional: Filter out empty strings if any exist
+    const filteredCategories = categories.filter(cat => cat.trim() !== "");
+
     res.status(200).json({
       success: true,
-      data: categories
+      data: filteredCategories
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
-
 
 exports.getSubcategoriesBySection = async (req, res) => {
   try {
