@@ -30,7 +30,8 @@ router.get(
   categoryCtrl.getAllCategories
 );
 
-router.get("/get-subCategories", adminAuth,categoryCtrl.getSubcategoriesBySection)
+router.get("/dropdown-categories", verifyAdmin, categoryCtrl.getAllCategoriesForDropdown);
+router.get("/get-subCategories", adminAuth,categoryCtrl.getSubcategoriesBySection);
 
 router.put("/update/:id",upload.single('image'), categoryCtrl.updateCategory);
 

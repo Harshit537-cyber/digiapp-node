@@ -42,7 +42,7 @@ const registerBusiness = async (req, res) => {
       return res.status(400).json({ success: false, message: "Please upload all required images (Business, ID, and Owner)" });
     }
 
-    // Upload images to Cloudinary
+  
     const businessImageUrls = await Promise.all(
       businessImages.map((file) => uploadToCloudinary(file.path))
     );

@@ -295,6 +295,20 @@ exports.getAllCategories = async (req, res) => {
   }
 };
 
+exports.getAllCategoriesForDropdown = async (req, res) => {
+  try {
+    const categories = await Category.find({}).select('category -_id');
+    
+    res.status(200).json({
+      success: true,
+      data: categories
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+
 exports.getSubcategoriesBySection = async (req, res) => {
   try {
     const { categoryName } = req.query;
