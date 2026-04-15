@@ -33,6 +33,25 @@ const response = require("../../utils/response")
 };
 
 
+const getAllUsersForDropdown = async (req, res) => {
+  try {
+   
+    const users = await User.find({}).select("-token -fcmToken -__v");
+
+    res.status(200).json({
+      success: true,
+      totalUsers: users.length,
+      data: users
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Server Error: Unable to fetch users",
+      error: error.message,
+    });
+  }
+};
+
 const updateProfile = async (req, res) => {
   try {
     const { id } = req.params;
@@ -154,4 +173,4 @@ const searchUserByName = async (req, res) => {
 }; 
 
 
-module.exports = {getAllUsers, updateProfile, deleteUser, searchUserByName};
+module.exports = {getAllUsers, updateProfile, deleteUser, searchUserByName,  getAllUsersForDropdown};
