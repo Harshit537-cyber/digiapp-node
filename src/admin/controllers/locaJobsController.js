@@ -4,11 +4,17 @@ const Job = require("../../models/Job");
 
 exports.getLocalJobs = async (req, res) => {
     try {
+ const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const skip = (page - 1) * limit;
+
         const [localJobs, totalLocalJobs,
             activeLocalJobs,
             featuredLocalJobs] = await Promise.all([
 
-                Job.find({ jobCategory: "LOCAL_JOB" }).sort({ createdAt: -1 }),
+                Job.find({ jobCategory: "LOCAL_JOB" }).sort({ createdAt: -1 })
+                 .skip(skip)
+                    .limit(limit),
 
                 Job.countDocuments({ jobCategory: "LOCAL_JOB" }),
 
@@ -23,6 +29,8 @@ exports.getLocalJobs = async (req, res) => {
             totalCount: totalLocalJobs,
             activeCount: activeLocalJobs,
             featuredCount: featuredLocalJobs,
+             totalPages: Math.ceil(totalLocalJobs / limit),
+            currentPage: page,
             data: localJobs,
         });
     } catch (error) {
