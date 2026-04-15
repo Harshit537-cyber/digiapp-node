@@ -294,7 +294,7 @@ exports.getAllCategories = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
-
+// getAllCategoriesForDropdown
 exports.getAllCategoriesForDropdown = async (req, res) => {
   try {
     const categories = await Category.find({}).select('category -_id');
