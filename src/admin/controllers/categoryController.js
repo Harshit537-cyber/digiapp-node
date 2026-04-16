@@ -271,7 +271,9 @@ exports.getAllCategories = async (req, res) => {
 
     // 2. Calculate the number of documents to skip
     const skip = (page - 1) * limit;
-   const categories = await Category.find({}).skip(skip)
+   const categories = await Category.find({})
+   .sort({createdAt: -1})
+   .skip(skip)
       .limit(limit);
 
        const totalCategories = await Category.countDocuments();
