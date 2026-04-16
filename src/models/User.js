@@ -14,7 +14,16 @@ const UserSchema = new Schema(
       required: true,
       trim: true
     },
+    email: {
+      type: String,
+      required: true,
+      unique: true
+    },
 
+    password: {
+      type: String,
+      required:  true
+    },
     gender: {
       type: String,
       enum: ["male", "female", "other"],
@@ -43,7 +52,7 @@ const UserSchema = new Schema(
     city: String,
     state: String,
     country: String,
-// ... (rest of the schema)
+    // ... (rest of the schema)
     // ---------------- PROFILE ----------------
     profilePhoto: String,
 
@@ -70,12 +79,12 @@ const UserSchema = new Schema(
       type: Number,
       default: 0
     },
-    token:{
-      type:String,
-     
+    token: {
+      type: String,
+
     },
 
-    fcmToken: { 
+    fcmToken: {
       type: String,
       default: null
     },

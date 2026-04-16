@@ -8,16 +8,24 @@ const Coupon = require('../models/Coupon');
 const fs = require("fs");
 const { sendPushToUser } = require("../services/notification.service");
 const Displayimage = require('../models/DisplayPhoto')
+const bcrypt = require("bcryptjs");
 
 exports.register = async (req, res) => {
   try {
     const body = { ...req.body }; 
-    const { mobile, latitude, longitude, address, ...restBody } = body;
+    const { mobile, email, password,latitude, longitude, address, ...restBody } = body;
     console.log(mobile, latitude, longitude, address, restBody )
 
-    if (!mobile) {
-      return response.error(res, "Mobile number is required", 400);
+    if (!mobile || !email || !password) {
+      return response.error(res, "Mobile number , email, password are required", 400);
     }
+
+     const existingEmail = await User.findOne({ email }); // Adjust based on your userService
+    if (existingEmail) {
+      if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+      return response.error(res, "User already registered with this email address", 409);
+    }
+
 
     const existingUser = await userService.findUserByMobile(mobile);
     if (existingUser) {
@@ -30,6 +38,10 @@ exports.register = async (req, res) => {
         409,
       );
     }
+
+
+      const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
 
     let profilePhotoUrl = null;
 
@@ -45,6 +57,8 @@ exports.register = async (req, res) => {
     const userData = {
       ...restBody,
       mobile,
+      email, 
+      password: hashedPassword,
       profilePhoto: profilePhotoUrl,
       ...(address && { address }), 
       credits:100
@@ -71,8 +85,12 @@ exports.register = async (req, res) => {
     user.token = token;
     await user.save();
 
+
+     const userResponse = user.toObject();
+    delete userResponse.password;
+
     return response.success(res, "User Registered Successfully", {
-      user,
+      user:userResponse,
       token,
     });
   } catch (err) {
