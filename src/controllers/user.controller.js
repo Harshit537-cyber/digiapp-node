@@ -102,6 +102,55 @@ exports.register = async (req, res) => {
   }
 };
 
+
+
+exports.login = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      return response.error(res, "Email and password are required", 400);
+    }
+
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return response.error(res, "Invalid email or password", 401);
+    }
+    if (user.status === "Blocked") {
+      return response.error(res, "Your account has been blocked. Contact support.", 403);
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return response.error(res, "Invalid email or password", 401);
+    }
+
+    const token = jwt.sign(
+      { userId: user._id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: process.env.JWT_EXPIRES_IN }
+    );
+
+    user.token = token;
+    await user.save();
+    
+    const userResponse = user.toObject();
+    delete userResponse.password;
+
+    return response.success(res, "Login successful", {
+      user: userResponse,
+      token
+    });
+
+  } catch (err) {
+    console.error("Login Error:", err);
+    return response.error(res, "Something went wrong during login", 500);
+  }
+};
+
+
+
+
 exports.getAllUsers = async (req, res) => {
   try {
     // Include role in selection for admin to identify who they are creating the job for
