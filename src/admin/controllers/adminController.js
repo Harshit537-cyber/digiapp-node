@@ -91,10 +91,10 @@ exports.searchAdmins = async (req, res) => {
         // Search logic using $or
         const admins = await Admin.find({
             $or: [
-                { name: { $regex: query, $options: 'i' } },  // Match name case-insensitive
-                { email: { $regex: query, $options: 'i' } } // Match email case-insensitive
+                { name: { $regex: query, $options: 'i' } },  
+                { email: { $regex: query, $options: 'i' } } 
             ]
-        }).select('-password'); // Security: Don't send passwords back
+        }).select('-password'); 
 
         res.status(200).json({
             count: admins.length,
@@ -112,7 +112,8 @@ exports.getAllAdmins = async (req, res) => {
      const skip = (page - 1) * limit;
     const admins = await Admin.find().select("-password")
      .skip(skip)
-      .limit(limit);
+      .limit(limit)
+      .sort({createdAt: -1});
 
 
 
@@ -132,10 +133,6 @@ exports.getAllAdmins = async (req, res) => {
 
 exports.updateAdmin = async (req, res) => {
   try {
-     const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-    const skip = (page - 1) * limit;
-
     const { email, password, role } = req.body;
 
     const updateData = {};
@@ -185,19 +182,23 @@ exports.deleteAdmin = async (req, res) => {
 
 exports.getDashboardStats = async (req, res) => {
   try {
-
+    // 1. Total Users
     const totalUsers = await User.countDocuments();
+
+    // 2. New Today (Users joined in last 24 hours)
     const startOfToday = new Date();
     startOfToday.setHours(0, 0, 0, 0);
     const newToday = await User.countDocuments({
       createdAt: { $gte: startOfToday },
     });
 
+    // 3. Active Now (Users who did something in the last 15 minutes)
     const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
     const activeNow = await User.countDocuments({
       updatedAt: { $gte: fifteenMinutesAgo },
     });
 
+    // 4. Monthly Active (Users active in last 30 days)
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     const monthlyActive = await User.countDocuments({
@@ -214,7 +215,7 @@ exports.getDashboardStats = async (req, res) => {
     // 7. Total Blood Requests Count
     const totalBloodRequests = await BloodRequest.countDocuments();
 
-    const totalDownloads = 0; 
+    const totalDownloads = 0; // Placeholder
 
     res.status(200).json({
       success: true,
@@ -241,16 +242,19 @@ exports.getDashboardStats = async (req, res) => {
   }
 };
 
+//forAdmin
 
 exports.getAllUsersForAdmin = async (req, res) => {
   try {
     const { search } = req.query;
     let query = {};
 
+    // Search by fullName (Case-insensitive search)
     if (search) {
       query.fullName = { $regex: search, $options: "i" };
     }
-    
+
+    // Fetch all user data
     const users = await User.find(query).sort({ createdAt: -1 });
 
     res.status(200).json({
