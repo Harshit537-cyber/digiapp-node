@@ -318,7 +318,7 @@ exports.getSubcategoriesBySection = async (req, res) => {
     const { categoryName } = req.query;
 
     // Find the document where the name matches
-    const categoryDoc = await Category.findOne({ name: categoryName });
+    const categoryDoc = await Category.findOne({ category: categoryName });
 
     // If category exists, send the subCategory array, otherwise send empty array
     res.status(200).json({
@@ -373,7 +373,7 @@ exports.updateCategory = async (req, res) => {
     console.log("Input Data:", { name, type, categoryField });
 
     // 2. Find Category
-    let categoryDoc = await Category.findById(id); // Naam categoryDoc rakha taaki confusion na ho
+    let categoryDoc = await Category.findById(id);
     if (!categoryDoc) {
       if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
       return res.status(404).json({ success: false, message: "Category not found" });
