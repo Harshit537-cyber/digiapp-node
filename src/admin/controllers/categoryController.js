@@ -322,7 +322,6 @@ exports.getSubcategoriesBySection = async (req, res) => {
 
     const { categoryName } = req.query;
 
-    // Find the document where the name matches
     const categoryDoc = await Category.findOne({ category: categoryName });
 
 
@@ -336,7 +335,6 @@ exports.getSubcategoriesBySection = async (req, res) => {
     const totalItems = sortedSubCategories.length;
     const paginatedData = sortedSubCategories.slice(skip, skip + limit);
 
-    // If category exists, send the subCategory array, otherwise send empty array
     res.status(200).json({
       success: true,
        pagination: {
