@@ -8,6 +8,8 @@ const upload = require("../../middlewares/upload");
 
 router.get('/jobs', verifyAdmin, partTimeController.getAllJobsForAdmin);
 
+router.get("/regular-jobs", verifyAdmin,  partTimeController.getRegularUserJobs);
+
 router.post('/job/create', verifyAdmin, upload.array('images', 5), partTimeController.adminCreateJob);
 
 router.put('/job/update/:id', verifyAdmin, upload.array('images', 5), partTimeController.adminUpdateJob);

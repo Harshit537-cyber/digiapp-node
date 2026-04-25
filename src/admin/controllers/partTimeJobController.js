@@ -218,3 +218,62 @@ const admins = await Admin.find().select("_id name role");
         res.status(500).json({ success: false, message: error.message });
     }
 };
+
+
+exports.getRegularUserJobs = async (req, res) => {
+    try {
+        const { lat, lng, radius, title, page = 1, limit = 10 } = req.query;
+
+        const pageNum = parseInt(page);
+        const limitNum = parseInt(limit);
+        const skip = (pageNum - 1) * limitNum;
+
+    
+        const adminIds = await Admin.find().distinct("_id");
+
+       
+        let query = { 
+            jobCategory: "PART_TIME_JOB",
+            userId: { $nin: adminIds }
+        };
+
+        if (title) {
+            query.title = { $regex: title, $options: "i" };
+        }
+
+        if (lat && lng) {
+            const latitude = parseFloat(lat);
+            const longitude = parseFloat(lng);
+            const distanceInKm = parseFloat(radius) || 10;
+            const radiusInRadians = distanceInKm / 6378.1;
+            query.location = {
+                $geoWithin: {
+                    $centerSphere: [[longitude, latitude], radiusInRadians]
+                }
+            };
+        }
+
+        const totalJobs = await Job.countDocuments(query);
+
+        const jobs = await Job.find(query)
+            .populate("userId", "fullName role profilePhoto mobile") 
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limitNum);
+
+        res.status(200).json({
+            success: true,
+            count: jobs.length,
+            pagination: {
+                totalJobs,
+                totalPages: Math.ceil(totalJobs / limitNum),
+                currentPage: pageNum,
+                pageSize: jobs.length
+            },
+            data: jobs
+        });
+
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
