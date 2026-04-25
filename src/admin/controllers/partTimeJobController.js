@@ -2,6 +2,7 @@ const Job = require("../../models/Job");
 const jobService = require("../../services/job.services");
 const cloudinary = require("../../config/cloudinary"); // Path sahi check kar lein
 const fs = require("fs");
+const Admin = require("../../admin/models/Admin")
 
 // Helper: Cloudinary par images upload karne ke liye
 const uploadFilesToCloudinary = async (files) => {
@@ -42,7 +43,7 @@ exports.getJobByIdForAdmin = async (req, res) => {
 exports.adminCreateJob = async (req, res) => {
     try {
         const body = req.body;
-        const userId = body.userId || req.user.id;
+        const userId = req.user.id ;
 
         // 1. Upload Images to Cloudinary
         const imageUrls = await uploadFilesToCloudinary(req.files);
@@ -70,7 +71,23 @@ exports.adminCreateJob = async (req, res) => {
         };
 
         const job = await Job.create(jobData);
-        res.status(201).json({ success: true, message: "Job created with images", data: job });
+
+        const adminData =  await Admin.findById(userId).select("name role");
+
+          if (!adminData) {
+            return res.status(404).json({ success: false, message: "Admin details not found" });
+        }
+const finalResponseData = job.toObject();
+        finalResponseData.userId = adminData;
+
+        res.status(201).json({ 
+            success: true,
+             message: "Job created with images", 
+             postedBy: "ADMIN",
+             adminName:  adminData.name,
+             adminRole:adminData.role,
+             data: finalResponseData 
+            });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
@@ -137,11 +154,25 @@ exports.getAllJobsForAdmin = async (req, res) => {
         const limitNum = parseInt(limit);
         const skip = (pageNum - 1) * limitNum;
 
+const admins = await Admin.find().select("_id name role");
+        const adminIds = admins.map(admin => admin._id);
 
-        let query = { jobCategory: "PART_TIME_JOB" };
+           const adminMap = {};
+        admins.forEach(admin => {
+            adminMap[admin._id.toString()] = { name: admin.name, role: admin.role };
+        });
+
+      let query = { 
+            jobCategory: "PART_TIME_JOB",
+            userId: { $in: adminIds } // <--- सिर्फ Admin द्वारा बनाए गए जॉब्स
+        };
+
+
         if (title) {
             query.title = { $regex: title, $options: "i" };
         }
+
+        
         if (lat && lng) {
             const latitude = parseFloat(lat);
             const longitude = parseFloat(lng);
@@ -158,21 +189,30 @@ exports.getAllJobsForAdmin = async (req, res) => {
 
 
         const jobs = await Job.find(query)
-            .populate("userId", "name role")
+
             .sort({ createdAt: -1 })
               .skip(skip)
-            .limit(limitNum);
+            .limit(limitNum)
+            .lean();
+
+            const populatedJobs = jobs.map(job => {
+            const adminInfo = adminMap[job.userId.toString()];
+            return {
+                ...job,
+                userId: adminInfo || { name: "Unknown Admin", role: "admin" }
+            };
+        });
 
         res.status(200).json({
             success: true,
-            count: jobs.length,
+            count: populatedJobs.length,
              pagination: {
                 totalJobs,
                 totalPages: Math.ceil(totalJobs / limitNum),
                 currentPage: pageNum,
-                pageSize: jobs.length
+                pageSize:populatedJobs.length
             },
-            data: jobs
+            data: populatedJobs
         });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });

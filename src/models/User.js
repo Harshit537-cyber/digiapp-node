@@ -62,7 +62,8 @@ const UserSchema = new Schema(
         "SERVICE_PROVIDER",
         "BUSINESS_SHOPS",
         "JOB_SEEKER",
-        "GENERAL_USER"
+        "GENERAL_USER",
+        "ADMIN"
       ],
       required: true
     },
