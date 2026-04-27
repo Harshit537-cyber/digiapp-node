@@ -10,8 +10,6 @@ router.get('/jobs', verifyAdmin, partTimeController.getAllJobsForAdmin);
 
 router.get("/regular-jobs", verifyAdmin,  partTimeController.getRegularUserJobs);
 
-router.get("/regular-jobsById/:id", verifyAdmin, partTimeController.getRegularUserJobById);
-
 router.post('/job/create', verifyAdmin, upload.array('images', 5), partTimeController.adminCreateJob);
 
 router.put('/job/update/:id', verifyAdmin, upload.array('images', 5), partTimeController.adminUpdateJob);

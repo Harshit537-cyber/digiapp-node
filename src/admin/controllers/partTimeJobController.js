@@ -278,32 +278,3 @@ exports.getRegularUserJobs = async (req, res) => {
     }
 };
 
-exports.getRegularUserJobById = async (req, res) => {
-    try {
-        const { id } = req.params;
-
-        const adminIds = await Admin.find().distinct("_id");
-        const job = await Job.findOne({
-            _id: id,
-            jobCategory: "PART_TIME_JOB",
-            userId: { $nin: adminIds } 
-        }).populate("userId", "fullName role profilePhoto mobile");
-        if (!job) {
-            return res.status(404).json({
-                success: false,
-                message: "Job not found or it's not a regular user job."
-            });
-        }
-
-        res.status(200).json({
-            success: true,
-            data: job
-        });
-
-    } catch (error) {
-        res.status(500).json({ 
-            success: false, 
-            message: error.kind === 'ObjectId' ? "Invalid Job ID" : error.message 
-        });
-    }
-};
