@@ -7,13 +7,16 @@ const {
     updateFullTimeJob, 
     deleteFullTimeJob,
     getFullTimeJobById,
-    adminCreateFullTimeJob
+    adminCreateFullTimeJob,
+    getNonFullTimeJobs,
+   
 } = require('../controllers/fullTimeJobController');
 
 router.post('/create', verifyAdmin, upload.array('images', 5), adminCreateFullTimeJob);
 router.put('/update/:id', verifyAdmin, upload.array('images', 5), updateFullTimeJob); // Added upload here
 
 router.get('/all', verifyAdmin, getAllFullTimeJobs);
+router.get("/non-admin-jobs", getNonFullTimeJobs)
 router.get('/:id', verifyAdmin, getFullTimeJobById); 
 router.delete('/delete/:id', verifyAdmin, deleteFullTimeJob);
 

@@ -2,6 +2,8 @@ const Job = require("../../models/Job");
 const cloudinary = require("../../config/cloudinary");
 const fs = require("fs");
 const mongoose = require("mongoose");
+const Admin = require("../../admin/models/Admin");
+const User = require("../../models/User")
 
 const getSingleValue = (val) => Array.isArray(val) ? val[0] : val;
 
@@ -17,31 +19,84 @@ const uploadFilesToCloudinary = async (files) => {
 
 exports.getAllFullTimeJobs = async (req, res) => {
     try {
-           const page = Math.max(1, parseInt(req.query.page) || 1);
-        const limit = Math.max(1, parseInt(req.query.limit) || 10);
-        const skip = (page - 1) * limit;
+        const { lat, lng, radius, title, page = 1, limit = 10 } = req.query;
 
- const total = await Job.countDocuments({ jobCategory: "FULL_TIME_JOB" });
+        const pageNum = parseInt(page);
+        const limitNum = parseInt(limit);
+        const skip = (pageNum - 1) * limitNum;
 
-        const jobs = await Job.find({ jobCategory: "FULL_TIME_JOB" })
-            .populate("userId", "name email")
+        // 1. Pehle saare Admins ki IDs nikaalein
+        const admins = await Admin.find().select("_id name role");
+        const adminIds = admins.map(admin => admin._id);
+
+        // Admin details ka map banayein population ke liye
+        const adminMap = {};
+        admins.forEach(admin => {
+            adminMap[admin._id.toString()] = { name: admin.name, role: admin.role };
+        });
+
+        let query = { 
+            jobCategory: "FULL_TIME_JOB",
+            userId: { $in: adminIds } 
+        };
+
+        // Title filter (agar user search kare)
+        if (title) {
+            query.title = { $regex: title, $options: "i" };
+        }
+
+        // Location filter (agar lat/lng provide kiya ho)
+        if (lat && lng) {
+            const latitude = parseFloat(lat);
+            const longitude = parseFloat(lng);
+            const distanceInKm = parseFloat(radius) || 10;
+            const radiusInRadians = distanceInKm / 6378.1;
+            query.location = {
+                $geoWithin: {
+                    $centerSphere: [[longitude, latitude], radiusInRadians]
+                }
+            };
+        }
+
+        // 3. Total count aur Jobs fetch karein
+        const totalJobs = await Job.countDocuments(query);
+
+        const jobs = await Job.find(query)
             .sort({ createdAt: -1 })
             .skip(skip)
-            .limit(limit);
-            
-        res.status(200).json({ success: true, 
-            count: jobs.length, 
-             pagination: {
-                total,
-                page,
-                limit,
-                totalPages: Math.ceil(total / limit)
+            .limit(limitNum)
+            .lean(); // Lean use karne se performance achi hoti hai
+
+        // 4. Jobs data mein Admin ki details map karein
+        const populatedJobs = jobs.map(job => {
+            const adminInfo = adminMap[job.userId ? job.userId.toString() : ""];
+            return {
+                ...job,
+                 userId: {
+                    _id: job.userId,
+                    name: adminInfo ? adminInfo.name : "Unknown Admin",
+                    role: adminInfo ? adminInfo.role : "admin"
+                }
+            };
+        });
+
+        res.status(200).json({
+            success: true,
+            count: populatedJobs.length,
+            pagination: {
+                totalJobs,
+                totalPages: Math.ceil(totalJobs / limitNum),
+                currentPage: pageNum,
+                pageSize: populatedJobs.length
             },
-            data: jobs });
+            data: populatedJobs
+        });
+
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
 };
+
 
 exports.getFullTimeJobById = async (req, res) => {
     try {
@@ -122,7 +177,24 @@ exports.adminCreateFullTimeJob = async (req, res) => {
         };
 
         const job = await Job.create(jobData);
-        res.status(201).json({ success: true, message: "Job created successfully", data: job });
+
+const adminData = await Admin.findById(userId).select("name role");
+
+ if (!adminData) {
+            return res.status(404).json({ success: false, message: "Admin details not found" });
+        }
+
+
+         const finalResponseData = job.toObject();
+        finalResponseData.userId = adminData;
+
+        res.status(201).json({ success: true,
+             message: "Job created successfully", 
+              postedBy: "ADMIN",
+             adminName: adminData.name,
+            adminRole: adminData.role,
+            data: finalResponseData 
+             });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
@@ -215,4 +287,61 @@ exports.deleteFullTimeJob = async (req, res) => {
 };
 
 
-  
+exports.getNonFullTimeJobs = async (req, res) => {
+    try {
+        const { lat, lng, radius, title, page = 1, limit = 10 } = req.query;
+
+        const pageNum = parseInt(page);
+        const limitNum = parseInt(limit);
+        const skip = (pageNum - 1) * limitNum;
+
+        // Bilkul vahi logic: Admin collection se IDs nikalna
+        const adminIds = await Admin.find().distinct("_id");
+
+        // Query: FULL_TIME_JOB aur exclude adminIds
+        let query = { 
+            jobCategory: "FULL_TIME_JOB",
+            userId: { $nin: adminIds }
+        };
+
+        if (title) {
+            query.title = { $regex: title, $options: "i" };
+        }
+
+        if (lat && lng) {
+            const latitude = parseFloat(lat);
+            const longitude = parseFloat(lng);
+            const distanceInKm = parseFloat(radius) || 10;
+            const radiusInRadians = distanceInKm / 6378.1;
+            query.location = {
+                $geoWithin: {
+                    $centerSphere: [[longitude, latitude], radiusInRadians]
+                }
+            };
+        }
+
+        const totalJobs = await Job.countDocuments(query);
+
+        // Populate logic vahi jo aapne di hai
+        const jobs = await Job.find(query)
+            .populate("userId", "fullName role profilePhoto mobile") 
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limitNum);
+
+        res.status(200).json({
+            success: true,
+            count: jobs.length,
+            pagination: {
+                totalJobs,
+                totalPages: Math.ceil(totalJobs / limitNum),
+                currentPage: pageNum,
+                pageSize: jobs.length
+            },
+            data: jobs
+        });
+
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};

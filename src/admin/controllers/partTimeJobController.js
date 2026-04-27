@@ -18,16 +18,6 @@ const uploadFilesToCloudinary = async (files) => {
     return results.map(result => result.secure_url);
 };
 
-exports.getAllJobsForAdmin = async (req, res) => {
-    try {
-        const jobs = await Job.find({ jobCategory: "PART_TIME_JOB" })
-            .populate("userId", "name role")
-            .sort({ createdAt: -1 });
-        res.status(200).json({ success: true, count: jobs.length, data: jobs });
-    } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
-    }
-};
 
 exports.getJobByIdForAdmin = async (req, res) => {
     try {
