@@ -8,7 +8,7 @@ router.post("/create", verifyAdmin,upload.array('images', 5),  localJobControlle
 
 router.get("/admin-get-jobs", verifyAdmin, localJobController.getLocalJobsForAdmin );
 
-router.put("/update-job", verifyAdmin, upload.array('images', 5), localJobController.adminUpdateLocalJob);
+router.put("/update-job/:id", verifyAdmin, upload.array('images', 5), localJobController.adminUpdateLocalJob);
 
 router.get("/public/local-jobs", verifyAdmin, localJobController.getRegularUserLocalJobs);
 
