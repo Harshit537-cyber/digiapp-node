@@ -13,7 +13,7 @@ const {
 } = require('../controllers/fullTimeJobController');
 
 router.post('/create', verifyAdmin, upload.array('images', 5), adminCreateFullTimeJob);
-router.put('/update/:id', verifyAdmin, upload.array('images', 5), updateFullTimeJob); // Added upload here
+router.put('/update/:id', verifyAdmin, upload.array('images', 5), updateFullTimeJob); 
 
 router.get('/all', verifyAdmin, getAllFullTimeJobs);
 router.get("/non-admin-jobs", getNonFullTimeJobs)

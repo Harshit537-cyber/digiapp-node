@@ -1,6 +1,6 @@
 const Job = require("../../models/Job");
 const jobService = require("../../services/job.services");
-const cloudinary = require("../../config/cloudinary"); // Path sahi check kar lein
+const cloudinary = require("../../config/cloudinary");
 const fs = require("fs");
 const Admin = require("../../admin/models/Admin")
 

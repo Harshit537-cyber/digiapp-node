@@ -10,6 +10,7 @@ const { sendPushToUser } = require("../services/notification.service");
 const Displayimage = require('../models/DisplayPhoto')
 const bcrypt = require("bcryptjs");
 
+
 exports.register = async (req, res) => {
   try {
     const body = { ...req.body }; 
@@ -153,7 +154,6 @@ exports.login = async (req, res) => {
 
 exports.getAllUsers = async (req, res) => {
   try {
-    // Include role in selection for admin to identify who they are creating the job for
     const users = await userService.getAllUsers();
     return response.success(res, "Users fetched successfully", users);
   } catch (err) {
