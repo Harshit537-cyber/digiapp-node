@@ -1,5 +1,21 @@
 const SubcategoryData = require("../../admin/models/SubCategoryData");
 const Category = require("../../admin/models/Category");
+const cloudinary = require("../../config/cloudinary");
+const fs = require("fs");
+
+const uploadFilesToCloudinary = async (files) => {
+    if (!files || files.length === 0) return [];
+    const uploadPromises = files.map(file =>
+        cloudinary.uploader.upload(file.path, { folder: "jobs" })
+    );
+    const results = await Promise.all(uploadPromises);
+
+
+    files.forEach(file => fs.unlinkSync(file.path));
+
+    return results.map(result => result.secure_url);
+};
+
 
 exports.createSubcategoryData = async (req, res) => {
     try {
@@ -9,8 +25,7 @@ exports.createSubcategoryData = async (req, res) => {
         if (!adminId) {
             return res.status(401).json({ 
                 success: false, 
-                message: "Admin authentication failed. User ID not found in token payload.",
-                decodedDataReceived: req.user 
+                message: "Admin authentication failed." 
             });
         }
 
@@ -25,22 +40,40 @@ exports.createSubcategoryData = async (req, res) => {
             return res.status(404).json({ success: false, message: "Category not found" });
         }
 
-        let liveImageUrl = "";
+        // --- CLOUDINARY UPLOAD LOGIC ---
+        let finalImageUrl = "";
+
         if (req.file) {
-            liveImageUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+            // Aapka function array mangta hai, isliye humne [req.file] pass kiya
+            const uploadResults = await uploadFilesToCloudinary([req.file]);
+            
+            // Function array return karta hai, toh pehla URL nikal lenge
+            if (uploadResults && uploadResults.length > 0) {
+                finalImageUrl = uploadResults[0];
+            }
+        } 
+        // Fallback: Agar kisi wajah se cloudinary function use nahi karna aur local path chahiye (optional)
+        else if (req.body.image) {
+            finalImageUrl = req.body.image;
         }
 
-      
         const newData = new SubcategoryData({
             ...req.body,
-            image: liveImageUrl,
+
+
+             images: finalImageUrl ? [finalImageUrl] : [], // Yahan Cloudinary ka secure_url save hoga
             subCategoryName: subCategoryName,
             categoryId: foundCategory._id,
             createdBy: adminId 
         });
 
         const savedData = await newData.save();
-        res.status(201).json({ success: true, data: savedData });
+        
+        // Response mein wahi URL jayega jo generate hua hai
+        res.status(201).json({ 
+            success: true, 
+            data: savedData,
+        });
 
     } catch (error) {
         console.error("Controller Error:", error);
