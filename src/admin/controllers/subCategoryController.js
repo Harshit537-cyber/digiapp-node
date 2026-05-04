@@ -40,19 +40,15 @@ exports.createSubcategoryData = async (req, res) => {
             return res.status(404).json({ success: false, message: "Category not found" });
         }
 
-        // --- CLOUDINARY UPLOAD LOGIC ---
         let finalImageUrl = "";
 
         if (req.file) {
-            // Aapka function array mangta hai, isliye humne [req.file] pass kiya
             const uploadResults = await uploadFilesToCloudinary([req.file]);
             
-            // Function array return karta hai, toh pehla URL nikal lenge
             if (uploadResults && uploadResults.length > 0) {
                 finalImageUrl = uploadResults[0];
             }
         } 
-        // Fallback: Agar kisi wajah se cloudinary function use nahi karna aur local path chahiye (optional)
         else if (req.body.image) {
             finalImageUrl = req.body.image;
         }
@@ -61,7 +57,7 @@ exports.createSubcategoryData = async (req, res) => {
             ...req.body,
 
 
-             images: finalImageUrl ? [finalImageUrl] : [], // Yahan Cloudinary ka secure_url save hoga
+             images: finalImageUrl ? [finalImageUrl] : [], 
             subCategoryName: subCategoryName,
             categoryId: foundCategory._id,
             createdBy: adminId 
@@ -69,7 +65,6 @@ exports.createSubcategoryData = async (req, res) => {
 
         const savedData = await newData.save();
         
-        // Response mein wahi URL jayega jo generate hua hai
         res.status(201).json({ 
             success: true, 
             data: savedData,

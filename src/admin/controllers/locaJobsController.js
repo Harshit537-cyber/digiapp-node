@@ -135,7 +135,7 @@ exports.adminCreateLocalJob = async (req, res) => {
 
     const job = await Job.create(jobData);
 
-    const adminData = await Admin.findById(userId).select("fullName role");
+    const adminData = await Admin.findById(userId).select("name role");
 
     if (!adminData) {
       return res
@@ -150,7 +150,7 @@ exports.adminCreateLocalJob = async (req, res) => {
       success: true,
       message: "Local Job created successfully by Admin",
       postedBy: "ADMIN",
-      adminName: adminData.fullName,
+      adminName: adminData.name,
       adminRole: adminData.role,
       data: finalResponseData,
     });
