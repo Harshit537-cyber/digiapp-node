@@ -218,8 +218,6 @@ exports.getUserCreatedItems = async (req, res) => {
         const pageNum = parseInt(page);
         const limitNum = parseInt(limit);
         const skip = (pageNum - 1) * limitNum;
-
-        // 1. Saare Admins ki IDs nikalna
         const admins = await Admin.find().select("_id");
         const adminIds = admins.map(admin => admin._id);
         let query = { 
@@ -246,7 +244,7 @@ exports.getUserCreatedItems = async (req, res) => {
 
         const totalItems = await Item.countDocuments(query);
         const activeCount = await Item.countDocuments({ ...query, isActive: true });
-        
+        const isFeaturedCount = await Item.countDocuments({...query, isFeatured: true})
       
         const priceAggregation = await Item.aggregate([
             { $match: query },
@@ -273,6 +271,7 @@ exports.getUserCreatedItems = async (req, res) => {
             totalItems: totalItems,
             activeItems: activeCount,
             totalPriceSum: totalSum,
+            isFeatured: isFeaturedCount,
             pagination: {
                 totalPages: Math.ceil(totalItems / limitNum),
                 currentPage: pageNum,
