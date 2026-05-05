@@ -365,3 +365,45 @@ exports.getBusinessServices = async (req, res) => {
         res.status(500).json({ success: false, message: "Server Error: " + error.message });
     }
 };
+
+
+exports.updateBusinessStatus = async (req, res) => {
+  try {
+    const { id } = req.params; 
+    const { status } = req.body; 
+
+    const validStatuses = ["Pending", "Approved", "Rejected"];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Invalid status! Please use Pending, Approved, or Rejected." 
+      });
+    }
+
+    const updatedBusiness = await Business.findByIdAndUpdate(
+      id,
+      { status: status },
+      { new: true, runValidators: true } 
+    );
+
+    if (!updatedBusiness) {
+      return res.status(404).json({ 
+        success: false, 
+        message: "Business not found!" 
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `Business status successfully updated to ${status}`,
+      data: updatedBusiness
+    });
+    
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      message: "Server Error", 
+      error: error.message 
+    });
+  }
+};

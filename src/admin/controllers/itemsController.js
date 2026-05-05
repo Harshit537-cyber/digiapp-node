@@ -1,6 +1,6 @@
 const Item = require("../../models/Item");
 const Admin = require("../../admin/models/Admin")
-const cloudinary = require("../../config/cloudinary"); // Path sahi check kar lein
+const cloudinary = require("../../config/cloudinary");
 const fs = require("fs");
 
 const uploadFilesToCloudinary = async (files) => {
