@@ -19,13 +19,17 @@ const createBloodRequest = async (req, res) => {
       additionalInfo,
     } = req.body;
 
+    
     const bloodRequestData = {
       userId: req.user.userId,
       patientName,
       bloodGroup,
       urgency,
       hospitalName,
-      location,
+       location: {
+        ...location, 
+        type: "Point", 
+      },
       contactNumber,
       whatsappNumber,
       additionalInfo,
@@ -41,7 +45,7 @@ const createBloodRequest = async (req, res) => {
       bloodRequest,
     );
   } catch (error) {
-    console.error(error);
+    console.error("Error in createBloodRequest:",error);
     return response.error(res, "Server error", 500);
   }
 };

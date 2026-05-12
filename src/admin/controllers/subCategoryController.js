@@ -19,59 +19,71 @@ const uploadFilesToCloudinary = async (files) => {
 
 exports.createSubcategoryData = async (req, res) => {
     try {
-        console.log("User data from req.user:", req.user);
         const adminId = req.user?._id || req.user?.id;
-
         if (!adminId) {
-            return res.status(401).json({ 
-                success: false, 
-                message: "Admin authentication failed." 
-            });
+            return res.status(401).json({ success: false, message: "Admin authentication failed." });
         }
-
-        const { categoryName, subCategoryName } = req.query;
-
-        if (!categoryName || !subCategoryName) {
-            return res.status(400).json({ success: false, message: "categoryName and subCategoryName are required." });
-        }
+        
+        const { 
+            categoryName, 
+            subCategoryName, 
+            title,           
+            description,     
+            address,        
+            rating,        
+            reviewCount,    
+            isTrusted,       
+            isCertified,     
+            calls, chats, whatsapp, saved, profileOpens, impressions, 
+            services         
+        } = req.body;
 
         const foundCategory = await Category.findOne({ category: categoryName });
         if (!foundCategory) {
             return res.status(404).json({ success: false, message: "Category not found" });
         }
 
-        let finalImageUrl = "";
-
-        if (req.file) {
-            const uploadResults = await uploadFilesToCloudinary([req.file]);
-            
-            if (uploadResults && uploadResults.length > 0) {
-                finalImageUrl = uploadResults[0];
-            }
-        } 
-        else if (req.body.image) {
-            finalImageUrl = req.body.image;
+        let finalImageUrls = [];
+        if (req.files && req.files.length > 0) {
+            finalImageUrls = await uploadFilesToCloudinary(req.files);
         }
 
         const newData = new SubcategoryData({
-            ...req.body,
-
-
-             images: finalImageUrl ? [finalImageUrl] : [], 
-            subCategoryName: subCategoryName,
             categoryId: foundCategory._id,
+            subCategoryName: subCategoryName,
+            title: title,
+            description: description,
+            address: address,
+            rating: Number(rating) || 0,
+            reviewCount: Number(reviewCount) || 0,
+            
+            isTrusted: isTrusted === 'true' || isTrusted === true,
+            isCertified: isCertified === 'true' || isCertified === true,
+
+            analytics: {
+                calls: Number(calls) || 0,
+                chats: Number(chats) || 0,
+                whatsapp: Number(whatsapp) || 0,
+                saved: Number(saved) || 0,
+                profileOpens: profileOpens || "0",
+                impressions: impressions || "0"
+            },
+
+            images: finalImageUrls, 
+            services: services ? JSON.parse(services) : [],
+
             createdBy: adminId 
         });
-
         const savedData = await newData.save();
         
         res.status(201).json({ 
             success: true, 
-            data: savedData,
+            message: "Sara data save ho gaya hai!", 
+            data: savedData 
         });
 
     } catch (error) {
-        console.error("Controller Error:", error);
+        console.error("Error saving data:", error);
         res.status(500).json({ success: false, message: error.message });
     }
 };
