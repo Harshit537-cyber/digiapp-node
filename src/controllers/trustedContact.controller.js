@@ -9,29 +9,46 @@ exports.addTrustedContact = async (req, res) => {
     const { name, relation, contactNumber } = req.body;
     const userId = req.user.userId;
 
+     const currentUser = await User.findById(userId);
+    
+    if (!currentUser) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    if (currentUser.gender !== "female") {
+      return res.status(403).json({ 
+        success: false, 
+        message: "Access denied. Only female users can add trusted contacts." 
+      });
+    }
+ await TrustedContact.deleteMany({ user: userId, status: "Rejected" });
+
     if (!contactNumber) {
       return res.status(400).json({ success: false, message: "Contact number is required" });
     }
 
     const existingCount = await TrustedContact.countDocuments({ user: userId });
     if (existingCount >= 3) {
-      return res.status(400).json({ success: false, message: "Limit reached. Max 3 contacts allowed." });
-    }
-
-    const recipient = await User.findOne({
-      $or: [
-        { phoneNumber: contactNumber },
-        { phone: contactNumber },
-        { mobile: contactNumber }
-      ]
-    });
-
-    if (!recipient) {
-      return res.status(404).json({ 
+      return res.status(400).json({ 
         success: false, 
-        message: "Recipient must have app installed. Check if number matches DB exactly." 
+        message: "Limit reached. You already have 3 trusted contacts. Please delete one to add a new one." 
       });
     }
+
+    // const recipient = await User.findOne({
+    //   $or: [
+    //     { phoneNumber: contactNumber },
+    //     { phone: contactNumber },
+    //     { mobile: contactNumber }
+    //   ]
+    // });
+
+    // if (!recipient) {
+    //   return res.status(404).json({ 
+    //     success: false, 
+    //     message: "Recipient must have app installed. Check if number matches DB exactly." 
+    //   });
+    // }
 
     if (!req.file) {
       return res.status(400).json({ success: false, message: "Image is required" });
@@ -115,22 +132,51 @@ exports.updateTrustedContact = async (req, res) => {
 
 exports.deleteTrustedContact = async (req, res) => {
   try {
-    await trustedContactService.deleteContact(req.params.id, req.user.userId);
-    return res.status(200).json({ success: true, message: "Deleted successfully" });
+    const contactId = req.params.id;
+    const deletedContact = await TrustedContact.findByIdAndDelete(contactId);
+
+    if (!deletedContact) {
+      return res.status(404).json({ 
+        success: false, 
+        message: "Contact not found. Check if the ID is correct." 
+      });
+    }
+
+    return res.status(200).json({ 
+      success: true, 
+      message: "Deleted successfully" 
+    });
+
   } catch (error) { 
-    return res.status(500).json({ success: false, message: error.message }); 
+    return res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    }); 
   }
 };
+
 
 exports.getAllContacts = async (req, res) => {
   try {
-    const contacts = await trustedContactService.getAllContacts(req.user.userId);
-    return res.status(200).json({ success: true, data: contacts });
+    const loggedInUserId = req.user.userId;
+    const contacts = await TrustedContact.find({ userId: loggedInUserId });
+
+ 
+    return res.status(200).json({ 
+      success: true, 
+      loggedInUserId: loggedInUserId, 
+      count: contacts.length,
+      data: contacts 
+    });
+
   } catch (error) { 
-    return res.status(500).json({ success: false, message: error.message }); 
+    console.error("Error fetching contacts:", error);
+    return res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    }); 
   }
 };
-
 exports.getContactById = async (req, res) => {
   try {
     const contact = await trustedContactService.getContactById(req.params.id, req.user.userId);
