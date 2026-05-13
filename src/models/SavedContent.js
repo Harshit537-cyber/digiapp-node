@@ -15,7 +15,8 @@ const savedContentSchema = new mongoose.Schema({
     type: String, 
     required: true, 
     enum: ['Job', 'Business', 'Item'] 
-  }
+  },
+   jobCategory: { type: String },
 }, { timestamps: true });
 
 

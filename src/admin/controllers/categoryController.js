@@ -353,6 +353,8 @@ exports.getSubcategoriesBySection = async (req, res) => {
     });
   }
 };
+
+
 exports.deleteCategory = async (req, res) => {
   try {
     const { id } = req.params;
