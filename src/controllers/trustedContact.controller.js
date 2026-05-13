@@ -159,9 +159,9 @@ exports.deleteTrustedContact = async (req, res) => {
 exports.getAllContacts = async (req, res) => {
   try {
     const loggedInUserId = req.user.userId;
-    const contacts = await TrustedContact.find({ userId: loggedInUserId });
+    
+    const contacts = await TrustedContact.find({ user: loggedInUserId });
 
- 
     return res.status(200).json({ 
       success: true, 
       loggedInUserId: loggedInUserId, 
@@ -177,6 +177,8 @@ exports.getAllContacts = async (req, res) => {
     }); 
   }
 };
+
+
 exports.getContactById = async (req, res) => {
   try {
     const contact = await trustedContactService.getContactById(req.params.id, req.user.userId);
