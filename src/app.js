@@ -43,7 +43,7 @@ app.use("/api/trusted-contact", trustedContactRoutes);
 app.use("/api/business", businessRoutes);
 app.use("/api/items", itemRoutes);
 app.use("/api/admin", adminRoutes);
-app.use(chatRoutes);
+app.use("/api/chat", chatRoutes);
 app.use("/api/admin", adminRoutes);
 app.use('/api/admin/part-time', partTimeJobRoutes);
 app.use('/api/admin/full-time', fullTimeJobRoutes);
