@@ -12,10 +12,10 @@ router.get('/dispplay-Image', userController.homeScreenImages)
 
 router.post('/apply-coupon', verifyToken, userController.applyCoupon);
 
-router.post("/update-fcm-token", userController.updateFcmToken);
+router.post("/update-fcm-token", verifyToken, userController.updateFCMToken);
 
 
-router.post("/test-notification",  userController.sendNotificationTest)
+// router.post("/test-notification", verifyToken, userController.sendNotificationTest)
 
 router.get('/wallet', verifyToken, userController.getWalletDetails);
 
@@ -29,6 +29,8 @@ router.post(
   upload.single("profilePhoto"),
   userController.register
 );
+
+router.post("/update-fcm-token", verifyToken, userController.updateFCMToken);
 
 router.post("/login", userController.login);
 

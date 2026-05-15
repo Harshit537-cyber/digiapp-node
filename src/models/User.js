@@ -87,7 +87,7 @@ const UserSchema = new Schema(
 
     fcmToken: {
       type: String,
-      default: null
+      default:""
     },
 
     isVerified: {

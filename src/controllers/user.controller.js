@@ -311,36 +311,37 @@ exports.getAvailableCoupons = async (req, res) => {
 };
 
 
-exports.updateFcmToken = async (req, res) => {
+exports.updateFCMToken = async (req, res) => {
   try {
-    const { userId, fcmToken } = req.body;
+    const { fcmToken } = req.body;
+    const userId = req.user.userId; 
 
-    if (!userId || !fcmToken) {
-      return res.status(400).json({ message: "UserId and fcmToken are required" });
+    if (!fcmToken) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "FCM Token is required" 
+      });
     }
 
-    // Update the fcmToken field specifically
-    await User.findByIdAndUpdate(userId, { fcmToken: fcmToken });
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { fcmToken: fcmToken },
+      { new: true }
+    );
 
-    res.status(200).json({ success: true, message: "FCM Token updated" });
+    if (!updatedUser) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    return res.status(200).json({ 
+      success: true, 
+      message: "FCM Token updated successfully" 
+    });
   } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+    return res.status(500).json({ success: false, message: error.message });
   }
 };
 
-
-
-exports.sendNotificationTest = async (req, res) => {
-  try {
-    const { userId, title, message } = req.body;
-    
-    const result = await sendPushToUser(userId, title, message);
-    
-    res.status(200).json({ success: true, result });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
-  }
-};
 
 
 exports.homeScreenImages = async (req, res)=>{

@@ -3,6 +3,7 @@ const User = require("../models/User");
 const trustedContactService = require("../services/trustedContact.service");
 const cloudinary = require("../config/cloudinary");
 const fs = require("fs");
+const{ sendNotification} =require("../utils/notification");
 
 exports.addTrustedContact = async (req, res) => {
   try {
@@ -66,6 +67,28 @@ exports.addTrustedContact = async (req, res) => {
       status: "Pending"
     });
 
+ try {
+      const targetUser = await User.findOne({
+        $or: [{ phoneNumber: contactNumber }, { phone: contactNumber }, { mobile: contactNumber }]
+      });
+
+      if (targetUser && targetUser.fcmToken) {
+        await sendNotification(
+          targetUser.fcmToken,
+          "Trusted Contact Request 🤝",
+          `${currentUser.name} wants to add you as their trusted contact.`,
+          {
+            type: "TRUSTED_CONTACT_REQUEST",
+            contactId: savedContact._id.toString(),
+            senderName: currentUser.name
+          }
+        );
+      }
+    } catch (notifErr) {
+      console.log("Notification sending failed but contact saved:", notifErr.message);
+    }
+
+
     return res.status(201).json({ success: true, message: "Request sent successfully", data: savedContact });
   } catch (error) {
     if (req.file?.path && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
@@ -105,15 +128,32 @@ exports.respondToRequest = async (req, res) => {
     const currentUser = await User.findById(req.user.userId);
     const myNumber = currentUser.phoneNumber || currentUser.phone || currentUser.mobile;
 
+     if (status === 'Rejected') {
+      const deleted = await TrustedContact.findOneAndDelete({ _id: id, contactNumber: myNumber });
+      if (!deleted) return res.status(404).json({ message: "Request not found" });
+      return res.status(200).json({ success: true, message: "Request rejected and removed" });
+    }
     const updated = await TrustedContact.findOneAndUpdate(
       { _id: id, contactNumber: myNumber },
       { status },
       { new: true }
-    );
+    ).populate('user');
 
     if (!updated) {
       return res.status(404).json({ success: false, message: "Request not found for your number" });
     }
+ if (status === 'Accepted') {
+      const requester = await User.findById(updated.user); // रिक्वेस्ट भेजने वाली महिला
+      if (requester && requester.fcmToken) {
+        await sendNotification(
+          requester.fcmToken,
+          "Request Accepted ✅",
+          `${currentUser.name} is now your trusted contact.`,
+          { type: "REQUEST_ACCEPTED" }
+        );
+      }
+    }
+    
 
     return res.status(200).json({ success: true, message: `Request ${status} successfully`, data: updated });
   } catch (error) {

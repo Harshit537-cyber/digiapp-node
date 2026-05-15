@@ -7,6 +7,8 @@ const http = require("http");
 const { Server } = require("socket.io"); 
 const chatSocket = require("./socket/chatSocket")
 
+
+require('./jobs/sosCron'); 
 const Message = require("./models/message.model");
 
 const PORT = process.env.PORT ||5000;
@@ -14,7 +16,7 @@ const PORT = process.env.PORT ||5000;
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: "*", // यह किसी भी फाइल को जुड़ने की अनुमति देगा
+    origin: "*", 
     methods: ["GET", "POST"]
   }
 });
