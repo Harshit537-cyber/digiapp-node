@@ -31,7 +31,7 @@ exports.triggerSOS = async (req, res) => {
         await sendNotification(
           contact.user.fcmToken,
           "🚨 EMERGENCY SOS!",
-          `${senderUser.name} मुसीबत में है! लोकेशन: ${address}`,
+          `${senderUser.name} Is In Trouble! Location: ${address}`,
           { 
             type: "SOS_ALERT", 
             latitude: latitude.toString(), 
