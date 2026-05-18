@@ -72,6 +72,9 @@ exports.addTrustedContact = async (req, res) => {
         $or: [{ phoneNumber: contactNumber }, { phone: contactNumber }, { mobile: contactNumber }]
       });
 
+      console.log("1. Target User मिला?:", targetUser ? "हाँ" : "नहीं");
+if (targetUser) console.log("2. उसका FCM Token है?:", targetUser.fcmToken ? "हाँ" : "नहीं");
+
       if (targetUser && targetUser.fcmToken) {
         await sendNotification(
           targetUser.fcmToken,
@@ -85,6 +88,7 @@ exports.addTrustedContact = async (req, res) => {
         );
       }
     } catch (notifErr) {
+        console.log("3. नोटिफिकेशन भेजने में गलती हुई:", notifErr.message);
       console.log("Notification sending failed but contact saved:", notifErr.message);
     }
 
@@ -98,23 +102,29 @@ exports.addTrustedContact = async (req, res) => {
 
 exports.getIncomingRequests = async (req, res) => {
   try {
-    const currentUser = await User.findById(req.user.userId);
+    const userId = req.user.userId;
+
+    const currentUser = await User.findById(userId);
     if (!currentUser) {
       return res.status(404).json({ success: false, message: "User not found" });
     }
 
-    const myNumber = currentUser.phoneNumber || currentUser.phone || currentUser.mobile;
+ 
+    const incomingRequests = await TrustedContact.find({
+      contactNumber: currentUser.phoneNumber, // सुनिश्चित करें कि फील्ड नाम 'phoneNumber' ही है
+      status: "Pending"
+    }).populate("user", "name phoneNumber image gender");
 
-    const requests = await TrustedContact.find({ 
-      contactNumber: myNumber, 
-      status: "Pending" 
-    }).populate("user", "name phoneNumber phone mobile");
-
-    return res.status(200).json({ success: true, data: requests });
+    return res.status(200).json({
+      success: true,
+      count: incomingRequests.length,
+      data: incomingRequests
+    });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
   }
 };
+
 
 exports.respondToRequest = async (req, res) => {
   try {
