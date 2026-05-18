@@ -14,6 +14,8 @@ router.get("/all", verifyToken, trustedContactController.getAllContacts);
 router.get("/requests/incoming", verifyToken, trustedContactController.getIncomingRequests); 
 
 
+router.get("/request/incoming-by-id/:requestId", verifyToken, trustedContactController.getRequestById);
+
 router.patch("/block/:id", verifyToken, trustedContactController.blockContact);
 router.patch("/unblock/:id", verifyToken, trustedContactController.unblockContact);
 
