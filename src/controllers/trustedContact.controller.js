@@ -171,45 +171,69 @@ exports.getRequestById = async (req, res) => {
 
 exports.respondToRequest = async (req, res) => {
   try {
-    const { id } = req.params;
-    const { status } = req.body;
+    const { id } = req.params; 
+    const { status } = req.body; 
 
     if (!['Accepted', 'Rejected'].includes(status)) {
-      return res.status(400).json({ success: false, message: "Invalid status" });
+      return res.status(400).json({ success: false, message: "Invalid status. Use 'Accepted' or 'Rejected'" });
     }
 
     const currentUser = await User.findById(req.user.userId);
-    const myNumber = currentUser.phoneNumber || currentUser.phone || currentUser.mobile;
+    if (!currentUser) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    const myNumber = currentUser.mobile;
 
     if (status === 'Rejected') {
       const deleted = await TrustedContact.findOneAndDelete({ _id: id, contactNumber: myNumber });
-      if (!deleted) return res.status(404).json({ message: "Request not found" });
-      return res.status(200).json({ success: true, message: "Request rejected and removed" });
+      
+      if (!deleted) {
+        return res.status(404).json({ success: false, message: "Request not found or unauthorized" });
+      }
+      return res.status(200).json({ success: true, message: "Request rejected and removed successfully" });
     }
+
     const updated = await TrustedContact.findOneAndUpdate(
       { _id: id, contactNumber: myNumber },
-      { status },
+      { status: status },
       { new: true }
     ).populate('user');
 
     if (!updated) {
       return res.status(404).json({ success: false, message: "Request not found for your number" });
     }
+
     if (status === 'Accepted') {
-      const requester = await User.findById(updated.user); // रिक्वेस्ट भेजने वाली महिला
+      const requester = updated.user;
+      
       if (requester && requester.fcmToken) {
-        await sendNotification(
-          requester.fcmToken,
-          "Request Accepted ✅",
-          `${currentUser.name} is now your trusted contact.`,
-          { type: "REQUEST_ACCEPTED" }
-        );
+        try {
+          await sendNotification(
+            requester.fcmToken,
+            "Request Accepted ✅",
+            `${currentUser.fullName} is now your trusted contact.`,
+            { 
+              type: "REQUEST_ACCEPTED",
+              contactId: updated._id.toString(),
+              responderName: currentUser.fullName
+            }
+          );
+          console.log("Success: Acceptance notification sent to requester.");
+        } catch (notifErr) {
+          console.log("Error: Notification failed but DB was updated:", notifErr.message);
+        }
       }
     }
 
+    return res.status(200).json({ 
+      success: true, 
+      message: `Request ${status} successfully`, 
+      data: updated 
+    });
 
-    return res.status(200).json({ success: true, message: `Request ${status} successfully`, data: updated });
   } catch (error) {
+    console.error("Respond Error:", error.message);
     return res.status(500).json({ success: false, message: error.message });
   }
 };
