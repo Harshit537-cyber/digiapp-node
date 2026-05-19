@@ -12,8 +12,7 @@ exports.triggerSOS = async (req, res) => {
     console.log(`\n================== SOS TRIGGERED ==================`);
     console.log(`[PROCESS] Started by User ID: ${userId}`);
 
-    // 1. Alert Record Create Karein
-    const expiresAt = new Date(Date.now() + 3600000); // 1 Hour expiry
+    const expiresAt = new Date(Date.now() + 3600000); 
     const newAlert = new EmergencyAlert({
       sender: userId,
       location: { latitude, longitude, address },
@@ -22,11 +21,9 @@ exports.triggerSOS = async (req, res) => {
     await newAlert.save();
     console.log(`✅ [STEP 1] SOS Alert saved to DB. Alert ID: ${newAlert._id}`);
 
-    // 2. Sender ki details nikalna (Naam ke liye)
     const senderUser = await User.findById(userId);
     const sName = senderUser ? senderUser.fullName : "Someone";
 
-    // 3. LOGIC: Wo contacts dhundo jinhe IS USER ne add kiya hai
     console.log(`🔍 [STEP 2] Searching for contacts added by ${sName}...`);
     const myTrustedContacts = await TrustedContact.find({ 
       user: userId, 
@@ -41,12 +38,10 @@ exports.triggerSOS = async (req, res) => {
 
     let notificationCount = 0;
 
-    // 4. Loop chalao aur har ek ka Token dhund kar bhejo
     for (const contact of myTrustedContacts) {
       const targetMobile = contact.contactNumber;
       console.log(`\n🚀 [SENDING] Attempting to notify: ${targetMobile}`);
 
-      // User table se is mobile number ka token uthao
       const recipient = await User.findOne({ mobile: targetMobile });
 
       if (recipient) {

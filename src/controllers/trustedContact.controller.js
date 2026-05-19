@@ -106,17 +106,12 @@ exports.getIncomingRequests = async (req, res) => {
   try {
     const userId = req.user.userId;
 
-    // 1. Fetch the logged-in user
     const currentUser = await User.findById(userId);
     if (!currentUser) {
       return res.status(404).json({ success: false, message: "User not found" });
     }
-
-    // DEBUG: This should now show '9548565376' in your terminal
     console.log("Logged-in User Mobile:", currentUser.mobile);
 
-    // 2. Fetch requests where contactNumber matches the user's mobile number
-    // Note: Use 'status: "Pending"' if you only want new requests
     const incomingRequests = await TrustedContact.find({
       contactNumber: currentUser.mobile, 
       status: "Pending" 
@@ -135,11 +130,9 @@ exports.getIncomingRequests = async (req, res) => {
 
 exports.getRequestById = async (req, res) => {
   try {
-    // 1. Get the ID from the URL parameters (e.g., /request/6a0b123...)
     const { requestId } = req.params;
     const userId = req.user.userId;
 
-    // 2. Find the specific request and populate sender details
     const request = await TrustedContact.findById(requestId).populate(
       "user", 
       "fullName mobile profilePhoto gender"
@@ -149,7 +142,6 @@ exports.getRequestById = async (req, res) => {
       return res.status(404).json({ success: false, message: "Request not found" });
     }
 
-    // 3. Security Check: Ensure this request is actually for the logged-in user
     const currentUser = await User.findById(userId);
     if (request.contactNumber !== currentUser.mobile) {
       return res.status(403).json({ 
@@ -205,7 +197,7 @@ exports.respondToRequest = async (req, res) => {
     }
 
     if (status === 'Accepted') {
-      const requester = updated.user; // Full sender object due to populate
+      const requester = updated.user; 
       
       if (requester && requester.fcmToken) {
         try {
