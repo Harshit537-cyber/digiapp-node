@@ -54,6 +54,7 @@ app.use('/api/admin/category', adminCategoryRoutes);
 app.use("/api/admin/localJobs", require("../src/admin/routes/localJobsRoutes"));
 app.use("/api/admin/subcategoryData", require("../src/admin/routes/subCategoryRoutes"))
 app.use("/api/admin/business", verifiedBusinessRoutes); 
+app.use("/api/sos", require("../src/routes/sosRoutes"));
 
 
 app.use('/api/user', userCategoryRoutes);

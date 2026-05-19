@@ -9,40 +9,81 @@ exports.triggerSOS = async (req, res) => {
     const { latitude, longitude, address } = req.body;
     const userId = req.user.userId;
 
-    const expiresAt = new Date();
-    expiresAt.setHours(expiresAt.getHours() + 1);
+    console.log(`\n================== SOS TRIGGERED ==================`);
+    console.log(`[PROCESS] Started by User ID: ${userId}`);
 
+    // 1. Alert Record Create Karein
+    const expiresAt = new Date(Date.now() + 3600000); // 1 Hour expiry
     const newAlert = new EmergencyAlert({
       sender: userId,
       location: { latitude, longitude, address },
       expiresAt: expiresAt
     });
     await newAlert.save();
+    console.log(`✅ [STEP 1] SOS Alert saved to DB. Alert ID: ${newAlert._id}`);
 
+    // 2. Sender ki details nikalna (Naam ke liye)
     const senderUser = await User.findById(userId);
+    const sName = senderUser ? senderUser.fullName : "Someone";
 
-    const contacts = await TrustedContact.find({ 
-      contactNumber: senderUser.phoneNumber, 
+    // 3. LOGIC: Wo contacts dhundo jinhe IS USER ne add kiya hai
+    console.log(`🔍 [STEP 2] Searching for contacts added by ${sName}...`);
+    const myTrustedContacts = await TrustedContact.find({ 
+      user: userId, 
       status: 'Accepted' 
-    }).populate('user'); 
+    }); 
 
-    for (let contact of contacts) {
-      if (contact.user && contact.user.fcmToken) {
-        await sendNotification(
-          contact.user.fcmToken,
-          "🚨 EMERGENCY SOS!",
-          `${senderUser.name} Is In Trouble! Location: ${address}`,
-          { 
-            type: "SOS_ALERT", 
-            latitude: latitude.toString(), 
-            longitude: longitude.toString() 
-          }
-        );
+    if (myTrustedContacts.length === 0) {
+      console.log(`⚠️ [RESULT] No trusted contacts found in your list.`);
+    } else {
+      console.log(`✅ [RESULT] Found ${myTrustedContacts.length} contacts in your list.`);
+    }
+
+    let notificationCount = 0;
+
+    // 4. Loop chalao aur har ek ka Token dhund kar bhejo
+    for (const contact of myTrustedContacts) {
+      const targetMobile = contact.contactNumber;
+      console.log(`\n🚀 [SENDING] Attempting to notify: ${targetMobile}`);
+
+      // User table se is mobile number ka token uthao
+      const recipient = await User.findOne({ mobile: targetMobile });
+
+      if (recipient) {
+        if (recipient.fcmToken) {
+          await sendNotification(
+            recipient.fcmToken,
+            "🚨 EMERGENCY SOS!",
+            `${sName} Is In Trouble! Location: ${address}`,
+            { 
+              type: "SOS_ALERT", 
+              latitude: latitude.toString(), 
+              longitude: longitude.toString() 
+            }
+          );
+          notificationCount++;
+          console.log(`✨ [SUCCESS] Notification delivered to: ${recipient.fullName}`);
+        } else {
+          console.log(`⚠️ [SKIPPED] ${recipient.fullName} has no FCM Token.`);
+        }
+      } else {
+        console.log(`❌ [FAILED] No App User found with number: ${targetMobile}`);
       }
     }
 
-    return res.status(201).json({ success: true, message: "SOS Sent", alertId: newAlert._id });
+    console.log(`\n================== SOS PROCESS FINISHED ==================`);
+    console.log(`[SUMMARY] Total Notifications Sent: ${notificationCount}`);
+    console.log(`==========================================================\n`);
+
+    return res.status(201).json({
+      success: true,
+      message: `SOS sent to ${notificationCount} contacts`,
+      alertId: newAlert._id,
+      notificationsSent: notificationCount 
+    });
+
   } catch (error) {
+    console.error(`\n❌ [CRITICAL ERROR] SOS API Failed:`, error.message);
     return res.status(500).json({ success: false, message: error.message });
   }
 };

@@ -205,7 +205,7 @@ exports.respondToRequest = async (req, res) => {
     }
 
     if (status === 'Accepted') {
-      const requester = updated.user;
+      const requester = updated.user; // Full sender object due to populate
       
       if (requester && requester.fcmToken) {
         try {
