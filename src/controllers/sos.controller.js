@@ -91,15 +91,66 @@ exports.triggerSOS = async (req, res) => {
 
 exports.deactivateSOS = async (req, res) => {
   try {
+    const userId = req.user.userId;
+
+    console.log(`\n================== DEACTIVATING SOS ==================`);
+
     const alert = await EmergencyAlert.findOneAndUpdate(
-      { sender: req.user.userId, status: 'Active' },
+      { sender: userId, status: 'Active' },
       { status: 'Resolved' },
       { new: true }
     );
 
-    if (!alert) return res.status(404).json({ message: "No active SOS found" });
-    return res.status(200).json({ success: true, message: "SOS Deactivated" });
+    if (!alert) {
+      console.log(`⚠️ [RESULT] No active SOS found for this user.`);
+      return res.status(404).json({ 
+        success: false, 
+        message: "No active SOS found" 
+      });
+    }
+
+    console.log(`✅ [STEP 1] SOS status marked as Resolved in DB.`);
+
+    const senderUser = await User.findById(userId);
+    const sName = senderUser ? senderUser.fullName : "Someone";
+
+    console.log(`🔍 [STEP 2] Notifying trusted contacts that ${sName} is safe...`);
+    
+    const myTrustedContacts = await TrustedContact.find({ 
+      user: userId, 
+      status: 'Accepted' 
+    }); 
+
+    let notificationCount = 0;
+
+    for (const contact of myTrustedContacts) {
+      const recipient = await User.findOne({ mobile: contact.contactNumber });
+
+      if (recipient && recipient.fcmToken) {
+        await sendNotification(
+          recipient.fcmToken,
+          "✅ I AM SAFE NOW", 
+          `${sName} has deactivated the SOS and is safe now.`, 
+          { 
+            type: "SOS_DEACTIVATED", 
+            alertId: alert._id.toString() 
+          }
+        );
+        notificationCount++;
+      }
+    }
+
+    console.log(`✨ [SUCCESS] SOS Deactivated and ${notificationCount} contacts notified.`);
+    console.log(`======================================================\n`);
+
+    return res.status(200).json({ 
+      success: true, 
+      message: "SOS Deactivated and contacts notified",
+      notificationsSent: notificationCount
+    });
+
   } catch (error) {
-    return res.status(500).json({ message: error.message });
+    console.error(`❌ [ERROR] Deactivate SOS Failed:`, error.message);
+    return res.status(500).json({ success: false, message: error.message });
   }
 };
