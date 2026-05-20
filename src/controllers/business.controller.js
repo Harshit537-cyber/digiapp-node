@@ -595,8 +595,33 @@ const deleteBusinessImage = async (req, res) => {
   }
 };
 
+const searchBusinesses = async (req, res) => {
+  try {
+    const { q } = req.query; // 'q' mein hum business name lenge
+    
+    let query = {};
 
+    // Agar user ne koi word bheja hai (e.g. ?q=Fresh)
+    if (q) {
+      query.businessName = { $regex: q, $options: "i" }; // "i" matlab Case-Insensitive (Chote-bade akshar ka farq nahi)
+    }
 
+    // Saara data find karein bina kisi extra filter ke
+    const businesses = await Business.find(query).sort({ createdAt: -1 }); // Naya data pehle dikhega
+
+    res.status(200).json({
+      success: true,
+      count: businesses.length,
+      data: businesses,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Data fetch karne mein dikkat aayi",
+      error: error.message,
+    });
+  }
+};
 
 
 module.exports = {
@@ -617,5 +642,6 @@ module.exports = {
   addServiceImages,
   deleteServiceImage,
   addMoreBusinessImages ,
-  deleteBusinessImage 
+  deleteBusinessImage ,
+  searchBusinesses
 };

@@ -12,7 +12,7 @@ router.get(
   verifyToken, 
   businessController.getMyBusinesses
 );
-
+router.get("/search", businessController.searchBusinesses)
 
 // 1. POST: Register Business
 router.post(
@@ -56,6 +56,8 @@ router.post(
 );
 
 router.get('/:id/services', businessController.getBusinessServices);
+
+
 
 router.delete('/:id/service/:serviceId', verifyToken, businessController.deleteServiceFromBusiness);
 
