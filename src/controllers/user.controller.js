@@ -9,19 +9,19 @@ const fs = require("fs");
 const { sendPushToUser } = require("../services/notification.service");
 const Displayimage = require('../models/DisplayPhoto')
 const bcrypt = require("bcryptjs");
-
+const NotificationService = require("../services/notificationService");
 
 exports.register = async (req, res) => {
   try {
-    const body = { ...req.body }; 
-    const { mobile, email, password,latitude, longitude, address, ...restBody } = body;
-    console.log(mobile, latitude, longitude, address, restBody )
+    const body = { ...req.body };
+    const { mobile, email, password, latitude, longitude, address, ...restBody } = body;
+    console.log(mobile, latitude, longitude, address, restBody)
 
     if (!mobile || !email || !password) {
       return response.error(res, "Mobile number , email, password are required", 400);
     }
 
-     const existingEmail = await User.findOne({ email }); // Adjust based on your userService
+    const existingEmail = await User.findOne({ email }); // Adjust based on your userService
     if (existingEmail) {
       if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
       return response.error(res, "User already registered with this email address", 409);
@@ -41,7 +41,7 @@ exports.register = async (req, res) => {
     }
 
 
-      const salt = await bcrypt.genSalt(10);
+    const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
     let profilePhotoUrl = null;
@@ -58,11 +58,11 @@ exports.register = async (req, res) => {
     const userData = {
       ...restBody,
       mobile,
-      email, 
+      email,
       password: hashedPassword,
       profilePhoto: profilePhotoUrl,
-      ...(address && { address }), 
-      credits:100
+      ...(address && { address }),
+      credits: 100
     };
 
     const lat = latitude;
@@ -87,11 +87,11 @@ exports.register = async (req, res) => {
     await user.save();
 
 
-     const userResponse = user.toObject();
+    const userResponse = user.toObject();
     delete userResponse.password;
 
     return response.success(res, "User Registered Successfully", {
-      user:userResponse,
+      user: userResponse,
       token,
     });
   } catch (err) {
@@ -134,7 +134,7 @@ exports.login = async (req, res) => {
 
     user.token = token;
     await user.save();
-    
+
     const userResponse = user.toObject();
     delete userResponse.password;
 
@@ -195,7 +195,8 @@ exports.updateUser = async (req, res) => {
 
     let profilePhotoUrl = null;
 
-    if (req.file) {cl
+    if (req.file) {
+      cl
       const localFilePath = req.file.path;
       const uploadResult = await cloudinary.uploader.upload(localFilePath, {
         folder: "user_profiles",
@@ -206,11 +207,11 @@ exports.updateUser = async (req, res) => {
 
     const updateData = { ...req.body };
 
-    
+
     if (updateData.latitude && updateData.longitude) {
       updateData.location = {
         type: "Point",
-    
+
         coordinates: [
           Number(updateData.longitude),
           Number(updateData.latitude),
@@ -244,82 +245,82 @@ exports.updateUser = async (req, res) => {
 
 
 exports.applyCoupon = async (req, res) => {
-    try {
-        
-        const userId = req.user.userId; 
-        const { couponCode } = req.body;
+  try {
 
-        if (!userId) {
-            return res.status(401).json({ success: false, message: "User not authenticated" });
-        }
+    const userId = req.user.userId;
+    const { couponCode } = req.body;
 
-        const result = await couponService.applyCouponService(userId, couponCode);
-
-        res.status(200).json({
-            success: true,
-            message: `Congratulations! ${result.addedCredits} credits added.`,
-            newBalance: result.totalCredits
-        });
-    } catch (error) {
-        res.status(400).json({ success: false, message: error.message });
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "User not authenticated" });
     }
+
+    const result = await couponService.applyCouponService(userId, couponCode);
+
+    res.status(200).json({
+      success: true,
+      message: `Congratulations! ${result.addedCredits} credits added.`,
+      newBalance: result.totalCredits
+    });
+  } catch (error) {
+    res.status(400).json({ success: false, message: error.message });
+  }
 };
 
 
 
 exports.getWalletDetails = async (req, res) => {
-    try {
-        const userId = req.user.userId;
-        const user = await User.findById(userId).select('credits name mobile');
+  try {
+    const userId = req.user.userId;
+    const user = await User.findById(userId).select('credits name mobile');
 
-        if (!user) return res.status(404).json({ success: false, message: "User not found" });
+    if (!user) return res.status(404).json({ success: false, message: "User not found" });
 
-        res.status(200).json({
-            success: true,
-            data: {
-                availableBalance: user.credits || 0,
-                userName: user.name,
-                userMobile: user.mobile
-            }
-        });
-    } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
-    }
+    res.status(200).json({
+      success: true,
+      data: {
+        availableBalance: user.credits || 0,
+        userName: user.name,
+        userMobile: user.mobile
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
 };
 
 
 exports.getAvailableCoupons = async (req, res) => {
-    try {
-        const userId = req.user.userId;
+  try {
+    const userId = req.user.userId;
 
-        
-        const coupons = await Coupon.find({
-            isActive: true,
-            expiryDate: { $gt: new Date() },
-            "usedBy.user": { $ne: userId } 
-        }).select('code credits expiryDate');
 
-        res.status(200).json({
-            success: true,
-            message: "Available offers fetched successfully",
-            count: coupons.length,
-            coupons
-        });
-    } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
-    }
+    const coupons = await Coupon.find({
+      isActive: true,
+      expiryDate: { $gt: new Date() },
+      "usedBy.user": { $ne: userId }
+    }).select('code credits expiryDate');
+
+    res.status(200).json({
+      success: true,
+      message: "Available offers fetched successfully",
+      count: coupons.length,
+      coupons
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
 };
 
 
 exports.updateFCMToken = async (req, res) => {
   try {
     const { fcmToken } = req.body;
-    const userId = req.user.userId; 
+    const userId = req.user.userId;
 
     if (!fcmToken) {
-      return res.status(400).json({ 
-        success: false, 
-        message: "FCM Token is required" 
+      return res.status(400).json({
+        success: false,
+        message: "FCM Token is required"
       });
     }
 
@@ -332,10 +333,10 @@ exports.updateFCMToken = async (req, res) => {
     if (!updatedUser) {
       return res.status(404).json({ success: false, message: "User not found" });
     }
-
-    return res.status(200).json({ 
-      success: true, 
-      message: "FCM Token updated successfully" 
+    NotificationService.syncUserTopics(fcmToken, updatedUser);
+    return res.status(200).json({
+      success: true,
+      message: "FCM Token updated successfully"
     });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });
@@ -344,18 +345,18 @@ exports.updateFCMToken = async (req, res) => {
 
 
 
-exports.homeScreenImages = async (req, res)=>{
-  try{
+exports.homeScreenImages = async (req, res) => {
+  try {
 
-   const images = await Displayimage.find().select("photo");
+    const images = await Displayimage.find().select("photo");
     res.status(200).json({
-      success : true,
+      success: true,
       images,
       message: "fetched successfully"
     })
 
-  }catch(error){
+  } catch (error) {
     res.status(500).json({ success: false, error: error.message });
-    
+
   }
 }
