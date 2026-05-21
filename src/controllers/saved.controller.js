@@ -34,125 +34,111 @@ const toggleSave = async (req, res) => {
 
 
 
-const getMySavedContent = async (req, res) => {
+const  getMySavedContent = async (req, res) => {
   try {
     const userId = req.user.userId || req.user.id;
+    
+    const { type, category } = req.query; 
 
+    let filter = { userId };
 
-    const allSaved = await SavedContent.find({ userId })
-      .populate('itemId')
+    if (type === 'Business') {
+      filter.itemType = 'Business';
+    } 
+    else if (type === 'Item') {
+      filter.itemType = 'Item';
+    }
+    else if (type === 'Job') {
+      filter.itemType = 'Job';
+      if (category) {
+        filter.jobCategory = category;
+      }
+    }
+
+    const savedRecords = await SavedContent.find(filter)
+      .populate('itemId') 
+      .sort({ createdAt: -1 }) 
       .lean();
 
-
-    const result = {
-      userId: userId,
-      jobs: {
-        LOCAL_JOB: [],
-        PART_TIME_JOB: [],
-        FULL_TIME_JOB: []
-      },
-      businesses: [],
-      items: []
-    };
-
-    allSaved.forEach(save => {
-      if (save.itemId) {
-        if (save.itemType === 'Job') {
-          const category = save.jobCategory;
-          if (result.jobs[category]) {
-            result.jobs[category].push(save.itemId);
-          } else {
-            if (!result.jobs.other) result.jobs.other = [];
-            result.jobs.other.push(save.itemId);
-          }
-        } else if (save.itemType === 'Business') {
-          result.businesses.push(save.itemId);
-        } else if (save.itemType === 'Item') {
-          result.items.push(save.itemId);
-        }
-      }
-    });
-
+    const formattedData = savedRecords
+      .filter(record => record.itemId !== null) 
+      .map(record => {
+        return {
+          savedRecordId: record._id,
+          itemType: record.itemType,
+          jobCategory: record.jobCategory || null,
+          ...record.itemId 
+        };
+      });
 
     res.status(200).json({
       success: true,
-      data: result
+      count: formattedData.length,
+      data: formattedData
     });
+
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
 
-// --- 3. Search Saved Content ---
 const searchMySavedContent = async (req, res) => {
   try {
     const userId = req.user.userId || req.user.id;
     const { searchQuery, itemType, jobCategory } = req.query;
-
-    // Build initial query for SavedContent
     const savedContentQuery = { userId };
 
     if (itemType) {
-      if (['Job', 'Business', 'Item'].includes(itemType)) {
-        savedContentQuery.itemType = itemType;
-      } else {
-        return res.status(400).json({ success: false, message: "Invalid item type" });
-      }
+      savedContentQuery.itemType = itemType;
     }
-
-    if (jobCategory) {
+    
+    if (itemType === 'Job' && jobCategory) {
       savedContentQuery.jobCategory = jobCategory;
     }
 
     const allSaved = await SavedContent.find(savedContentQuery)
-      .populate('itemId') // Populate the actual item details
+      .populate('itemId') 
       .lean();
 
-    const result = {
-      userId: userId,
-      jobs: [],
-      businesses: [],
-      items: []
-    };
+    const lowerCaseSearch = searchQuery ? searchQuery.toLowerCase() : '';
 
-    const lowerCaseSearchQuery = searchQuery ? searchQuery.toLowerCase() : '';
+    const filteredData = allSaved.filter(save => {
+      if (!save.itemId) return false;
 
-    allSaved.forEach(save => {
-      if (save.itemId) {
-        let matchesSearch = true;
+      if (lowerCaseSearch) {
+        const item = save.itemId;
+        const searchText = [
+          item.title,
+          item.name,
+          item.jobRole,
+          item.details,
+          item.description,
+          item.companyName,
+          save.jobCategory
+        ].join(' ').toLowerCase();
 
-        if (lowerCaseSearchQuery) {
-          const item = save.itemId;
-          const searchFields = [
-            item.title,
-            item.name,
-            item.jobRole,
-            item.details,
-            save.jobCategory,
-            item.description,
-            item.category,
-            item.companyName,
-          ];
-
-
-          matchesSearch = searchFields.some(field =>
-            field && typeof field === 'string' && field.toLowerCase().includes(lowerCaseSearchQuery)
-          );
-        }
-
-        if (matchesSearch) {
-          if (save.itemType === 'Job') result.jobs.push(save.itemId);
-          if (save.itemType === 'Business') result.businesses.push(save.itemId);
-          if (save.itemType === 'Item') result.items.push(save.itemId);
-        }
+        return searchText.includes(lowerCaseSearch);
       }
+
+      return true;
     });
+
+    const result = filteredData.map(save => ({
+      savedRecordId: save._id,
+      itemType: save.itemType,
+      jobCategory: save.jobCategory,
+      ...save.itemId,
+      savedAt: save.createdAt
+    }));
 
     res.status(200).json({
       success: true,
+      count: result.length,
+      itemType: itemType || "All",
       data: result
     });
+
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

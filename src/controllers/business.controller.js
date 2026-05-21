@@ -597,17 +597,14 @@ const deleteBusinessImage = async (req, res) => {
 
 const searchBusinesses = async (req, res) => {
   try {
-    const { q } = req.query; // 'q' mein hum business name lenge
+    const { q } = req.query; 
     
     let query = {};
-
-    // Agar user ne koi word bheja hai (e.g. ?q=Fresh)
     if (q) {
-      query.businessName = { $regex: q, $options: "i" }; // "i" matlab Case-Insensitive (Chote-bade akshar ka farq nahi)
+      query.businessName = { $regex: q, $options: "i" }; 
     }
 
-    // Saara data find karein bina kisi extra filter ke
-    const businesses = await Business.find(query).sort({ createdAt: -1 }); // Naya data pehle dikhega
+    const businesses = await Business.find(query).sort({ createdAt: -1 });
 
     res.status(200).json({
       success: true,
