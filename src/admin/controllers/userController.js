@@ -173,4 +173,26 @@ const searchUserByName = async (req, res) => {
 }; 
 
 
-module.exports = {getAllUsers, updateProfile, deleteUser, searchUserByName,  getAllUsersForDropdown};
+const getAllCities = async (req, res) => {
+  try {
+    let cities = await User.distinct("city");
+
+    cities = cities.filter(city => city && city.trim() !== "");
+
+    cities.sort();
+
+    return res.status(200).json({
+      success: true,
+      count: cities.length,
+      data: cities
+    });
+  } catch (error) {
+    console.error("Error fetching cities:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server Error",
+      error: error.message
+    });
+  }
+};
+module.exports = {getAllUsers, updateProfile, deleteUser, searchUserByName, getAllCities,  getAllUsersForDropdown};
