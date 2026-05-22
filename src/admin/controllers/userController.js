@@ -195,4 +195,30 @@ const getAllCities = async (req, res) => {
     });
   }
 };
-module.exports = {getAllUsers, updateProfile, deleteUser, searchUserByName, getAllCities,  getAllUsersForDropdown};
+
+const getAllUsersForNotification = async (req, res) => {
+  try {
+    const users = await User.find({}, "fullName email");
+
+    if (!users || users.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No users found"
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      count: users.length,
+      data: users
+    });
+  } catch (error) {
+    console.error("Error fetching users for notification:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Server Error",
+      error: error.message
+    });
+  }
+};
+module.exports = {getAllUsers, updateProfile, deleteUser, searchUserByName, getAllCities,  getAllUsersForDropdown, getAllUsersForNotification};
