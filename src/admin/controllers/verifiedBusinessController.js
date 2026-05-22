@@ -1,10 +1,7 @@
-// ... existing imports in AdminController.js (e.g., Admin.js, AdminAuth.js)
-const businessService = require('../../services/business.services'); // Make sure this is imported
+const businessService = require('../../services/business.services'); 
 
-// --- 1. Get All Pending Business Requests ---
 const getPendingBusinessRequests = async (req, res) => {
     try {
-        // Admin middleware (AdminAuth.js) should protect this route
         const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 10;
         
@@ -25,12 +22,11 @@ const getPendingBusinessRequests = async (req, res) => {
     }
 };
 
-// --- 2. Approve/Reject Business Request ---
 const verifyBusinessRequest = async (req, res) => {
     try {
-        // Admin middleware (AdminAuth.js) should protect this route
-        const { id } = req.params; // Business ID
-        const { action } = req.body; // 'approve' or 'reject'
+        
+        const { id } = req.params; 
+        const { action } = req.body; 
 
         let newStatus;
         if (action === 'approve') {

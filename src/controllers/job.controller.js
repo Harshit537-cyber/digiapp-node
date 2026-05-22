@@ -36,11 +36,9 @@ const postJob = async (req, res) => {
 
     req.body.jobCategory = config.label;
 
-    // ⭐ Calculate total credits based on isFeatured
     const FEATURED_CREDITS = 10;
     const totalCredits = isFeatured ? config.credits + FEATURED_CREDITS : config.credits;
 
-    // 🔍 Check user & balance FIRST
     const user = await User.findById(creatorId).session(session);
 
     if (!user) throw new Error("User not found");
@@ -49,7 +47,6 @@ const postJob = async (req, res) => {
       throw new Error("Insufficient credits");
     }
 
-    // ✅ Create job (WITH session)
     const job = await jobService.createJob(
       req.body,
       req.files,
@@ -57,11 +54,9 @@ const postJob = async (req, res) => {
       session
     );
 
-    // 🔻 Deduct credits
     user.credits -= totalCredits;
     await user.save({ session });
 
-    // 🧾 Transaction log
     await transactionSchema.create([{
       userId: creatorId,
       type: "DEBIT",
