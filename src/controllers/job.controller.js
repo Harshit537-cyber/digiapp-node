@@ -416,8 +416,47 @@ const getMyPostedJobs = async (req, res) => {
     });
   }
 };
+const searchMyJobsAdvanced = async (req, res) => {
+  try {
+    const idFromToken = req.user.userId;
+    const { category, search } = req.query; 
+
+    if (!idFromToken) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
+    let filter = { userId: new mongoose.Types.ObjectId(idFromToken) };
+
+    if (category) {
+      filter.jobCategory = category; 
+    }
+
+    if (search) {
+      filter.$or = [
+        { title: { $regex: search, $options: "i" } },
+        { details: { $regex: search, $options: "i" } },
+        { companyName: { $regex: search, $options: "i" } },
+        { jobRole: { $regex: search, $options: "i" } }
+      ];
+    }
+
+    const jobs = await Job.find(filter).sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      count: jobs.length,
+      data: jobs,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Search Error",
+      error: error.message,
+    });
+  }
+};
 
 
 module.exports = { postJob, getAllJobs, getJobById, updateJob ,deactivateJob , activateJob , searchJobs ,getMyJobs , getTheNearbyLatestJob, getMyActiveJobs, 
   getMyDeactivatedJobs , toggleSaveJob,handleGetJobs,
-    getSavedJobs, getRecentJobs, homeAPI,getMyPostedJobs};
+    getSavedJobs, getRecentJobs, homeAPI,getMyPostedJobs, searchMyJobsAdvanced};

@@ -20,6 +20,7 @@ router.get("/my-deactivated", verifyToken, jobController.getMyDeactivatedJobs);
 router.get("/my-posted", verifyToken, jobController.getMyPostedJobs);
 router.post("/save/:id", verifyToken, jobController.toggleSaveJob);
 router.get("/my/saved", verifyToken, jobController.getSavedJobs);
+router.get("/search-by-category", verifyToken, jobController.searchMyJobsAdvanced);
 
 router.get("/recents", verifyToken, jobController.getRecentJobs)
 
