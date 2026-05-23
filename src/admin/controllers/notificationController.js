@@ -56,26 +56,106 @@ exports.getNotificationHistory = async (req, res) => {
     }
 };
 
-exports.getAllUserCities = async (req, res) => {
+exports.deleteNotification = async (req, res) => {
     try {
 
-        const cities = await User.distinct("city", { 
-            city: { $exists: true, $ne: "" } 
-        });
+        const deletedNotification = await Notification.findByIdAndDelete(
+            req.params.id
+        );
 
-        cities.sort();
+        if (!deletedNotification) {
+            return res.status(404).json({
+                success: false,
+                message: "Notification not found"
+            });
+        }
 
         res.status(200).json({
             success: true,
-            count: cities.length,
-            data: cities 
+            message: "Notification deleted successfully",
+            data: deletedNotification
         });
+
     } catch (error) {
+
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+
+    }
+};
+
+exports.clearAllNotifications = async (req, res) => {
+    try {
+
+        const result = await Notification.deleteMany({});
+
+        res.status(200).json({
+            success: true,
+            message: "All notifications cleared successfully",
+            deletedCount: result.deletedCount
+        });
+
+    } catch (error) {
+
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+
+    }
+};
+
+
+exports.getAllUserCities = async (req, res) => {
+    try {
+
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+
+        // Get all distinct cities
+        let cities = await User.distinct("city", {
+            city: { $exists: true, $ne: "" }
+        });
+
+        // Sort cities alphabetically
+        cities.sort();
+
+        // Pagination calculation
+        const totalCities = cities.length;
+        const totalPages = Math.ceil(totalCities / limit);
+
+        const startIndex = (page - 1) * limit;
+        const endIndex = startIndex + limit;
+
+        const paginatedCities = cities.slice(startIndex, endIndex);
+
+        res.status(200).json({
+            success: true,
+
+            pagination: {
+                totalCities,
+                totalPages,
+                currentPage: page,
+                limit,
+                hasNextPage: page < totalPages,
+                hasPrevPage: page > 1
+            },
+
+            count: paginatedCities.length,
+
+            data: paginatedCities
+        });
+
+    } catch (error) {
+
         res.status(500).json({
             success: false,
             message: "Cities fetch karne mein error aaya",
             error: error.message
         });
+
     }
 };
 
@@ -97,3 +177,4 @@ const searchUserByName = async (req, res) => {
     return response.error(res, err.message || "Something went wrong", 500);
   }
 }; 
+

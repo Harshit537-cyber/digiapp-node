@@ -19,5 +19,14 @@ router.delete('/job/delete/:id', verifyAdmin, partTimeController.adminDeleteJob)
 
 router.get('/job/:id', verifyAdmin, partTimeController.getJobByIdForAdmin);
 
+router.delete(
+    "/admin-job/:id",
+    jobController.deleteAdminPostedJob
+);
+
+router.delete(
+    "/regular-job/:id",
+    jobController.deleteRegularUserJob
+);
 
 module.exports = router;

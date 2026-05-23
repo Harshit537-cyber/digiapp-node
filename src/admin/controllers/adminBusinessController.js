@@ -407,3 +407,14 @@ exports.updateBusinessStatus = async (req, res) => {
     });
   }
 };
+
+const deleteAdminService = async (id) => {
+
+  const deletedAdmin = await Admin.findByIdAndDelete(id);
+
+  if (!deletedAdmin) {
+    throw new AppError("Admin not found", 404);
+  }
+
+  return deletedAdmin;
+};

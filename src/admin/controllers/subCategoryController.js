@@ -185,3 +185,110 @@ exports.getSubcategoriesByCategory = async (req, res) => {
     });
   }
 };
+
+exports.updateSubcategoryData = async (req, res) => {
+    try {
+
+        const body = req.body;
+
+        let updateData = { ...body };
+
+        // Upload new images if provided
+        if (req.files && req.files.length > 0) {
+            updateData.images = await uploadFilesToCloudinary(req.files);
+        }
+
+        // Convert boolean fields
+        if (body.isTrusted !== undefined) {
+            updateData.isTrusted =
+                body.isTrusted === "true" || body.isTrusted === true;
+        }
+
+        if (body.isCertified !== undefined) {
+            updateData.isCertified =
+                body.isCertified === "true" || body.isCertified === true;
+        }
+
+        // Services parse
+        if (body.services) {
+            updateData.services =
+                typeof body.services === "string"
+                    ? JSON.parse(body.services)
+                    : body.services;
+        }
+
+        // Analytics update
+        updateData.analytics = {
+            calls: Number(body.calls) || 0,
+            chats: Number(body.chats) || 0,
+            whatsapp: Number(body.whatsapp) || 0,
+            saved: Number(body.saved) || 0,
+            profileOpens: body.profileOpens || "0",
+            impressions: body.impressions || "0"
+        };
+
+        // Rating & reviews
+        updateData.rating = Number(body.rating) || 0;
+        updateData.reviewCount = Number(body.reviewCount) || 0;
+
+        const updatedData = await SubcategoryData.findByIdAndUpdate(
+            req.params.id,
+            { $set: updateData },
+            {
+                new: true,
+                runValidators: true
+            }
+        );
+
+        if (!updatedData) {
+            return res.status(404).json({
+                success: false,
+                message: "Data not found"
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: "Subcategory data updated successfully",
+            data: updatedData
+        });
+
+    } catch (error) {
+
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+
+    }
+};
+
+exports.deleteSubcategoryData = async (req, res) => {
+    try {
+
+        const deletedData = await SubcategoryData.findByIdAndDelete(
+            req.params.id
+        );
+
+        if (!deletedData) {
+            return res.status(404).json({
+                success: false,
+                message: "Data not found"
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: "Subcategory data deleted successfully",
+            data: deletedData
+        });
+
+    } catch (error) {
+
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+
+    }
+};

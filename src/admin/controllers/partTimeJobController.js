@@ -268,3 +268,104 @@ exports.getRegularUserJobs = async (req, res) => {
     }
 };
 
+exports.adminDeleteJob = async (req, res) => {
+    try {
+        const job = await Job.findOneAndDelete({ 
+            _id: req.params.id, 
+            jobCategory: "PART_TIME_JOB" 
+        });
+
+        if (!job) {
+            return res.status(404).json({
+                success: false,
+                message: "Job not found"
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: "Job deleted successfully"
+        });
+
+    } catch (error) {
+
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+
+    }
+};
+
+
+exports.deleteRegularUserJob = async (req, res) => {
+    try {
+
+        // Get all admin ids
+        const adminIds = await Admin.find().distinct("_id");
+
+        // Delete only regular user jobs
+        const job = await Job.findOneAndDelete({
+            _id: req.params.id,
+            jobCategory: "PART_TIME_JOB",
+            userId: { $nin: adminIds }
+        });
+
+        if (!job) {
+            return res.status(404).json({
+                success: false,
+                message: "Regular user job not found"
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: "Regular user job deleted successfully",
+            data: job
+        });
+
+    } catch (error) {
+
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+
+    }
+};
+
+exports.deleteAdminPostedJob = async (req, res) => {
+    try {
+
+        // Get all admin ids
+        const adminIds = await Admin.find().distinct("_id");
+
+        // Delete only admin posted jobs
+        const job = await Job.findOneAndDelete({
+            _id: req.params.id,
+            jobCategory: "PART_TIME_JOB",
+            userId: { $in: adminIds }
+        });
+
+        if (!job) {
+            return res.status(404).json({
+                success: false,
+                message: "Admin job not found"
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: "Admin job deleted successfully",
+            data: job
+        });
+
+    } catch (error) {
+
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+
+    }
+};

@@ -117,3 +117,73 @@ exports.redeemCouponUser = async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 };
+
+exports.deleteCoupon = async (req, res) => {
+    try {
+
+        const { id } = req.params;
+
+        const deletedCoupon = await Coupon.findByIdAndDelete(id);
+
+        if (!deletedCoupon) {
+            return res.status(404).json({
+                success: false,
+                message: "Coupon not found"
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: "Coupon deleted successfully",
+            data: deletedCoupon
+        });
+
+    } catch (error) {
+
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+
+    }
+};
+
+exports.updateCouponStatus = async (req, res) => {
+    try {
+
+        const { id } = req.params;
+        const { isActive } = req.body;
+
+        const updatedCoupon = await Coupon.findByIdAndUpdate(
+            id,
+            { isActive },
+            {
+                new: true,
+                runValidators: true
+            }
+        );
+
+        if (!updatedCoupon) {
+            return res.status(404).json({
+                success: false,
+                message: "Coupon not found"
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: `Coupon ${
+                isActive ? "activated" : "deactivated"
+            } successfully`,
+            data: updatedCoupon
+        });
+
+    } catch (error) {
+
+        res.status(500).json({
+            success: false,
+            message: error.message
+        });
+
+    }
+};

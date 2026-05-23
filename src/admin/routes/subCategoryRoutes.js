@@ -13,4 +13,15 @@ router.get("/filter", getBySubCategory);
 router.get("/subcategories-by-category", getSubcategoriesByCategory);
 router.get("/details/:id", getDetailById);
 
+router.put(
+    "/:id",
+    upload.array("images"),
+    categoryController.updateSubcategoryData
+);
+
+router.delete(
+    "/:id",
+    categoryController.deleteSubcategoryData
+);
+
 module.exports = router ;
