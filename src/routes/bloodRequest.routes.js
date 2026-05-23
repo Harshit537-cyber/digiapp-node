@@ -19,6 +19,9 @@ router.delete(
 
 
 router.get("/all", verifyToken, bloodRequestController.getAllBloodRequests);
+router.get("/my-posted", verifyToken, bloodRequestController.getMyPostedBloodRequests);
+
+router.get("/search-posted-blood-requests", verifyToken, bloodRequestController.searchMyBloodRequests);
 
 router.get("/my-requests", verifyToken, bloodRequestController.getMyBloodRequests);
 

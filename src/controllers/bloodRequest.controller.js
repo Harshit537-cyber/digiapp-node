@@ -1,6 +1,7 @@
 const bloodRequestService = require("../services/bloodRequest.services");
 const response = require("../utils/response");
-
+const BloodRequest = require("../models/BloodRequest");
+const mongoose = require("mongoose");
 const createBloodRequest = async (req, res) => {
   try {
     console.log("Token User Data:", req.user);
@@ -257,6 +258,60 @@ const getUrgentAndRecentBloodRequests = async (req, res) => {
   }
 };
 
+const getMyPostedBloodRequests = async (req, res) => {
+  try {
+    const idFromToken = req.user.userId;
+
+    const requests = await BloodRequest.find({ 
+      userId: new mongoose.Types.ObjectId(idFromToken) 
+    }).sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      count: requests.length,
+      data: requests,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Error fetching blood requests",
+      error: error.message,
+    });
+  }
+};
+
+const searchMyBloodRequests = async (req, res) => {
+  try {
+    const idFromToken = req.user.userId;
+    const { q } = req.query; 
+
+    let filter = { userId: new mongoose.Types.ObjectId(idFromToken) };
+
+    if (q) {
+      filter.$or = [
+        { bloodGroup: { $regex: q, $options: "i" } },
+        { patientName: { $regex: q, $options: "i" } },
+        { hospitalName: { $regex: q, $options: "i" } },
+        { urgency: { $regex: q, $options: "i" } },
+        { status: { $regex: q, $options: "i" } }
+      ];
+    }
+
+    const results = await BloodRequest.find(filter).sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      count: results.length,
+      data: results,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Search Error",
+      error: error.message,
+    });
+  }
+};
 module.exports = {
   createBloodRequest,
   getMyBloodRequests,
@@ -268,4 +323,6 @@ module.exports = {
   deactivateBloodRequest,
   searchBloodRequests,
   getUrgentAndRecentBloodRequests,
+  getMyPostedBloodRequests,
+  searchMyBloodRequests
 };
