@@ -55,6 +55,14 @@ const businessSchema = new mongoose.Schema(
       default: false,
     },
 
+
+    subscription: {
+    planName: { type: String, enum: ["None", "Lite", "Pro+"], default: "Lite" },
+    planType: { type: String, enum: ["Monthly", "Yearly", "Trial"], default: "Trial" },
+    expiryDate: { type: Date },
+    isTrialUsed: { type: Boolean, default: false }
+},
+// Badge
     backgroundImage: {
       type: String,
       default: "",
@@ -70,7 +78,7 @@ const businessSchema = new mongoose.Schema(
     badge:{
        type: String,
       enum: ["Trusted", "Normal", "Trial"],
-      default: "Trusted",
+      default: "Trial",
       required: true,
     },
 

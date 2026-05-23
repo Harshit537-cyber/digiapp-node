@@ -49,6 +49,9 @@ const registerBusiness = async (req, res) => {
     const nationalIdUrl = await uploadToCloudinary(nationalId[0].path);
     const ownerImageUrl = await uploadToCloudinary(ownerImage[0].path);
 
+  const trialExpiry = new Date();
+    trialExpiry.setMonth(trialExpiry.getMonth() + 3); 
+
     const businessData = {
       userId,
       businessName,
@@ -62,6 +65,14 @@ const registerBusiness = async (req, res) => {
       businessImages: businessImageUrls,
       nationalIdImage: nationalIdUrl,
       ownerImage: ownerImageUrl,
+      badge: "Trial", 
+      status: "Pending",
+      subscription: {
+        plan: "Lite",        
+        type: "Trial",      
+        expiryDate: trialExpiry,
+        isTrialUsed: true    
+      }
     };
 
     const savedBusiness = await businessService.createBusiness(businessData);

@@ -17,7 +17,7 @@ router.get("/get-jobs", optionalAuth ,jobController.handleGetJobs )
 
 router.get("/my-active", verifyToken, jobController.getMyActiveJobs);
 router.get("/my-deactivated", verifyToken, jobController.getMyDeactivatedJobs);
-
+router.get("/my-posted", verifyToken, jobController.getMyPostedJobs);
 router.post("/save/:id", verifyToken, jobController.toggleSaveJob);
 router.get("/my/saved", verifyToken, jobController.getSavedJobs);
 

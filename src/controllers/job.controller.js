@@ -388,6 +388,36 @@ const handleGetJobs = async (req, res) => {
 };
 
 
+const getMyPostedJobs = async (req, res) => {
+  try {
+    // Console ke mutabik key 'userId' hai
+    const idFromToken = req.user.userId; 
+
+    if (!idFromToken) {
+      return res.status(400).json({ success: false, message: "User ID not found in token" });
+    }
+    const query = { userId: new mongoose.Types.ObjectId(idFromToken) };
+    if (req.query.category) {
+      query.jobCategory = req.query.category;
+    }
+
+    const jobs = await Job.find(query).sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      count: jobs.length,
+      data: jobs,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Server Error",
+      error: error.message,
+    });
+  }
+};
+
+
 module.exports = { postJob, getAllJobs, getJobById, updateJob ,deactivateJob , activateJob , searchJobs ,getMyJobs , getTheNearbyLatestJob, getMyActiveJobs, 
   getMyDeactivatedJobs , toggleSaveJob,handleGetJobs,
-    getSavedJobs, getRecentJobs, homeAPI};
+    getSavedJobs, getRecentJobs, homeAPI,getMyPostedJobs};
