@@ -28,7 +28,8 @@ router.post(
 
 // 2. GET: Get All Businesses (Public route rakh sakte hain ya protected)
 router.get('/all', businessController.getAllBusinesses);
-
+router.get("/get-posted-job", verifyToken, businessController.getMyPostedBusinesses)
+router.get("/search-my-businesses", verifyToken, businessController.searchMyBusinesses)
 // 3. GET: Get Business By ID
 router.get('/:id', businessController.getBusinessById);
 

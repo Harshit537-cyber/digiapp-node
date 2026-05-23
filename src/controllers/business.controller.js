@@ -2,7 +2,7 @@ const fs = require("fs");
 const businessService = require("../services/business.services");
 const cloudinary = require("../config/cloudinary");
 const Business = require("../models/Business");
-
+const mongoose = require("mongoose");
 // --- Helper Function: Upload to Cloudinary ---
 const uploadToCloudinary = async (filePath) => {
   if (!filePath) return null;
@@ -631,6 +631,64 @@ const searchBusinesses = async (req, res) => {
   }
 };
 
+const getMyPostedBusinesses = async (req, res) => {
+  try {
+    const idFromToken = req.user.userId;
+
+    const businesses = await Business.find({ 
+      userId: new mongoose.Types.ObjectId(idFromToken) 
+    }).sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      count: businesses.length,
+      data: businesses,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Server Error",
+      error: error.message,
+    });
+  }
+};
+
+const searchMyBusinesses = async (req, res) => {
+  try {
+    const idFromToken = req.user.userId;
+    const { q } = req.query; 
+
+    if (!idFromToken) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
+    let filter = { userId: new mongoose.Types.ObjectId(idFromToken) };
+
+    if (q) {
+      filter.$or = [
+        { businessName: { $regex: q, $options: "i" } },
+        { details: { $regex: q, $options: "i" } },
+        { ownerName: { $regex: q, $options: "i" } },
+        { category: { $regex: q, $options: "i" } },
+        { "services.serviceTitle": { $regex: q, $options: "i" } }
+      ];
+    }
+
+    const results = await Business.find(filter).sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      count: results.length,
+      data: results,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Search Error",
+      error: error.message,
+    });
+  }
+};
 
 module.exports = {
   registerBusiness,
@@ -651,5 +709,7 @@ module.exports = {
   deleteServiceImage,
   addMoreBusinessImages ,
   deleteBusinessImage ,
-  searchBusinesses
+  searchBusinesses,
+  getMyPostedBusinesses,
+  searchMyBusinesses
 };
