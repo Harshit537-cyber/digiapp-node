@@ -5,6 +5,7 @@ const businessController = require('../controllers/business.controller');
 // Imports
 const upload = require('../middlewares/upload'); 
 const verifyToken = require('../middlewares/auth.middlewares'); 
+const { upgradeBusinessPlan } = require('../controllers/upgradePlanController');
 
 
 router.get(
@@ -25,6 +26,8 @@ router.post(
   ]),
   businessController.registerBusiness
 );
+
+router.post("/upgrade-plan", verifyToken, upgradeBusinessPlan);
 
 // 2. GET: Get All Businesses (Public route rakh sakte hain ya protected)
 router.get('/all', businessController.getAllBusinesses);

@@ -1,6 +1,6 @@
 const Coupon = require('../models/Coupon');
-
-
+const TransactionRecord = require("../models/Transaction")
+const User = require("../models/User")
 exports.createCoupon = async (req, res) => {
     try {
         const { code, credits, expiryDate, usageLimit } = req.body;
@@ -71,35 +71,41 @@ exports.getCouponTracker = async (req, res) => {
 exports.redeemCouponUser = async (req, res) => {
     try {
         const { couponCode } = req.body;
-        const userId = req.user.id; // From Auth Middleware
+
+      
+        const userId = req.user.userId || req.user.id || req.user._id; 
+
+        if (!userId) {
+            return res.status(401).json({ success: false, message: "User ID not found in token" });
+        }
 
         const coupon = await Coupon.findOne({ code: couponCode.toUpperCase(), isActive: true });
 
-        // 1. Validations
         if (!coupon) return res.status(404).json({ message: "Invalid Coupon Code" });
         if (new Date() > coupon.expiryDate) return res.status(400).json({ message: "Coupon Expired" });
         if (coupon.usedBy.length >= coupon.usageLimit) return res.status(400).json({ message: "Coupon Limit Reached" });
         
-        const alreadyUsed = coupon.usedBy.some(u => u.user.toString() === userId);
+        const alreadyUsed = coupon.usedBy.some(u => u.user.toString() === userId.toString());
         if (alreadyUsed) return res.status(400).json({ message: "You have already used this coupon" });
 
-        // 2. Transaction (User Credits update + Coupon UsedBy push + Transaction Record)
-        // Production tip: Use Mongoose Session for Atomicity
+        const mongoose = require("mongoose"); 
         const session = await mongoose.startSession();
         session.startTransaction();
 
         try {
-            // Update User Credits
             await User.findByIdAndUpdate(userId, { $inc: { credits: coupon.credits } }, { session });
 
-            // Mark Coupon as Used
             coupon.usedBy.push({ user: userId });
             await coupon.save({ session });
 
-            // Create Success Transaction
-            await Transaction.create([{
+
+              const customOrderId = `REDEEM-${Date.now()}-${Math.floor(1000 + Math.random() * 9000)}`;
+            const TransactionModel = mongoose.models.TransactionRecord || mongoose.models.Transaction;
+
+            await TransactionModel.create([{
                 userId,
-                amount: 0, // Coupon is free
+                amount: 0,
+                   orderId: customOrderId,
                 category: 'COUPON_REDEEM',
                 status: 'Success',
                 metadata: { creditsAdded: coupon.credits, couponCode: coupon.code }
@@ -114,6 +120,7 @@ exports.redeemCouponUser = async (req, res) => {
             session.endSession();
         }
     } catch (error) {
+        console.error("Redeem Error:", error);
         res.status(500).json({ success: false, message: error.message });
     }
 };

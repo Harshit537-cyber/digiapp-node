@@ -390,7 +390,6 @@ const handleGetJobs = async (req, res) => {
 
 const getMyPostedJobs = async (req, res) => {
   try {
-    // Console ke mutabik key 'userId' hai
     const idFromToken = req.user.userId; 
 
     if (!idFromToken) {
@@ -416,6 +415,8 @@ const getMyPostedJobs = async (req, res) => {
     });
   }
 };
+
+
 const searchMyJobsAdvanced = async (req, res) => {
   try {
     const idFromToken = req.user.userId;

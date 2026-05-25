@@ -1,83 +1,110 @@
 const razorpay = require("../config/razorpay");
-const Transaction = require("../models/Transaction")
-
+const TransactionRecord = require("../models/Transaction");
+const User = require("../models/User");
+const Business = require("../models/Business");
+const crypto = require("crypto"); 
 
 
 exports.createOrder = async (req, res) => {
-  const { amount, purpose, metadata } = req.body; 
-
-  const options = {
-    amount: amount * 100,
-    currency: "INR",
-    receipt: `rcpt_${Date.now()}`
-  };
-
   try {
+    const { amount, purpose, metadata } = req.body; 
+
+    
+    const userId = req.user.userId; 
+
+    if (!userId) {
+      return res.status(401).json({ 
+        success: false, 
+        message: "User ID missing in token payload. Please Login again." 
+      });
+    }
+
+    const options = {
+      amount: amount * 100, 
+      currency: "INR",
+      receipt: `rcpt_${Date.now()}`
+    };
+
     const order = await razorpay.orders.create(options);
-    await Transaction.create({
-      userId: req.user.id,
+
+    const newTransaction = new TransactionRecord({
+      userId: userId, 
       orderId: order.id,
       amount: amount,
-      category: purpose === 'CREDIT' ? 'CREDIT_PURCHASE' : 'SUBSCRIPTION_UPGRADE',
+      category: purpose === 'CREDIT' ? 'CREDIT_PURCHASE' : 'SUBSCRIPTION_UPGRADE', 
       metadata: metadata,
       status: 'Pending'
     });
 
+    await newTransaction.save();
+
     res.json({ success: true, order });
+
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error("Order Logic Error:", err);
+    res.status(500).json({ 
+      success: false, 
+      message: "Database Error: " + err.message 
+    });
   }
 };
 
 
 exports.verifyPayment = async (req, res) => {
-  const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+  try {
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
 
-  const hmac = crypto.createHmac("sha256", process.env.RAZORPAY_SECRET);
-  hmac.update(razorpay_order_id + "|" + razorpay_payment_id);
-  const generated_signature = hmac.digest("hex");
+    const hmac = crypto.createHmac("sha256", process.env.RAZORPAY_KEY_SECRET);
+    hmac.update(razorpay_order_id + "|" + razorpay_payment_id);
+    const generated_signature = hmac.digest("hex");
 
-  if (generated_signature !== razorpay_signature) {
-    return res.status(400).json({ success: false, message: "Payment Security Breach" });
-  }
+    if (generated_signature !== razorpay_signature) {
+      return res.status(400).json({ success: false, message: "Payment Security Breach" });
+    }
 
-  const trx = await Transaction.findOne({ orderId: razorpay_order_id });
+    const trx = await TransactionRecord.findOne({ orderId: razorpay_order_id });
+    if (!trx) {
+      return res.status(404).json({ success: false, message: "Transaction Record Not Found" });
+    }
 
-  if (trx.category === 'CREDIT_PURCHASE') {
-    await User.findByIdAndUpdate(trx.userId, { 
-       $inc: { credits: trx.metadata.creditsAdded } 
-    });
-  } 
-  
-  else if (trx.category === 'SUBSCRIPTION_UPGRADE') {
-    const { planName, planType } = trx.metadata;
     
-    let newBadge = (planName === "Pro+") ? "Trusted" : "Normal";
+    if (trx.category === 'CREDIT_PURCHASE') {
+      await User.findByIdAndUpdate(trx.userId, { 
+         $inc: { credits: trx.metadata.creditsAdded } 
+      });
+    } 
     
-    let days = planType === "Monthly" ? 30 : 365;
-    let newExpiry = new Date();
-    newExpiry.setDate(newExpiry.getDate() + days);
+    else if (trx.category === 'SUBSCRIPTION_UPGRADE') {
+      const { planName, planType } = trx.metadata;
+      
+      let newBadge = (planName === "Pro+") ? "Trusted" : "Normal";
+      
+      let days = planType === "Monthly" ? 30 : 365;
+      let newExpiry = new Date();
+      newExpiry.setDate(newExpiry.getDate() + days);
 
-    await Business.findOneAndUpdate(
-      { userId: trx.userId },
-      {
-        badge: newBadge,
-        "subscription.planName": planName,
-        "subscription.planType": planType,
-        "subscription.expiryDate": newExpiry,
-        status: "Approved" 
-      }
-    );
+      await Business.findOneAndUpdate(
+        { userId: trx.userId },
+        {
+          badge: newBadge,
+          "subscription.planName": planName,
+          "subscription.planType": planType,
+          "subscription.expiryDate": newExpiry,
+          status: "Approved" 
+        }
+      );
+    }
+    trx.status = 'Success';
+    trx.paymentId = razorpay_payment_id;
+    await trx.save();
+
+    res.json({ success: true, message: "DB Updated as per plan conditions" });
+
+  } catch (error) {
+    console.error("Verification Error:", error);
+    res.status(500).json({ success: false, error: error.message });
   }
-
-  // Transaction ko Success mark karo
-  trx.status = 'Success';
-  trx.paymentId = razorpay_payment_id;
-  await trx.save();
-
-  res.json({ success: true, message: "DB Updated as per plan conditions" });
 };
-
 
 exports.getTransactionHistory = async (req, res) => {
     try {
