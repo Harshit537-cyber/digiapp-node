@@ -124,3 +124,54 @@ exports.redeemCouponUser = async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 };
+
+
+exports.getAvailableCoupons = async (req, res) => {
+  try {
+    const today = new Date();
+    
+    // --- FIX 1: Safe UserId extraction ---
+    const userId = req.user.userId || req.user.id || req.user._id;
+
+    if (!userId) {
+        return res.status(401).json({ success: false, message: "User not authenticated" });
+    }
+
+    // 1. Get Active and non-expired coupons
+    const coupons = await Coupon.find({
+      isActive: true,
+      expiryDate: { $gt: today }
+    }).sort({ createdAt: -1 });
+
+    const availableCoupons = coupons.filter(coupon => {
+      const isLimitAvailable = coupon.usedBy.length < coupon.usageLimit;
+      
+      const isAlreadyUsedByUser = coupon.usedBy.some(u => {
+          if (u.user && userId) {
+              return u.user.toString() === userId.toString();
+          }
+          return false;
+      });
+
+      return isLimitAvailable && !isAlreadyUsedByUser;
+    });
+
+    const data = availableCoupons.map(c => ({
+      id: c._id,
+      code: c.code,
+      credits: c.credits,
+      expiry: c.expiryDate,
+      message: `Redeem this code to get ${c.credits} Credits!`
+    }));
+
+    res.status(200).json({
+      success: true,
+      count: data.length,
+      data
+    });
+
+  } catch (error) {
+    console.error("Get Coupons Error:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
