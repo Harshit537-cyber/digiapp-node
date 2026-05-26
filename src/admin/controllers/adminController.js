@@ -9,7 +9,8 @@ const cloudinary = require("../../config/cloudinary"); // Correct path based on 
 const Displayimage = require("../../models/DisplayPhoto");
 const BloodRequest = require("../../models/BloodRequest");
 const Business = require("../../models/Business");
-const Item = require("../../models/Item")
+const Item = require("../../models/Item");
+const PlanConfig = require("../../models/PlanConfig");
 // --- REGISTER API (For Admins) ---
 exports.adminRegister = async (req, res) => {
   try {
@@ -867,5 +868,92 @@ exports.displayImage = async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: err.message });
+  }
+};
+
+
+
+
+exports.createPlan = async (req, res) => {
+  try {
+    const { planId, name, price, credits, category, description } = req.body;
+
+    const existing = await PlanConfig.findOne({ planId });
+    if (existing) {
+      return res.status(400).json({ success: false, message: "Plan ID already exists!" });
+    }
+
+    const newPlan = await PlanConfig.create({
+      planId,
+      name,
+      price,
+      credits,
+      category,
+      description
+    });
+
+    res.status(201).json({
+      success: true,
+      message: "Plan created successfully!",
+      data: newPlan
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+
+exports.updatePlan = async (req, res) => {
+  try {
+    const { planId } = req.params;
+    const updateData = req.body;   
+
+    const updatedPlan = await PlanConfig.findOneAndUpdate(
+      { planId },
+      updateData,
+      { new: true, runValidators: true } 
+    );
+
+    if (!updatedPlan) {
+      return res.status(404).json({ success: false, message: "Plan not found!" });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Plan updated successfully!",
+      data: updatedPlan
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+
+exports.deletePlan = async (req, res) => {
+  try {
+    const { planId } = req.params;
+
+    const deletedPlan = await PlanConfig.findOneAndDelete({ planId });
+
+    if (!deletedPlan) {
+      return res.status(404).json({ success: false, message: "Plan not found!" });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `Plan ${planId} has been deleted successfully.`
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+
+exports.getAllPlans = async (req, res) => {
+  try {
+    const plans = await PlanConfig.find().sort({ category: 1, price: 1 });
+    res.status(200).json({ success: true, data: plans });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
   }
 };

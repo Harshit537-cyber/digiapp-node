@@ -3,11 +3,11 @@ const TransactionRecord = require("../models/Transaction");
 const User = require("../models/User");
 const Business = require("../models/Business");
 const crypto = require("crypto"); 
-
+const PlanConfig = require("../models/PlanConfig")
 
 exports.createOrder = async (req, res) => {
   try {
-    const { amount, purpose, metadata } = req.body; 
+    const { purpose, metadata , planId} = req.body; 
 
     
     const userId = req.user.userId; 
@@ -19,8 +19,16 @@ exports.createOrder = async (req, res) => {
       });
     }
 
+
+     const plan = await PlanConfig.findOne({ planId });
+    if (!plan) {
+      return res.status(404).json({ success: false, message: "Invalid Plan selected." });
+    }
+    const finalAmount = plan.price; 
+
+
     const options = {
-      amount: amount * 100, 
+      amount: finalAmount  * 100, 
       currency: "INR",
       receipt: `rcpt_${Date.now()}`
     };
@@ -30,7 +38,7 @@ exports.createOrder = async (req, res) => {
     const newTransaction = new TransactionRecord({
       userId: userId, 
       orderId: order.id,
-      amount: amount,
+      amount: finalAmount,
       category: purpose === 'CREDIT' ? 'CREDIT_PURCHASE' : 'SUBSCRIPTION_UPGRADE', 
       metadata: metadata,
       status: 'Pending'

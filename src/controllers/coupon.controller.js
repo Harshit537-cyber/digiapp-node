@@ -1,6 +1,8 @@
 const Coupon = require('../models/Coupon');
-const TransactionRecord = require("../models/Transaction")
-const User = require("../models/User")
+const TransactionRecord = require("../models/Transaction");
+const User = require("../models/User");
+
+
 exports.createCoupon = async (req, res) => {
     try {
         const { code, credits, expiryDate, usageLimit } = req.body;
@@ -130,14 +132,12 @@ exports.getAvailableCoupons = async (req, res) => {
   try {
     const today = new Date();
     
-    // --- FIX 1: Safe UserId extraction ---
     const userId = req.user.userId || req.user.id || req.user._id;
 
     if (!userId) {
         return res.status(401).json({ success: false, message: "User not authenticated" });
     }
 
-    // 1. Get Active and non-expired coupons
     const coupons = await Coupon.find({
       isActive: true,
       expiryDate: { $gt: today }

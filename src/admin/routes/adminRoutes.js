@@ -17,7 +17,8 @@ const {
     adminUpdateJob,
     adminDeleteJob,
     displayImage,
-    searchAdmins
+    searchAdmins,
+    createPlan
 } = require('../controllers/adminController'); // Correct path relative to adminRoutes.js
 const verifyAdmin = require('../middlewares/adminAuth'); // Ensure this path is correct
 const upload = require('../../middlewares/upload'); // Correct path relative to adminRoutes.js
@@ -25,7 +26,7 @@ const upload = require('../../middlewares/upload'); // Correct path relative to 
 // Public Admin Routes (for Admin authentication)
 router.post('/register', adminRegister);
 router.post('/login', adminLogin);
-
+router.post("/create-plan", verifyAdmin, createPlan)
 // Admin Management Routes (Protected by verifyAdmin)
 router.get('/all', verifyAdmin, getAllAdmins);
 router.put('/update/:id', verifyAdmin, updateAdmin);

@@ -10,6 +10,9 @@ const { sendPushToUser } = require("../services/notification.service");
 const Displayimage = require('../models/DisplayPhoto')
 const bcrypt = require("bcryptjs");
 const NotificationService = require("../services/notificationService");
+const PlanConfig = require("../models/PlanConfig");
+
+
 
 exports.register = async (req, res) => {
   try {
@@ -360,3 +363,36 @@ exports.homeScreenImages = async (req, res) => {
 
   }
 }
+
+
+exports.getPlansForUser = async (req, res) => {
+  try {
+    const allPlans = await PlanConfig.find().sort({ price: 1 });
+
+    const creditPacks = allPlans.filter(p => p.category === 'CREDIT');
+    const subscriptionPlans = allPlans.filter(p => p.category === 'SUBSCRIPTION');
+
+    res.status(200).json({
+      success: true,
+      data: {
+        screen1_wallet: creditPacks,      
+        screen2_shopPlans: subscriptionPlans 
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.getPlanById = async (req, res) => {
+  try {
+    const { planId } = req.params;
+    const plan = await PlanConfig.findOne({ planId });
+    
+    if (!plan) return res.status(404).json({ message: "Plan not found" });
+
+    res.status(200).json({ success: true, data: plan });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};

@@ -15,8 +15,11 @@ router.post('/apply-coupon', verifyToken, userController.applyCoupon);
 router.post("/update-fcm-token", verifyToken, userController.updateFCMToken);
 
 
-// router.post("/test-notification", verifyToken, userController.sendNotificationTest)
 
+router.get("/plan-by-id/:planId", verifyToken, userController.getPlanById)
+
+// router.post("/test-notification", verifyToken, userController.sendNotificationTest)
+router.get("/all-plans", verifyToken, userController.getPlansForUser);
 router.get('/wallet', verifyToken, userController.getWalletDetails);
 
 
