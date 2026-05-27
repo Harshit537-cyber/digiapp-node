@@ -57,5 +57,27 @@ const verifyBusinessRequest = async (req, res) => {
         });
     }
 };
+const getApprovedBusinesses = async (req, res) => {
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        
+        const result = await businessService.getBusinessesByStatus('approved', page, limit);
 
-module.exports = {  getPendingBusinessRequests, verifyBusinessRequest };
+        return res.status(200).json({
+            success: true,
+            message: "Approved businesses fetched successfully",
+            ...result,
+        });
+
+    } catch (error) {
+        return res.status(500).json({ 
+            success: false, 
+            message: "Error fetching approved businesses", 
+            error: error.message 
+        });
+    }
+};
+
+
+module.exports = {  getPendingBusinessRequests, verifyBusinessRequest , getApprovedBusinesses};
