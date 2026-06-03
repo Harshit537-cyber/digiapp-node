@@ -39,7 +39,7 @@ exports.createOrder = async (req, res) => {
       userId: userId, 
       orderId: order.id,
       amount: finalAmount,
-      category: purpose === 'CREDIT' ? 'CREDIT_PURCHASE' : 'SUBSCRIPTION_UPGRADE', 
+      category: purpose === 'CREDIT' ? 'CREDIT_PURCHASE' : 'PLAN_UPGRADE', 
       metadata: metadata,
       status: 'Pending'
     });
