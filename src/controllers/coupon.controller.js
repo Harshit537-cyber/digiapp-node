@@ -17,6 +17,142 @@ exports.createCoupon = async (req, res) => {
 };
 
 
+exports.updateCoupon = async (req, res) => {
+    try {
+        const { id } = req.params; 
+        const { code, credits, expiryDate, usageLimit } = req.body;
+
+        let coupon = await Coupon.findById(id);
+        if (!coupon) {
+            return res.status(404).json({ success: false, message: "Coupon not found" });
+        }
+
+        if (code && code !== coupon.code) {
+            const existingCode = await Coupon.findOne({ code });
+            if (existingCode) {
+                return res.status(400).json({ success: false, message: "New coupon code already exists" });
+            }
+        }
+
+        const updatedCoupon = await Coupon.findByIdAndUpdate(
+            id,
+            { code, credits, expiryDate, usageLimit },
+            { new: true, runValidators: true }
+        );
+
+        res.status(200).json({
+            success: true,
+            message: "Coupon updated successfully",
+            data: updatedCoupon
+        });
+
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+exports.deleteCoupon = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        const deletedCoupon = await Coupon.findByIdAndDelete(id);
+
+        if (!deletedCoupon) {
+            return res.status(404).json({ 
+                success: false, 
+                message: "Coupon not found" 
+            });
+        }
+
+        res.status(200).json({ 
+            success: true, 
+            message: "Coupon deleted successfully",
+            deletedData: deletedCoupon 
+        });
+
+    } catch (error) {
+        res.status(500).json({ 
+            success: false, 
+            message: "Error deleting coupon: " + error.message 
+        });
+    }
+};
+
+exports.getCouponById = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const coupon = await Coupon.findById(id);
+        if (!coupon) {
+            return res.status(404).json({ 
+                success: false, 
+                message: "Coupon nahi mila bhai!" 
+            });
+        }
+        res.status(200).json({
+            success: true,
+            data: coupon
+        });
+
+    } catch (error) {
+        res.status(500).json({ 
+            success: false, 
+            message: "Server error: " + error.message 
+        });
+    }
+};
+
+
+
+exports.searchCoupons = async (req, res) => {
+    try {
+        const { 
+            q,          // Search keyword (code)
+            status,     
+            sort,       
+            page = 1,   
+            limit = 10 
+        } = req.query;
+
+        let query = {};
+
+        if (q) {
+            query.code = { $regex: q, $options: 'i' };
+        }
+
+        const now = new Date();
+        if (status === 'active') {
+            query.expiryDate = { $gte: now }; 
+        } else if (status === 'expired') {
+            query.expiryDate = { $lt: now }; 
+        }
+
+        let sortOption = { createdAt: -1 }; 
+        if (sort === 'high-credits') sortOption = { credits: -1 };
+        if (sort === 'low-credits') sortOption = { credits: 1 };
+        if (sort === 'oldest') sortOption = { createdAt: 1 };
+
+        const skip = (page - 1) * limit;
+
+        const coupons = await Coupon.find(query)
+            .sort(sortOption)
+            .skip(skip)
+            .limit(parseInt(limit));
+
+        const total = await Coupon.countDocuments(query);
+
+        res.status(200).json({
+            success: true,
+            totalFound: total,
+            currentPage: parseInt(page),
+            totalPages: Math.ceil(total / limit),
+            data: coupons
+        });
+
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
 exports.getAllCoupons = async (req, res) => {
     try {
         
