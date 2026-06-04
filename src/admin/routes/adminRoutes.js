@@ -21,7 +21,9 @@ const {
     createPlan,
     updatePlan,
     getPlans,
-    deletePlan
+    deletePlan,
+    getPlanById,
+    searchPlans
 } = require('../controllers/adminController'); // Correct path relative to adminRoutes.js
 const verifyAdmin = require('../middlewares/adminAuth'); // Ensure this path is correct
 const upload = require('../../middlewares/upload'); // Correct path relative to adminRoutes.js
@@ -34,7 +36,8 @@ router.post("/create-plan", verifyAdmin, createPlan);
 router.get("/plans", verifyAdmin, getPlans);
 router.put("/update-plan/:planId", verifyAdmin, updatePlan);
 router.delete("/delete-plan/:planId", verifyAdmin, deletePlan);
-
+router.get("/get-plan-by-id/:planId", verifyAdmin,getPlanById );
+router.get("/search-plan", verifyAdmin, searchPlans)
 // Admin Management Routes (Protected by verifyAdmin)
 router.get('/all', verifyAdmin, getAllAdmins);
 router.put('/update/:id', verifyAdmin, updateAdmin);

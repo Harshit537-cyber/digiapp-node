@@ -1003,3 +1003,60 @@ exports.getPlans = async (req, res) => {
     });
   }
 };
+
+
+exports.getPlanById = async (req, res) => {
+  try {
+    const { planId } = req.params;
+
+    const plan = await PlanConfig.findOne({ planId }).lean(); 
+
+    if (!plan) {
+      return res.status(404).json({ 
+        success: false, 
+        message: `Plan with ID ${planId} not found!` 
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: plan
+    });
+
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      message: "Error fetching plan details", 
+      error: error.message 
+    });
+  }
+};
+
+
+exports.searchPlans = async (req, res) => {
+  try {
+    const { q } = req.query; 
+    
+    let filter = {};
+
+    if (q) {
+      filter.$or = [
+        { name: { $regex: q, $options: 'i' } },      
+        { description: { $regex: q, $options: 'i' } }, 
+        { planId: { $regex: q, $options: 'i' } },      
+        { category: { $regex: q, $options: 'i' } }     
+      ];
+    }
+
+    const plans = await PlanConfig.find(filter).lean();
+
+    res.status(200).json({
+      success: true,
+      count: plans.length,
+      data: plans
+    });
+
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
