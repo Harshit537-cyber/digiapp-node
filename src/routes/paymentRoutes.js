@@ -9,4 +9,5 @@ router.post("/verify-payment", verifyToken,paymentController.verifyPayment);
 
 router.get("/history", verifyToken, paymentController.getTransactionHistory);
 
+router.get("/credits-balance", verifyToken, paymentController.getUserCredits);
 module.exports = router;

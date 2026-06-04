@@ -141,3 +141,31 @@ exports.getTransactionHistory =  async (req, res) => {
     });
   }
 };
+
+exports.getUserCredits = async (req, res) => {
+  try {
+    const userId = req.user.userId;
+
+    const user = await User.findById(userId).select("credits fullName");
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User nahi mila"
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      fullName: user.fullName,
+      credits: user.credits || 0 
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Server error",
+      error: error.message
+    });
+  }
+};
