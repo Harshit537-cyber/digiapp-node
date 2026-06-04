@@ -5,10 +5,6 @@ const verifyToken = require("../middlewares/auth.middlewares");
 const upload = require("../middlewares/upload");
 const optionalAuth= require("../middlewares/optionalAuth");
 
-
-
-
-
 router.get("/search", jobController.searchJobs);
 router.get("/my-jobs", verifyToken, jobController.getMyJobs);
 router.get('/near-by-after-login', verifyToken, jobController.getTheNearbyLatestJob );

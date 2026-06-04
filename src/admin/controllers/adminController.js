@@ -906,25 +906,32 @@ exports.createPlan = async (req, res) => {
 exports.updatePlan = async (req, res) => {
   try {
     const { planId } = req.params;
-    const updateData = req.body;   
-
+    
     const updatedPlan = await PlanConfig.findOneAndUpdate(
       { planId },
-      updateData,
-      { new: true, runValidators: true } 
+      { $set: req.body }, 
+      { new: true, runValidators: true }
     );
 
     if (!updatedPlan) {
-      return res.status(404).json({ success: false, message: "Plan not found!" });
+      return res.status(404).json({ 
+        success: false, 
+        message: "Plan not found with the given ID" 
+      });
     }
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
-      message: "Plan updated successfully!",
+      message: "Plan updated successfully",
       data: updatedPlan
     });
+
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    const statusCode = error.name === 'ValidationError' ? 400 : 500;
+    res.status(statusCode).json({ 
+      success: false, 
+      message: error.message || "Internal Server Error" 
+    });
   }
 };
 
@@ -933,27 +940,66 @@ exports.deletePlan = async (req, res) => {
   try {
     const { planId } = req.params;
 
+    if (!planId) {
+      return res.status(400).json({ success: false, message: "Plan ID is required!" });
+    }
+
     const deletedPlan = await PlanConfig.findOneAndDelete({ planId });
 
     if (!deletedPlan) {
-      return res.status(404).json({ success: false, message: "Plan not found!" });
+      return res.status(404).json({ 
+        success: false, 
+        message: `Plan with ID '${planId}' not found!` 
+      });
     }
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
-      message: `Plan ${planId} has been deleted successfully.`
+      message: "Plan deleted successfully",
+      deletedId: planId 
     });
+
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ 
+      success: false, 
+      message: "Internal Server Error", 
+      error: error.message 
+    });
   }
 };
 
-
-exports.getAllPlans = async (req, res) => {
+exports.getPlans = async (req, res) => {
   try {
-    const plans = await PlanConfig.find().sort({ category: 1, price: 1 });
-    res.status(200).json({ success: true, data: plans });
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const [plans, totalPlans] = await Promise.all([
+      PlanConfig.find()
+        .sort({ category: 1, price: 1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(), 
+      PlanConfig.countDocuments()
+    ]);
+
+    res.status(200).json({
+      success: true,
+      results: plans.length,
+      pagination: {
+        totalItems: totalPlans,
+        totalPages: Math.ceil(totalPlans / limit),
+        currentPage: page,
+        limit: limit
+      },
+      data: plans
+    });
+
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ 
+      success: false, 
+      message: "Error fetching plans", 
+      error: error.message 
+    });
   }
 };
