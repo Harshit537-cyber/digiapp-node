@@ -4,7 +4,7 @@ const User = require("../models/User");
 const Business = require("../models/Business");
 const crypto = require("crypto"); 
 const PlanConfig = require("../models/PlanConfig")
-
+const mongoose = require("mongoose");
 exports.createOrder = async (req, res) => {
   try {
     const { purpose, metadata , planId} = req.body; 
@@ -114,11 +114,30 @@ exports.verifyPayment = async (req, res) => {
   }
 };
 
-exports.getTransactionHistory = async (req, res) => {
-    try {
-        const history = await Transaction.find({ userId: req.user.id }).sort({ createdAt: -1 });
-        res.json({ success: true, data: history });
-    } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
-    }
+exports.getTransactionHistory =  async (req, res) => {
+  try {
+    const tokenUserId = req.user.userId; 
+
+    console.log("Fetching for User:", tokenUserId);
+
+    const history = await TransactionRecord.find({ 
+      userId: new mongoose.Types.ObjectId(tokenUserId) 
+    }).sort({ createdAt: -1 });
+
+    console.log("Total Found:", history.length);
+
+    return res.status(200).json({
+      success: true,
+      count: history.length,
+      data: history
+    });
+
+  } catch (error) {
+    console.error("Error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Server Error",
+      error: error.message
+    });
+  }
 };
