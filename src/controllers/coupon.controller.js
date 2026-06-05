@@ -81,13 +81,23 @@ exports.deleteCoupon = async (req, res) => {
 exports.getCouponById = async (req, res) => {
     try {
         const { id } = req.params;
-        const coupon = await Coupon.findById(id);
+        
+        let coupon = await Coupon.findById(id).lean();
+
         if (!coupon) {
-            return res.status(404).json({ 
-                success: false, 
-                message: "Coupon nahi mila bhai!" 
+            return res.status(404).json({ success: false, message: "Coupon not found" });
+        }
+
+        if (coupon.usedBy && coupon.usedBy.length > 0) {
+            coupon.usedBy = coupon.usedBy.map(item => {
+                return {
+
+                    userId: item._id.toString(), 
+                    usedAt: item.usedAt
+                };
             });
         }
+
         res.status(200).json({
             success: true,
             data: coupon
@@ -102,11 +112,10 @@ exports.getCouponById = async (req, res) => {
 };
 
 
-
 exports.searchCoupons = async (req, res) => {
     try {
         const { 
-            q,          // Search keyword (code)
+            q,          
             status,     
             sort,       
             page = 1,   

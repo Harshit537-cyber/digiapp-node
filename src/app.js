@@ -56,14 +56,9 @@ app.use("/api/admin/subcategoryData", require("../src/admin/routes/subCategoryRo
 app.use("/api/admin/business", verifiedBusinessRoutes); 
 app.use("/api/sos", require("../src/routes/sosRoutes"));
 app.use("/api/admin/notifications", require("../src/admin/routes/adminNotificationRoutes"))
-
 app.use('/api/user', userCategoryRoutes);
-
-
 app.use("/api/admin/manage-business", adminBusinessRoutes);
-
 app.use('/api/saved', saveJobsAll);
-
 app.use('/api/admin/coupon', CouponRoutes); 
 app.use("/api/payments", paymentRoutes)
 
