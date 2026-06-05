@@ -5,9 +5,11 @@ const Business = require("../models/Business");
 const crypto = require("crypto"); 
 const PlanConfig = require("../models/PlanConfig")
 const mongoose = require("mongoose");
+
+
 exports.createOrder = async (req, res) => {
   try {
-    const { purpose, metadata , planId} = req.body; 
+    const { purpose, metadata , planId,businessId} = req.body; 
 
     
     const userId = req.user.userId; 
@@ -38,6 +40,7 @@ exports.createOrder = async (req, res) => {
     const newTransaction = new TransactionRecord({
       userId: userId, 
       orderId: order.id,
+       businessId: businessId || null,
       amount: finalAmount,
       category: purpose === 'CREDIT' ? 'CREDIT_PURCHASE' : 'PLAN_UPGRADE', 
       metadata: metadata,
