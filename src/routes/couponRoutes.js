@@ -13,6 +13,7 @@ router.put("/update-coupon/:id", verifyAdmin, couponController.updateCoupon);
 router.get("/admin/track/:id", verifyAdmin , couponController.getCouponTracker);
 router.get("/available", verifyToken, couponController.getAvailableCoupons);
 router.get("/get-by-id/:id", verifyAdmin, couponController.getCouponById);
+router.get("/search-coupon", verifyAdmin, couponController.searchCoupons);
 router.delete("/delete/:id", verifyAdmin, couponController.deleteCoupon);
 
 module.exports = router;

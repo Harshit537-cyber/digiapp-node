@@ -145,22 +145,34 @@ exports.searchCoupons = async (req, res) => {
         const coupons = await Coupon.find(query)
             .sort(sortOption)
             .skip(skip)
-            .limit(parseInt(limit));
+            .limit(parseInt(limit))
+            .lean(); 
 
         const total = await Coupon.countDocuments(query);
+
+        const cleanedCoupons = coupons.map(coupon => {
+            if (coupon.usedBy && Array.isArray(coupon.usedBy)) {
+                coupon.usedBy = coupon.usedBy.map(u => ({
+                    userId: u._id ? u._id.toString() : null, 
+                    usedAt: u.usedAt
+                }));
+            }
+            return coupon;
+        });
 
         res.status(200).json({
             success: true,
             totalFound: total,
             currentPage: parseInt(page),
             totalPages: Math.ceil(total / limit),
-            data: coupons
+            data: cleanedCoupons 
         });
 
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
 };
+
 
 exports.getAllCoupons = async (req, res) => {
     try {
