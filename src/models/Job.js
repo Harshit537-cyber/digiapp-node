@@ -13,6 +13,18 @@ const jobSchema = new mongoose.Schema(
       required: true,
     },
 
+
+    category: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "JobsCategory",
+      required: true,
+    },
+
+ subCategory: {
+      type: String,
+      required: true,
+    },
+
     // Common Fields
     title: { type: String, required: true },
     details: { type: String, required: true },

@@ -4,6 +4,7 @@ const Business = require('../models/Business')
 const transactionSchema = require('../models/Transitionmodel')
 const mongoose = require('mongoose');
 const User = require('../models/User')
+const JobsCategory = require("../admin/models/JobsCategory")
 
 
 const postJob = async (req, res) => {
@@ -20,7 +21,25 @@ const postJob = async (req, res) => {
       });
     }
 
-    const { jobCategory, isFeatured } = req.body;
+    const { jobCategory, isFeatured,category, subCategory  } = req.body;
+
+    if (!category || !subCategory) {
+      throw new Error("Category and Sub-category are required");
+    }
+
+    const catData = await JobsCategory.findById(category).session(session);
+    
+    if (!catData) {
+      throw new Error("Selected Category not found");
+    }
+
+    if (catData.type !== jobCategory) {
+      throw new Error(`This category is only for ${catData.type}`);
+    }
+
+    if (!catData.subCategory.includes(subCategory)) {
+      throw new Error("Invalid sub-category selection for this category");
+    }
 
     const jobConfig = {
       LOCAL_JOB: { credits: 10, label: "LOCAL_JOB" },

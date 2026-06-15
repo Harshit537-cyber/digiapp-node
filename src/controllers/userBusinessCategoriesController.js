@@ -9,7 +9,6 @@ exports.getAllCategoriesForUsers = async (req, res) => {
       status: true, 
       type: "Business" 
     }).sort({ name: 1 }); 
-
   if (!categories || categories.length === 0) {
       return res.status(404).json({
         success: false,

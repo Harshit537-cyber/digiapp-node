@@ -61,6 +61,7 @@ app.use("/api/admin/manage-business", adminBusinessRoutes);
 app.use('/api/saved', saveJobsAll);
 app.use('/api/admin/coupon', CouponRoutes); 
 app.use("/api/payments", paymentRoutes);
-app.use("/api/users/businessCategories", require("../src/routes/userBusinessCategoriesRoutes"))
-
+app.use("/api/users/businessCategories", require("../src/routes/userBusinessCategoriesRoutes"));
+app.use("/api/admin/jobsCategory", require("../src/admin/routes/jobsCategoryRoutes"))
+app.use("/api/user/userJobCategories", require("../src/routes/userJobsCategoriesRoutes"))
 module.exports = app;
