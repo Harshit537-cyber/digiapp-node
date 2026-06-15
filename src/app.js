@@ -60,6 +60,7 @@ app.use('/api/user', userCategoryRoutes);
 app.use("/api/admin/manage-business", adminBusinessRoutes);
 app.use('/api/saved', saveJobsAll);
 app.use('/api/admin/coupon', CouponRoutes); 
-app.use("/api/payments", paymentRoutes)
+app.use("/api/payments", paymentRoutes);
+app.use("/api/users/businessCategories", require("../src/routes/userBusinessCategoriesRoutes"))
 
 module.exports = app;

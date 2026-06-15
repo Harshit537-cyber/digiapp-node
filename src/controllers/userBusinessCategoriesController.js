@@ -1,6 +1,6 @@
 const BusinessCategory = require('../admin/models/BusinessCategory'); 
 const Business = require("../models/Business");
-
+const mongoose = require('mongoose')
 
 exports.getAllCategoriesForUsers = async (req, res) => {
   try {
@@ -73,24 +73,19 @@ exports.getSubCategoriesByCategoryId = async (req, res) => {
 exports.getBusinessesBySubCategory = async (req, res) => {
   try {
     const { subCategory, categoryId } = req.query;
-    if (!subCategory) {
+
+    if (!subCategory || !categoryId) {
       return res.status(400).json({
         success: false,
-        message: "Sub-category name is required"
+        message: "Sub-category and Category ID are required"
       });
     }
 
-    let filter = {
-      status: "Approved",     
-      isBlocked: false,    
-      services: { $elemMatch: { serviceTitle: { $regex: subCategory, $options: 'i' } } } 
-    };
     const query = {
-        status: "Approved",
-        isBlocked: false,
-        category: categoryId, 
-        subCategory: { $regex: `^${subCategory}$`, $options: 'i' } 
+      category: new mongoose.Types.ObjectId(categoryId), 
+      subCategory: { $regex: `^${subCategory.trim()}$`, $options: 'i' } 
     };
+
     const businesses = await Business.find(query)
       .populate('category', 'name image') 
       .sort({ createdAt: -1 }); 
@@ -103,13 +98,17 @@ exports.getBusinessesBySubCategory = async (req, res) => {
 
   } catch (error) {
     console.error("Filter Business Error:", error.message);
+    
+    if (error.kind === 'ObjectId') {
+        return res.status(400).json({ success: false, message: "Invalid Category ID format" });
+    }
+
     res.status(500).json({
       success: false,
       message: "Internal Server Error"
     });
   }
 };
-
 
 
 
