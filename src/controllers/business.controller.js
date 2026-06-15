@@ -33,8 +33,9 @@ const registerBusiness = async (req, res) => {
     }
     console.log(req.body)
    
-    const { businessName, details, category, location, address, ownerName, mobileNumber, whatsappNumber } = req.body;
+    const { businessName, details, category, subCategory, location, address, ownerName, mobileNumber, whatsappNumber } = req.body;
     const { businessImages, nationalId, ownerImage } = req.files || {};
+
      console.log('bussiness id : ', businessImages, nationalId, ownerImage );
      console.log(businessImages,nationalId,ownerImage)
 
@@ -42,7 +43,20 @@ const registerBusiness = async (req, res) => {
       return res.status(400).json({ success: false, message: "Please upload all required images (Business, ID, and Owner)" });
     }
 
-  
+  const BusinessCategory = require('../admin/models/BusinessCategory'); // Model import karein
+    const catData = await BusinessCategory.findById(category);
+    
+    if (!catData) {
+      return res.status(404).json({ success: false, message: "Selected Category not found" });
+    }
+
+    if (!subCategory || !catData.subCategory.includes(subCategory)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: `Invalid sub-category. Please select a valid one from this category.` 
+      });
+    }
+
     const businessImageUrls = await Promise.all(
       businessImages.map((file) => uploadToCloudinary(file.path))
     );
@@ -56,7 +70,8 @@ const registerBusiness = async (req, res) => {
       userId,
       businessName,
       details,
-      category,
+      category,      
+      subCategory,  
       location,
       address,
       ownerName,

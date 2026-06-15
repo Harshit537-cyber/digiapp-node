@@ -20,9 +20,11 @@ const UserSchema = new Schema(
       unique: true
     },
 
+    
+    
     password: {
       type: String,
-      required:  true
+      required: true
     },
     gender: {
       type: String,
@@ -85,10 +87,10 @@ const UserSchema = new Schema(
 
     },
 
-    
+
     fcmToken: {
       type: String,
-      default:""
+      default: ""
     },
 
     isVerified: {

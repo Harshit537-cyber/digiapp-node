@@ -14,7 +14,7 @@ const saveJobsAll = require("./routes/saved.routes")
 const chatRoutes = require("./routes/chat.routes")
 const verifiedBusinessRoutes = require("./admin/routes/verifiedBusinessRoutes"); 
 
-const adminCategoryRoutes = require('../src/admin/routes/categoryRoutes');
+const adminCategoryRoutes = require('../src/admin/routes/businessCategoryRoutes');
  const userCategoryRoutes  = require('./routes/user.routes');
 
  const adminBusinessRoutes = require("./admin/routes/adminBusinessRoutes");

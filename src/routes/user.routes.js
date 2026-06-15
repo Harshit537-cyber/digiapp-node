@@ -62,11 +62,11 @@ router.delete(
 
 // -------------------- CATEGORY ROUTES --------------------
 
-router.get(
-  "/categories",
-  verifyToken,
-  cat.getAppCategories
-);
+// router.get(
+//   "/categories",
+//   verifyToken,
+//   cat.getAppCategories
+// );
 
 
 

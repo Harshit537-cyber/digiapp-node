@@ -34,6 +34,7 @@ exports.sendAdminNotification = async (req, res) => {
         notificationParams.isTopic = true;
         break;
 
+        
       case "USER":
         const user = await User.findById(targetValue).select("fcmToken");
         if (!user || !user.fcmToken) {

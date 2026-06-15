@@ -1,27 +1,24 @@
-
 const mongoose = require('mongoose');
 
-const categorySchema = new mongoose.Schema({
-  name: { type: String, default : " " },
+const businessCategorySchema = new mongoose.Schema({
+  name: { 
+    type: String, 
+    required: true,
+    trim: true,
+    unique: true 
+  },
 
   type: {
     type: String,
-    enum: ['jobs', 'sale', 'shop'], 
-    required: true
+    default: "Business"
   },
 
-  image: { type: String },
-
- category: { 
-    type: String, 
-    default: "" 
-  },
+  image: { type: String }, 
 
   subCategory: { 
     type: [String], 
     default: [] 
   },
-
 
   status: { type: Boolean, default: true },
 
@@ -33,4 +30,4 @@ const categorySchema = new mongoose.Schema({
 
 }, { timestamps: true });
 
-module.exports = mongoose.model('Category', categorySchema);
+module.exports = mongoose.model('BusinessCategory', businessCategorySchema);

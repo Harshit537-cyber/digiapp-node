@@ -23,7 +23,16 @@ const businessSchema = new mongoose.Schema(
     // Text Fields
     businessName: { type: String, required: true },
     details: { type: String, required: true },
-    category: { type: String, required: true },
+   category: { 
+      type: mongoose.Schema.Types.ObjectId, 
+      ref: 'BusinessCategory', 
+      required: true 
+    },
+
+     subCategory: { 
+      type: String, 
+      required: true 
+    },
     // location: { type: String, required: true },
     location: {
       type: {

@@ -1,5 +1,5 @@
 const SubcategoryData = require("../../admin/models/SubCategoryData");
-const Category = require("../../admin/models/Category");
+const Category = require("../../admin/models/BusinessCategory");
 const cloudinary = require("../../config/cloudinary");
 const fs = require("fs");
 

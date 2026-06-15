@@ -1,0 +1,415 @@
+const BusinessCategory = require('../models/BusinessCategory');
+const cloudinary = require('../../config/cloudinary');
+const fs = require('fs');
+
+exports.createCategory = async (req, res) => {
+  try {
+    const { name, type, category, subCategory } = req.body;
+
+    if (!name || !type) {
+      if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+      return res.status(400).json({
+        success: false,
+        message: "Name and type are required"
+      });
+    }
+
+    const allowedTypes = ["Business"];
+    if (!allowedTypes.includes(type)) {
+      if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+      return res.status(400).json({
+        success: false,
+        message: "Type must be Business"
+      });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: "Image upload is required"
+      });
+    }
+
+    const exists = await BusinessCategory.findOne({ name, type });
+    if (exists) {
+      if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+      return res.status(400).json({
+        success: false,
+        message: "Category already exists"
+      });
+    }
+
+    const uploadResponse = await cloudinary.uploader.upload(req.file.path, {
+      folder: 'category_icons'
+    });
+
+    const newCategory = await BusinessCategory.create({
+      name,
+      type,
+      category: category || "", 
+      subCategory: subCategory ? (Array.isArray(subCategory) ? subCategory : [subCategory]) : [], 
+      image: uploadResponse.secure_url,
+      createdBy: req.user?.id 
+    });
+
+    if (fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+
+    res.status(201).json({
+      success: true,
+      message: "Business Category created successfully",
+      data: newCategory
+    });
+
+  } catch (error) {
+    if (req.file && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+    console.error("Create Category Error:", error.message);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+exports.createSubCategory = async (req, res) => {
+  try {
+    const { categoryId, subCategory } = req.body;
+
+    if (!categoryId || !subCategory) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "CategoryId and subCategory name are required" 
+      });
+    }
+    const updatedDoc = await BusinessCategory.findByIdAndUpdate(
+      categoryId, 
+      { 
+        $addToSet: { subCategory: subCategory } 
+      },
+      { new: true } 
+    );
+
+    if (!updatedDoc) {
+      return res.status(404).json({ 
+        success: false, 
+        message: "Main Category not found with this ID" 
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Sub-category added successfully",
+      data: updatedDoc
+    });
+
+  } catch (error) {
+    console.error("Sub-category Error:", error.message);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+
+
+// exports.updateSubCategory = async (req, res) => {
+//   try {
+//     const { category, oldSubCategory, newSubCategory } = req.body;
+
+//     if (!category || !oldSubCategory || !newSubCategory) {
+//       return res.status(400).json({ 
+//         success: false, 
+//         message: "Main category, old sub-category, and new sub-category name are required" 
+//       });
+//     }
+
+   
+//     const updatedDoc = await Category.findOneAndUpdate(
+//       { 
+//         category: category, 
+//         subCategory: oldSubCategory 
+//       },
+//       { 
+//         $set: { 
+//           "subCategory.$": newSubCategory, 
+//           updatedBy: req.user?.id 
+//         } 
+//       },
+//       { new: true } 
+//     );
+
+   
+//     if (!updatedDoc) {
+//       return res.status(404).json({ 
+//         success: false, 
+//         message: "Main Category or specific Sub-category not found" 
+//       });
+//     }
+
+//     res.status(200).json({
+//       success: true,
+//       message: "Sub-category updated successfully",
+//       data: updatedDoc
+//     });
+
+//   } catch (error) {
+//     console.error("Update Error:", error.message);
+//     res.status(500).json({ success: false, message: error.message });
+//   }
+// };
+
+
+
+// exports.deleteSubCategory = async (req, res) => {
+//   try {
+//     const { category, subCategoryToDelete } = req.body;
+//     if (!category || !subCategoryToDelete) {
+//       return res.status(400).json({ 
+//         success: false, 
+//         message: "Main category and sub-category to delete are required" 
+//       });
+//     }
+
+//     const updatedDoc = await BusinessCategory.findOneAndUpdate(
+//       { category: category }, 
+//       { 
+//         $pull: { subCategory: subCategoryToDelete } 
+//       },
+//       { new: true }
+//     );
+
+//     if (!updatedDoc) {
+//       return res.status(404).json({ 
+//         success: false, 
+//         message: "Main Category not found" 
+//       });
+//     }
+
+//     res.status(200).json({
+//       success: true,
+//       message: "Sub-category deleted successfully",
+//       data: updatedDoc
+//     });
+
+//   } catch (error) {
+//     console.error("Delete Error:", error.message);
+//     res.status(500).json({ success: false, message: error.message });
+//   }
+// };
+
+exports.getAllCategories = async (req, res) => {
+  try {
+    const categories = await BusinessCategory.find({})
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      count: categories.length,
+      data: categories 
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+
+
+// getAllCategoriesForDropdown
+// exports.getAllCategoriesForDropdown = async (req, res) => {
+//   try {
+//     const categories = await Category.distinct('category');
+    
+//     // Optional: Filter out empty strings if any exist
+//     const filteredCategories = categories.filter(cat => cat.trim() !== "");
+
+//     res.status(200).json({
+//       success: true,
+//       data: filteredCategories
+//     });
+//   } catch (error) {
+//     res.status(500).json({ success: false, message: error.message });
+//   }
+// };
+
+// exports.getSubcategoriesBySection = async (req, res) => {
+//   try {
+//     const page = parseInt(req.query.page) || 1;
+//     const limit = parseInt(req.query.limit) || 10;
+//     const skip = (page - 1) * limit;
+
+
+//     const { categoryName } = req.query;
+
+//     const categoryDoc = await Category.findOne({ category: categoryName });
+
+
+//     if (!categoryDoc) {
+//       return res.status(404).json({ success: false, message: "Category not found" });
+//     }
+
+//  const sortedSubCategories = categoryDoc.subCategory.sort((a, b) => {
+//       return new Date(b.createdAt) - new Date(a.createdAt); 
+//     });
+//     const totalItems = sortedSubCategories.length;
+//     const paginatedData = sortedSubCategories.slice(skip, skip + limit);
+
+//     res.status(200).json({
+//       success: true,
+//        pagination: {
+//         totalItems,
+//         totalPages: Math.ceil(totalItems / limit),
+//         currentPage: page,
+//         limit
+//       },
+//       data: paginatedData
+//     });
+
+//   } catch (error) {
+//     res.status(500).json({
+//       success: false,
+//       message: error.message
+//     });
+//   }
+// };
+
+
+exports.deleteCategory = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const category = await BusinessCategory.findById(id);
+    
+    if (!category) {
+      return res.status(404).json({
+        success: false,
+        message: "Category not found"
+      });
+    }
+
+    if (category.image) {
+      try {
+        const publicId = category.image.split('/').pop().split('.')[0];
+        const folderName = 'category_icons'; 
+        
+        await cloudinary.uploader.destroy(`${folderName}/${publicId}`);
+      } catch (cloudinaryErr) {
+        console.error("Cloudinary Delete Error:", cloudinaryErr.message);
+      }
+    }
+    await BusinessCategory.findByIdAndDelete(id);
+
+    res.status(200).json({
+      success: true,
+      message: "Category and associated image deleted successfully"
+    });
+
+  } catch (error) {
+    console.error("Delete Category Error:", error.message);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+
+exports.updateBusinessCategory = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // 1. Destructure fields
+    const { name, type, category: categoryField } = req.body;
+    
+    // Debugging ke liye (categoryField check karein)
+    console.log("Input Data:", { name, type, categoryField });
+
+    // 2. Find Category
+    let categoryDoc = await Category.findById(id);
+    if (!categoryDoc) {
+      if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+      return res.status(404).json({ success: false, message: "Category not found" });
+    }
+
+    // 3. Validation
+    if (type) {
+      const allowedTypes = ['jobs', 'sale', 'shop'];
+      if (!allowedTypes.includes(type)) {
+        if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+        return res.status(400).json({ success: false, message: "Type must be jobs, sale or shop" });
+      }
+    }
+
+    // 4. Duplicate Check
+    if (name || type) {
+      const checkName = name || categoryDoc.name;
+      const checkType = type || categoryDoc.type;
+      const exists = await Category.findOne({ 
+        name: checkName, 
+        type: checkType, 
+        _id: { $ne: id } 
+      });
+      if (exists) {
+        if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+        return res.status(400).json({ success: false, message: "Duplicate exists" });
+      }
+    }
+
+    // 5. Image Update
+    if (req.file) {
+      const uploadResponse = await cloudinary.uploader.upload(req.file.path, { folder: 'category_icons' });
+      categoryDoc.image = uploadResponse.secure_url;
+      if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+    }
+
+    // 6. Final Updates
+    categoryDoc.name = name || categoryDoc.name;
+    categoryDoc.type = type || categoryDoc.type;
+    
+    if (categoryField !== undefined) {
+      categoryDoc.category = categoryField;
+    }
+
+    const updatedCategory = await categoryDoc.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Category updated successfully",
+      data: updatedCategory
+    });
+
+  } catch (error) {
+    if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+    console.error("Update Error:", error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+// exports.searchCategory = async (req, res) => {
+//   try {
+//     const { q } = req.query; 
+
+//     if (!q) {
+//       return res.status(400).json({
+//         success: false,
+//         message: "Search query is required"
+//       });
+//     }
+
+//     const results = await Category.find({
+//       name: { $regex: q, $options: 'i' }
+//     }).populate('createdBy', 'name email'); 
+
+//     res.status(200).json({
+//       success: true,
+//       count: results.length,
+//       data: results
+//     });
+//   } catch (error) {
+//     res.status(500).json({
+//       success: false,
+//       message: "Error performing search",
+//       error: error.message
+//     });
+//   }
+// };
