@@ -84,6 +84,8 @@ const businessSchema = new mongoose.Schema(
       default: "Pending",
       required: true,
     },
+
+    
     badge:{
        type: String,
       enum: ["Trusted", "Normal", "Trial"],
