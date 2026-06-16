@@ -29,7 +29,7 @@ cron.schedule('* * * * *', async () => {
           await sendNotification(
             contact.user.fcmToken,
             "🚨 SOS STILL LIVE!",
-            `${alert.sender.name} अभी भी खतरे में है! लोकेशन: ${alert.location.address}`,
+            `${alert.sender.name} Is in danger,  Location: ${alert.location.address}`,
             { type: "SOS_REPEAT" }
           );
         }

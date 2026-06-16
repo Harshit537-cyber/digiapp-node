@@ -4,7 +4,6 @@ const cloudinary = require("../../config/cloudinary");
 const fs = require("fs");
 const Admin = require("../../admin/models/Admin")
 
-// Helper: Cloudinary par images upload karne ke liye
 const uploadFilesToCloudinary = async (files) => {
     if (!files || files.length === 0) return [];
     const uploadPromises = files.map(file =>

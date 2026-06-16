@@ -48,7 +48,7 @@ exports.createJobsCategory = async (req, res) => {
       type,
       image: uploadResponse.secure_url,
       subCategory: subCategory ? (Array.isArray(subCategory) ? subCategory : [subCategory]) : [],
-      createdBy: req.user?.id // Admin ID
+      createdBy: req.user?.id 
     });
 
     if (fs.existsSync(req.file.path)) {
@@ -185,3 +185,77 @@ exports.deleteJobsCategory = async (req, res) => {
 };
 
 
+exports.getJobsCategoryById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const category = await JobsCategory.findById(id);
+
+    if (!category) {
+      return res.status(404).json({
+        success: false,
+        message: "Jobs Category not found"
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: category
+    });
+
+  } catch (error) {
+    if (error.kind === 'ObjectId') {
+      return res.status(400).json({ success: false, message: "Invalid ID format" });
+    }
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.updateJobsCategory = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, type, subCategory, status } = req.body;
+
+    let category = await JobsCategory.findById(id);
+    if (!category) {
+      if (req.file) fs.unlinkSync(req.file.path);
+      return res.status(404).json({ success: false, message: "Category not found" });
+    }
+
+    let imageUrl = category.image;
+    if (req.file) {
+      if (category.image) {
+        const oldPublicId = category.image.split('/').pop().split('.')[0];
+        await cloudinary.uploader.destroy(`jobs_category_icons/${oldPublicId}`);
+      }
+
+      const uploadResponse = await cloudinary.uploader.upload(req.file.path, {
+        folder: 'jobs_category_icons'
+      });
+      imageUrl = uploadResponse.secure_url;
+
+      fs.unlinkSync(req.file.path);
+    }
+
+    const updatedData = {
+      name: name || category.name,
+      type: type || category.type,
+      status: status !== undefined ? status : category.status,
+      image: imageUrl,
+         subCategory: subCategory ? (Array.isArray(subCategory) ? subCategory : [subCategory]) : category.subCategory
+    };
+
+    const updatedCategory = await JobsCategory.findByIdAndUpdate(id, updatedData, { new: true });
+
+    res.status(200).json({
+      success: true,
+      message: "Jobs Category updated successfully",
+      data: updatedCategory
+    });
+
+  } catch (error) {
+    if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+    console.error("Update Jobs Category Error:", error.message);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
