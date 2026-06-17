@@ -4,7 +4,7 @@ const response = require("../utils/response");
 const cloudinary = require("../config/cloudinary");
 const fs = require("fs");
 const Item = require("../models/Item");
-
+const ItemCategory = require("../admin/models/ItemCategory")
 
 /* ================= IMAGE UPLOAD ================= */
 const uploadImages = async (files) => {
@@ -49,14 +49,27 @@ const postItem = async (req, res) => {
         400,
       );
     }
+ if (!category || !subCategory) {
+      return response.error(res, "Category and Sub-category are required", 400);
+    }
+
+    const catData = await ItemCategory.findById(category);
+    if (!catData) {
+      return response.error(res, "Selected Category not found", 404);
+    }
+
+    if (!catData.subCategory.includes(subCategory)) {
+      return response.error(res, `Invalid sub-category. Select from ${catData.name}`, 400);
+    }
+
 
     const imageUrls = await uploadImages(req.files);
 
     const item = await itemService.createItem({
       title: title?.trim(),
       details: details?.trim(),
-      category: category?.trim(),
-      subCategory: subCategory?.trim() || null,
+      category: category,
+      subCategory: subCategory,
 
       price: Number(price) || 0,
 

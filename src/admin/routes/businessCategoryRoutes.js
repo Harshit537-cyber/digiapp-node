@@ -20,6 +20,8 @@ router.get(
   categoryCtrl.getAllCategories
 );
 
+router.get("/get-by-id/:id", adminAuth, categoryCtrl.getCategoryById);
+router.put("/update/:id", adminAuth, upload.single('image'),categoryCtrl.updateBusinessCategory )
 // router.delete("/delete-subCategory", adminAuth,categoryCtrl.deleteSubCategory);
 
 // router.get("/dropdown-categories", categoryCtrl.getAllCategoriesForDropdown);

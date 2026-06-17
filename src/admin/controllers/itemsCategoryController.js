@@ -1,0 +1,188 @@
+const ItemCategory = require('../models/ItemCategory'); 
+const cloudinary = require('../../config/cloudinary');
+const fs = require('fs');
+
+exports.createItemCategory = async (req, res) => {
+  try {
+    const { name, subCategory } = req.body;
+
+    if (!name) {
+      if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+      return res.status(400).json({
+        success: false,
+        message: "Category name is required"
+      });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: "Category image is required"
+      });
+    }
+
+    const exists = await ItemCategory.findOne({ name });
+    if (exists) {
+      if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+      return res.status(400).json({
+        success: false,
+        message: "This Item category already exists"
+      });
+    }
+
+    const uploadResponse = await cloudinary.uploader.upload(req.file.path, {
+      folder: 'item_category_icons' 
+    });
+
+    const newItemCategory = await ItemCategory.create({
+      name,
+      image: uploadResponse.secure_url,
+      subCategory: subCategory ? (Array.isArray(subCategory) ? subCategory : [subCategory]) : [],
+      createdBy: req.user?.id 
+    });
+
+    if (fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+
+    res.status(201).json({
+      success: true,
+      message: "Item Category created successfully",
+      data: newItemCategory
+    });
+
+  } catch (error) {
+    if (req.file && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+    console.error("Create Item Category Error:", error.message);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+
+exports.addItemSubCategory = async (req, res) => {
+  try {
+    const { categoryId, subCategoryName } = req.body;
+    if (!categoryId || !subCategoryName) {
+      return res.status(400).json({
+        success: false,
+        message: "categoryId and subCategoryName are required"
+      });
+    }
+    const updatedCategory = await ItemCategory.findByIdAndUpdate(
+      categoryId,
+      { 
+        $addToSet: { subCategory: subCategoryName.trim() } 
+      },
+      { new: true, runValidators: true }
+    );
+    if (!updatedCategory) {
+      return res.status(404).json({
+        success: false,
+        message: "Item Category not found"
+      });
+    }
+    res.status(200).json({
+      success: true,
+      message: `Sub-category '${subCategoryName}' added successfully to ${updatedCategory.name}`,
+      data: updatedCategory
+    });
+
+  } catch (error) {
+    console.error("Add Item Sub-Category Error:", error.message);
+    if (error.kind === 'ObjectId') {
+      return res.status(400).json({ success: false, message: "Invalid Category ID format" });
+    }
+    res.status(500).json({
+      success: false,
+      message: "Internal Server Error"
+    });
+  }
+};
+
+exports.getAllItemCategories = async (req, res) => {
+  try {
+    const categories = await ItemCategory.find({ status: true }).sort({ name: 1 });
+
+    res.status(200).json({
+      success: true,
+      count: categories.length,
+      data: categories
+    });
+  } catch (error) {
+    console.error("Get All Item Categories Error:", error.message);
+    res.status(500).json({ success: false, message: "Internal Server Error" });
+  }
+};
+
+
+exports.getItemCategoryById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const category = await ItemCategory.findById(id);
+
+    if (!category) {
+      return res.status(404).json({
+        success: false,
+        message: "Item Category not found"
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: category
+    });
+  } catch (error) {
+    if (error.kind === 'ObjectId') {
+      return res.status(400).json({ success: false, message: "Invalid ID format" });
+    }
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+
+exports.deleteItemCategory = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const category = await ItemCategory.findById(id);
+
+    if (!category) {
+      return res.status(404).json({
+        success: false,
+        message: "Item Category not found"
+      });
+    }
+
+    if (category.image) {
+      try {
+        const publicId = category.image.split('/').pop().split('.')[0];
+        const folderName = 'item_category_icons'; 
+        
+        await cloudinary.uploader.destroy(`${folderName}/${publicId}`);
+      } catch (cloudinaryErr) {
+        console.error("Cloudinary Delete Error:", cloudinaryErr.message);
+      }
+    }
+
+    await ItemCategory.findByIdAndDelete(id);
+
+    res.status(200).json({
+      success: true,
+      message: "Item Category and its icon deleted successfully"
+    });
+
+  } catch (error) {
+    console.error("Delete Item Category Error:", error.message);
+    res.status(500).json({
+      success: false,
+      message: "Internal Server Error"
+    });
+  }
+};
+

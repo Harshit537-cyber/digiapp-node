@@ -3,26 +3,31 @@ const mongoose = require('mongoose');
 const itemSchema = new mongoose.Schema({
   title: { type: String, required: true },
   details: { type: String, required: true },
-  category: { type: String, required: true },
-  subCategory: { type: String },                    
- 
- 
+  category: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'ItemCategory',
+    required: true
+  },
+  subCategory: {
+    type: String,
+    required: true
+  },
   price: { type: Number, default: 0 },
   images: [{ type: String }],
-  
+
   location: {
-      type: {
-        type: String,
-        required: true,
-      },
-      coordinates: {
-        type: [Number],
-        required: true,
-      },
-      address: {
-        type: String,
-      },
+    type: {
+      type: String,
+      required: true,
     },
+    coordinates: {
+      type: [Number],
+      required: true,
+    },
+    address: {
+      type: String,
+    },
+  },
 
   preferredCommunication: {
     call: { type: Boolean, default: false },
