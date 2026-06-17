@@ -377,3 +377,41 @@ exports.updateJobsCategory = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+exports.searchJobsCategories = async (req, res) => {
+  try {
+    const { q, type } = req.query;
+
+    if (!q) {
+      return res.status(400).json({
+        success: false,
+        message: "Search query (q) is required"
+      });
+    }
+    let searchFilter = {
+      $or: [
+        { name: { $regex: q, $options: 'i' } },
+        { subCategory: { $regex: q, $options: 'i' } }
+      ]
+    };
+
+    if (type) {
+      searchFilter.type = type;
+    }
+    const results = await JobsCategory.find(searchFilter)
+      .sort({ name: 1 }); 
+
+    res.status(200).json({
+      success: true,
+      count: results.length, 
+      data: results
+    });
+
+  } catch (error) {
+    console.error("Search Jobs Category Error:", error.message);
+    res.status(500).json({
+      success: false,
+      message: "Internal Server Error"
+    });
+  }
+};
