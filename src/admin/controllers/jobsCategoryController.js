@@ -72,10 +72,12 @@ exports.createJobsCategory = async (req, res) => {
     });
   }
 };
+
+
 exports.updateJobsCategory = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, status } = req.body;
+    const { name, status, type } = req.body;
 
     let category = await JobsCategory.findById(id);
     if (!category) {
@@ -84,6 +86,18 @@ exports.updateJobsCategory = async (req, res) => {
         success: false,
         message: "Jobs Category not found"
       });
+    }
+
+    if (type) {
+      const allowedJobTypes = ["LOCAL_JOB", "PART_TIME_JOB", "FULL_TIME_JOB"];
+      if (!allowedJobTypes.includes(type)) {
+        if (req.file) fs.unlinkSync(req.file.path);
+        return res.status(400).json({
+          success: false,
+          message: "Invalid Type. Must be LOCAL_JOB, PART_TIME_JOB, or FULL_TIME_JOB"
+        });
+      }
+      category.type = type; 
     }
 
     if (req.file) {
@@ -99,9 +113,9 @@ exports.updateJobsCategory = async (req, res) => {
       const uploadResponse = await cloudinary.uploader.upload(req.file.path, {
         folder: 'jobs_category_icons'
       });
-      category.image = uploadResponse.secure_url;
+      category.image = uploadResponse.secure_url; // Image update kiya
 
-      fs.unlinkSync(req.file.path);
+      if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
     }
 
     if (name) {
@@ -116,7 +130,7 @@ exports.updateJobsCategory = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: "Jobs Category updated successfully (Name, Image, Status)",
+      message: "Jobs Category updated successfully (Name, Image, Status, Type)",
       data: updatedCategory
     });
 
