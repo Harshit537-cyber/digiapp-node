@@ -196,14 +196,14 @@ exports.getAllJobsCategories = async (req, res) => {
   try {
     const { type } = req.query;
 
-    let query = { status: true }; 
+    let query = {}; 
 
     if (type) {
       query.type = type;
     }
 
     const categories = await JobsCategory.find(query)
-      .sort({ name: 1 });
+      .sort({ name: 1 }); 
 
     res.status(200).json({
       success: true,
