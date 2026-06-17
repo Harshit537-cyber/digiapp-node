@@ -74,6 +74,46 @@ exports.createCategory = async (req, res) => {
   }
 };
 
+exports.searchBusinessCategories = async (req, res) => {
+  try {
+    const { q } = req.query;
+
+    if (!q) {
+      return res.status(400).json({
+        success: false,
+        message: "Search query is required"
+      });
+    }
+
+    const searchFilter = {
+      status: true, 
+      $or: [
+        { name: { $regex: q, $options: 'i' } },
+        { subCategory: { $regex: q, $options: 'i' } }
+      ]
+    };
+
+    const results = await BusinessCategory.find(searchFilter)
+      .select('name image subCategory type') 
+      .limit(10); 
+
+    res.status(200).json({
+      success: true,
+      count: results.length,
+      data: results
+    });
+
+  } catch (error) {
+    console.error("Search Category Error:", error.message);
+    res.status(500).json({
+      success: false,
+      message: "Internal Server Error"
+    });
+  }
+};
+
+
+
 exports.createSubCategory = async (req, res) => {
   try {
     const { categoryId, subCategory } = req.body;
@@ -110,6 +150,136 @@ exports.createSubCategory = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+
+exports.updateBusinessSubCategory = async (req, res) => {
+  try {
+    const { categoryId, oldSubCategory, newSubCategory } = req.body;
+
+    if (!categoryId || !oldSubCategory || !newSubCategory) {
+      return res.status(400).json({
+        success: false,
+        message: "categoryId, oldSubCategory, and newSubCategory are required"
+      });
+    }
+
+    const updatedDoc = await BusinessCategory.findOneAndUpdate(
+      { _id: categoryId, subCategory: oldSubCategory }, 
+      { 
+        $set: { "subCategory.$": newSubCategory.trim() } 
+      },
+      { new: true }
+    );
+
+    if (!updatedDoc) {
+      return res.status(404).json({
+        success: false,
+        message: "Category not found or Sub-category name mismatch"
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Sub-category updated successfully",
+      data: updatedDoc
+    });
+
+  } catch (error) {
+    console.error("Update Sub-category Error:", error.message);
+    
+    if (error.kind === 'ObjectId') {
+      return res.status(400).json({ success: false, message: "Invalid Category ID format" });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: "Internal Server Error"
+    });
+  }
+};
+
+exports.getSubCategoriesByCategoryId = async (req, res) => {
+  try {
+    const { id } = req.params; 
+    const categoryData = await BusinessCategory.findById(id).select('name subCategory');
+
+    if (!categoryData) {
+      return res.status(404).json({
+        success: false,
+        message: "Business Category not found"
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      categoryName: categoryData.name, 
+      subCategories: categoryData.subCategory
+    });
+
+  } catch (error) {
+    console.error("Get Sub-categories Error:", error.message);
+
+    if (error.kind === 'ObjectId') {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Invalid Category ID format" 
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: "Internal Server Error"
+    });
+  }
+};
+
+exports.deleteBusinessSubCategory = async (req, res) => {
+  try {
+    const { categoryId, subCategoryName } = req.body;
+
+    if (!categoryId || !subCategoryName) {
+      return res.status(400).json({
+        success: false,
+        message: "categoryId and subCategoryName are required"
+      });
+    }
+
+    const updatedDoc = await BusinessCategory.findByIdAndUpdate(
+      categoryId,
+      { 
+        $pull: { subCategory: subCategoryName } 
+      },
+      { new: true } 
+    );
+
+    if (!updatedDoc) {
+      return res.status(404).json({
+        success: false,
+        message: "Main Category not found"
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `Sub-category '${subCategoryName}' deleted successfully`,
+      data: updatedDoc
+    });
+
+  } catch (error) {
+    console.error("Delete Sub-category Error:", error.message);
+
+    if (error.kind === 'ObjectId') {
+      return res.status(400).json({ success: false, message: "Invalid Category ID format" });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: "Internal Server Error"
+    });
+  }
+};
+
+
 
 exports.getCategoryById = async (req, res) => {
   try {

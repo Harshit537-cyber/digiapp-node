@@ -72,6 +72,110 @@ exports.createJobsCategory = async (req, res) => {
     });
   }
 };
+exports.updateJobsCategory = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, status } = req.body;
+
+    let category = await JobsCategory.findById(id);
+    if (!category) {
+      if (req.file) fs.unlinkSync(req.file.path);
+      return res.status(404).json({
+        success: false,
+        message: "Jobs Category not found"
+      });
+    }
+
+    if (req.file) {
+      if (category.image) {
+        try {
+          const publicId = category.image.split('/').pop().split('.')[0];
+          await cloudinary.uploader.destroy(`jobs_category_icons/${publicId}`);
+        } catch (err) {
+          console.error("Cloudinary Delete Error:", err.message);
+        }
+      }
+
+      const uploadResponse = await cloudinary.uploader.upload(req.file.path, {
+        folder: 'jobs_category_icons'
+      });
+      category.image = uploadResponse.secure_url;
+
+      fs.unlinkSync(req.file.path);
+    }
+
+    if (name) {
+      category.name = name;
+    }
+
+    if (status !== undefined) {
+      category.status = String(status) === 'true';
+    }
+
+    const updatedCategory = await category.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Jobs Category updated successfully (Name, Image, Status)",
+      data: updatedCategory
+    });
+
+  } catch (error) {
+    if (req.file && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+    console.error("Update Jobs Category Error:", error.message);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+exports.deleteJobsCategory = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const category = await JobsCategory.findById(id);
+
+    if (!category) {
+      return res.status(404).json({
+        success: false,
+        message: "Jobs Category not found"
+      });
+    }
+
+    if (category.image) {
+      try {
+        
+        const publicId = category.image.split('/').pop().split('.')[0];
+        
+        await cloudinary.uploader.destroy(`jobs_category_icons/${publicId}`);
+      } catch (cloudinaryErr) {
+        console.error("Cloudinary Image Delete Error:", cloudinaryErr.message);
+      }
+    }
+
+    await JobsCategory.findByIdAndDelete(id);
+
+    res.status(200).json({
+      success: true,
+      message: "Jobs Category and its icon deleted successfully"
+    });
+
+  } catch (error) {
+    console.error("Delete Jobs Category Error:", error.message);
+    
+    if (error.kind === 'ObjectId') {
+      return res.status(400).json({ success: false, message: "Invalid ID format" });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: "Internal Server Error"
+    });
+  }
+};
 
 
 exports.getAllJobsCategories = async (req, res) => {

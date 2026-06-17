@@ -158,23 +158,16 @@ exports.getDetailById = async (req, res) => {
 exports.getSubcategoriesByCategory = async (req, res) => {
   try {
     const { categoryName } = req.query;
-
-    // 1. Category find karein
     const categoryDoc = await Category.findOne({ category: categoryName });
-
     if (!categoryDoc) {
       return res.status(404).json({ success: false, message: "Category not found" });
     }
-
-    // 2. Subcategories ko sort karein (Newest first)
     const sortedSubCategories = categoryDoc.subCategory.sort((a, b) => {
       return new Date(b.createdAt) - new Date(a.createdAt);
     });
-
-    // 3. Response bhejein (Bina pagination ke)
     res.status(200).json({
       success: true,
-      count: sortedSubCategories.length, // Total items count dikhane ke liye (optional)
+      count: sortedSubCategories.length, 
       data: sortedSubCategories
     });
 

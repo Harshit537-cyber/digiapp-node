@@ -2,6 +2,8 @@ const ItemCategory = require('../models/ItemCategory');
 const cloudinary = require('../../config/cloudinary');
 const fs = require('fs');
 
+
+// CATEGORY CONTROLLERS
 exports.createItemCategory = async (req, res) => {
   try {
     const { name, subCategory } = req.body;
@@ -64,45 +66,7 @@ exports.createItemCategory = async (req, res) => {
 };
 
 
-exports.addItemSubCategory = async (req, res) => {
-  try {
-    const { categoryId, subCategoryName } = req.body;
-    if (!categoryId || !subCategoryName) {
-      return res.status(400).json({
-        success: false,
-        message: "categoryId and subCategoryName are required"
-      });
-    }
-    const updatedCategory = await ItemCategory.findByIdAndUpdate(
-      categoryId,
-      { 
-        $addToSet: { subCategory: subCategoryName.trim() } 
-      },
-      { new: true, runValidators: true }
-    );
-    if (!updatedCategory) {
-      return res.status(404).json({
-        success: false,
-        message: "Item Category not found"
-      });
-    }
-    res.status(200).json({
-      success: true,
-      message: `Sub-category '${subCategoryName}' added successfully to ${updatedCategory.name}`,
-      data: updatedCategory
-    });
 
-  } catch (error) {
-    console.error("Add Item Sub-Category Error:", error.message);
-    if (error.kind === 'ObjectId') {
-      return res.status(400).json({ success: false, message: "Invalid Category ID format" });
-    }
-    res.status(500).json({
-      success: false,
-      message: "Internal Server Error"
-    });
-  }
-};
 
 exports.getAllItemCategories = async (req, res) => {
   try {
@@ -185,4 +149,107 @@ exports.deleteItemCategory = async (req, res) => {
     });
   }
 };
+
+exports.updateItemCategory = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, status } = req.body;
+
+    let category = await ItemCategory.findById(id);
+    if (!category) {
+      if (req.file) fs.unlinkSync(req.file.path);
+      return res.status(404).json({
+        success: false,
+        message: "Item Category not found"
+      });
+    }
+
+    if (req.file) {
+      if (category.image) {
+        try {
+          const publicId = category.image.split('/').pop().split('.')[0];
+          await cloudinary.uploader.destroy(`item_category_icons/${publicId}`);
+        } catch (err) {
+          console.error("Old Image Delete Error:", err.message);
+        }
+      }
+
+      const uploadResponse = await cloudinary.uploader.upload(req.file.path, {
+        folder: 'item_category_icons'
+      });
+      category.image = uploadResponse.secure_url;
+
+      fs.unlinkSync(req.file.path);
+    }
+
+    if (name) {
+      category.name = name;
+    }
+
+    if (status !== undefined) {
+      category.status = String(status) === 'true';
+    }
+
+    const updatedCategory = await category.save();
+    res.status(200).json({
+      success: true,
+      message: "Item Category updated successfully",
+      data: updatedCategory
+    });
+
+  } catch (error) {
+    if (req.file && fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+    console.error("Update Item Category Error:", error.message);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+
+//SUBCATEGORY CONTROLLERS 
+
+exports.addItemSubCategory = async (req, res) => {
+  try {
+    const { categoryId, subCategoryName } = req.body;
+    if (!categoryId || !subCategoryName) {
+      return res.status(400).json({
+        success: false,
+        message: "categoryId and subCategoryName are required"
+      });
+    }
+    const updatedCategory = await ItemCategory.findByIdAndUpdate(
+      categoryId,
+      { 
+        $addToSet: { subCategory: subCategoryName.trim() } 
+      },
+      { new: true, runValidators: true }
+    );
+    if (!updatedCategory) {
+      return res.status(404).json({
+        success: false,
+        message: "Item Category not found"
+      });
+    }
+    res.status(200).json({
+      success: true,
+      message: `Sub-category '${subCategoryName}' added successfully to ${updatedCategory.name}`,
+      data: updatedCategory
+    });
+
+  } catch (error) {
+    console.error("Add Item Sub-Category Error:", error.message);
+    if (error.kind === 'ObjectId') {
+      return res.status(400).json({ success: false, message: "Invalid Category ID format" });
+    }
+    res.status(500).json({
+      success: false,
+      message: "Internal Server Error"
+    });
+  }
+};
+
 
