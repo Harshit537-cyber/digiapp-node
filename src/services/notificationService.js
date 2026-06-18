@@ -10,8 +10,6 @@ class NotificationService {
             .replace(/\s+/g, "_");
         return `${prefix}_${cleanValue}`;
     }
-
-
     static async syncUserTopics(token, user) {
         try {
             if (!token) {
