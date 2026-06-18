@@ -290,19 +290,20 @@ exports.toggleUserStatus = async (req, res) => {
   }
 };
 
-// --- NEW: CREATE USER BY ADMIN (Adapted for UserSchema and image upload) ---
+
+
 exports.createUserByAdmin = async (req, res) => {
-  console.log("----- createUserByAdmin called -----");
-  console.log("Request Body:", req.body);
-  console.log("Request File:", req.file);
-
   let profilePhoto = "";
-
   let uploadedFilePath = req.file ? req.file.path : null;
 
   try {
-    const { mobile, fullName, gender, role } = req.body;
     const {
+      mobile,
+      email,
+      password,
+      fullName,
+      gender,
+      role,
       location,
       address,
       city,
@@ -314,77 +315,64 @@ exports.createUserByAdmin = async (req, res) => {
       isVerified = false,
     } = req.body;
 
-    // Handle image upload if a file is provided
+    if (!mobile || !email || !password || !fullName || !gender || !role) {
+      if (uploadedFilePath && fs.existsSync(uploadedFilePath)) {
+        fs.unlinkSync(uploadedFilePath);
+      }
+      return res.status(400).json({
+        message: "Mobile, email, password, fullName, gender, and role are required.",
+      });
+    }
+
+    const existingUser = await User.findOne({
+      $or: [{ mobile }, { email }],
+    });
+
+    if (existingUser) {
+      if (uploadedFilePath && fs.existsSync(uploadedFilePath)) {
+        fs.unlinkSync(uploadedFilePath);
+      }
+      const duplicateField = existingUser.mobile === mobile ? "mobile number" : "email";
+      return res.status(400).json({
+        message: `User with this ${duplicateField} already exists.`,
+      });
+    }
+
     if (req.file) {
-      console.log("File detected for upload. Path:", req.file.path);
-      console.log(
-        "Does file exist at Multer path before Cloudinary upload?",
-        fs.existsSync(req.file.path),
-      );
-
       if (!fs.existsSync(req.file.path)) {
-        console.error(
-          "ERROR: File does not exist at path before Cloudinary upload:",
-          req.file.path,
-        );
-
-        return res
-          .status(500)
-          .json({ message: "Server Error: Uploaded file not found on disk." });
+        return res.status(500).json({
+          message: "Server Error: Uploaded file not found on disk.",
+        });
       }
 
       const result = await cloudinary.uploader.upload(req.file.path, {
-        folder: "user_profile_photos", // Specify a folder in Cloudinary
+        folder: "user_profile_photos",
       });
       profilePhoto = result.secure_url;
-      console.log("Cloudinary upload successful. URL:", profilePhoto);
 
-      // Delete the local file after uploading to Cloudinary
-      console.log("Attempting to delete local file:", req.file.path);
       if (fs.existsSync(req.file.path)) {
-        // Check again before attempting to delete
         try {
           fs.unlinkSync(req.file.path);
-          console.log("Local file deleted successfully.");
-          uploadedFilePath = null; // Mark as deleted
+          uploadedFilePath = null;
         } catch (unlinkError) {
-          console.error(
-            "Error deleting local file after Cloudinary upload:",
-            unlinkError.message,
-          );
+          console.error(unlinkError.message);
         }
-      } else {
-        console.warn(
-          "Local file not found for deletion after Cloudinary upload, it might have been deleted already.",
-        );
       }
-    }
-
-    // Validate required fields
-    if (!mobile || !fullName || !gender || !role) {
-      return res
-        .status(400)
-        .json({ message: "Mobile, fullName, gender, and role are required." });
-    }
-
-    const existingUser = await User.findOne({ mobile });
-    if (existingUser) {
-      return res
-        .status(400)
-        .json({ message: "User with this mobile number already exists" });
     }
 
     const newUser = new User({
       mobile,
+      email,
+      password,
       fullName,
       gender,
       role,
-      location: location ? JSON.parse(location) : undefined, // Assuming location comes as a stringified GeoJSON object
+      location: location ? JSON.parse(location) : undefined,
       address,
       city,
       state,
       country,
-      profilePhoto, // Set the Cloudinary URL here
+      profilePhoto,
       bloodGroup,
       status,
       credits,
@@ -392,37 +380,31 @@ exports.createUserByAdmin = async (req, res) => {
     });
 
     await newUser.save();
-    console.log("New user saved to DB:", newUser._id);
+
+    const userResponse = newUser.toObject();
+    delete userResponse.password;
 
     res.status(201).json({
       success: true,
       message: "User created successfully by admin",
-      user: newUser,
+      user: userResponse,
     });
+
   } catch (error) {
-    console.error("Error in createUserByAdmin:", error);
-    // Clean up uploaded file in case of any error during processing
     if (uploadedFilePath && fs.existsSync(uploadedFilePath)) {
       try {
         fs.unlinkSync(uploadedFilePath);
-        console.log("Local file cleaned up in error handler.");
       } catch (unlinkError) {
-        console.error(
-          "Failed to unlink local file in error handler:",
-          unlinkError.message,
-        );
+        console.error(unlinkError.message);
       }
     }
 
     if (error.name === "ValidationError") {
-      return res
-        .status(400)
-        .json({ message: "Validation Error", error: error.message });
+      return res.status(400).json({ message: "Validation Error", error: error.message });
     }
     res.status(500).json({ message: "Server Error", error: error.message });
   }
 };
-
 // --- NEW: UPDATE USER BY ADMIN (Adapted for UserSchema and image upload) ---
 exports.updateUserByAdmin = async (req, res) => {
   console.log("----- updateUserByAdmin called -----");
