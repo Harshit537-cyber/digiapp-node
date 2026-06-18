@@ -3,7 +3,7 @@ const cloudinary = require("../../config/cloudinary");
 const fs = require("fs");
 const mongoose = require("mongoose");
 const Admin = require("../../admin/models/Admin");
-const User = require("../../models/User")
+const User = require("../../models/User");
 
 const getSingleValue = (val) => Array.isArray(val) ? val[0] : val;
 
@@ -25,11 +25,9 @@ exports.getAllFullTimeJobs = async (req, res) => {
         const limitNum = parseInt(limit);
         const skip = (pageNum - 1) * limitNum;
 
-        // 1. Pehle saare Admins ki IDs nikaalein
         const admins = await Admin.find().select("_id name role");
         const adminIds = admins.map(admin => admin._id);
 
-        // Admin details ka map banayein population ke liye
         const adminMap = {};
         admins.forEach(admin => {
             adminMap[admin._id.toString()] = { name: admin.name, role: admin.role };
@@ -40,12 +38,10 @@ exports.getAllFullTimeJobs = async (req, res) => {
             userId: { $in: adminIds } 
         };
 
-        // Title filter (agar user search kare)
         if (title) {
             query.title = { $regex: title, $options: "i" };
         }
 
-        // Location filter (agar lat/lng provide kiya ho)
         if (lat && lng) {
             const latitude = parseFloat(lat);
             const longitude = parseFloat(lng);
@@ -58,16 +54,14 @@ exports.getAllFullTimeJobs = async (req, res) => {
             };
         }
 
-        // 3. Total count aur Jobs fetch karein
         const totalJobs = await Job.countDocuments(query);
 
         const jobs = await Job.find(query)
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(limitNum)
-            .lean(); // Lean use karne se performance achi hoti hai
+            .lean();
 
-        // 4. Jobs data mein Admin ki details map karein
         const populatedJobs = jobs.map(job => {
             const adminInfo = adminMap[job.userId ? job.userId.toString() : ""];
             return {
@@ -97,10 +91,8 @@ exports.getAllFullTimeJobs = async (req, res) => {
     }
 };
 
-
 exports.getFullTimeJobById = async (req, res) => {
     try {
-        console.log("Searching for ID:", req.params.id);
         const jobByIdOnly = await Job.findById(req.params.id);
         
         if (!jobByIdOnly) {
@@ -109,8 +101,6 @@ exports.getFullTimeJobById = async (req, res) => {
                 message: "ID does not exist in database at all" 
             });
         }
-
-        console.log("Job found in DB, its category is:", jobByIdOnly.jobCategory);
 
         if (jobByIdOnly.jobCategory !== "FULL_TIME_JOB") {
             return res.status(400).json({ 
@@ -124,7 +114,6 @@ exports.getFullTimeJobById = async (req, res) => {
 
         res.status(200).json({ success: true, data: job });
     } catch (error) {
-        console.error("Error:", error);
         res.status(500).json({ success: false, message: error.message });
     }
 };
@@ -177,24 +166,23 @@ exports.adminCreateFullTimeJob = async (req, res) => {
         };
 
         const job = await Job.create(jobData);
+        const adminData = await Admin.findById(userId).select("name role");
 
-const adminData = await Admin.findById(userId).select("name role");
-
- if (!adminData) {
+        if (!adminData) {
             return res.status(404).json({ success: false, message: "Admin details not found" });
         }
 
-
-         const finalResponseData = job.toObject();
+        const finalResponseData = job.toObject();
         finalResponseData.userId = adminData;
 
-        res.status(201).json({ success: true,
-             message: "Job created successfully", 
-              postedBy: "ADMIN",
-             adminName: adminData.name,
+        res.status(201).json({ 
+            success: true,
+            message: "Job created successfully", 
+            postedBy: "ADMIN",
+            adminName: adminData.name,
             adminRole: adminData.role,
             data: finalResponseData 
-             });
+        });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
@@ -220,12 +208,11 @@ exports.updateFullTimeJob = async (req, res) => {
                 address: address || ""
             };
         }
-  const rawSalary = getSingleValue(body.salaryRange);
+        const rawSalary = getSingleValue(body.salaryRange);
         if (rawSalary) {
             try {
                 updateData.salaryRange = typeof rawSalary === "string" ? JSON.parse(rawSalary) : rawSalary;
             } catch (e) {
-                console.error("Salary parsing error:", e);
                 delete updateData.salaryRange;
             }
         }
@@ -261,7 +248,6 @@ exports.deleteFullTimeJob = async (req, res) => {
         const job = await Job.findOneAndDelete({ 
             _id: id, 
             jobCategory: "FULL_TIME_JOB" 
-            
         });
 
         if (!job) {
@@ -277,15 +263,12 @@ exports.deleteFullTimeJob = async (req, res) => {
         });
 
     } catch (error) {
-        console.error("Error in deleteFullTimeJob:", error.message);
-        
         res.status(500).json({ 
             success: false, 
             message: "Internal Server Error" 
         });
     }
 };
-
 
 exports.getNonFullTimeJobs = async (req, res) => {
     try {
@@ -295,10 +278,8 @@ exports.getNonFullTimeJobs = async (req, res) => {
         const limitNum = parseInt(limit);
         const skip = (pageNum - 1) * limitNum;
 
-        // Bilkul vahi logic: Admin collection se IDs nikalna
         const adminIds = await Admin.find().distinct("_id");
 
-        // Query: FULL_TIME_JOB aur exclude adminIds
         let query = { 
             jobCategory: "FULL_TIME_JOB",
             userId: { $nin: adminIds }
@@ -322,7 +303,6 @@ exports.getNonFullTimeJobs = async (req, res) => {
 
         const totalJobs = await Job.countDocuments(query);
 
-        // Populate logic vahi jo aapne di hai
         const jobs = await Job.find(query)
             .populate("userId", "fullName role profilePhoto mobile") 
             .sort({ createdAt: -1 })
@@ -341,6 +321,93 @@ exports.getNonFullTimeJobs = async (req, res) => {
             data: jobs
         });
 
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+exports.getAdminSelfJobs = async (req, res) => {
+    try {
+        const userId = req.user ? req.user.id : null;
+        if (!userId) {
+            return res.status(401).json({ success: false, message: "Unauthorized access" });
+        }
+
+        const { page = 1, limit = 10 } = req.query;
+        const pageNum = parseInt(page);
+        const limitNum = parseInt(limit);
+        const skip = (pageNum - 1) * limitNum;
+
+        const query = { jobCategory: "FULL_TIME_JOB", userId };
+        const totalJobs = await Job.countDocuments(query);
+        const jobs = await Job.find(query)
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limitNum);
+
+        res.status(200).json({
+            success: true,
+            count: jobs.length,
+            pagination: {
+                totalJobs,
+                totalPages: Math.ceil(totalJobs / limitNum),
+                currentPage: pageNum,
+                pageSize: jobs.length
+            },
+            data: jobs
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+exports.updateJobStatus = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { status } = req.body;
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ success: false, message: "Invalid Job ID format" });
+        }
+
+        if (!status) {
+            return res.status(400).json({ success: false, message: "Status is required" });
+        }
+
+        const updatedJob = await Job.findOneAndUpdate(
+            { _id: id, jobCategory: "FULL_TIME_JOB" },
+            { $set: { status } },
+            { new: true, runValidators: true }
+        );
+
+        if (!updatedJob) {
+            return res.status(404).json({ success: false, message: "Job not found" });
+        }
+
+        res.status(200).json({ success: true, message: "Status updated successfully", data: updatedJob });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+exports.getFullTimeJobStats = async (req, res) => {
+    try {
+        const adminIds = await Admin.find().distinct("_id");
+        
+        const totalJobs = await Job.countDocuments({ jobCategory: "FULL_TIME_JOB" });
+        const adminJobsCount = await Job.countDocuments({ jobCategory: "FULL_TIME_JOB", userId: { $in: adminIds } });
+        const userJobsCount = await Job.countDocuments({ jobCategory: "FULL_TIME_JOB", userId: { $nin: adminIds } });
+        const expiredJobsCount = await Job.countDocuments({ jobCategory: "FULL_TIME_JOB", expiresAt: { $lt: new Date() } });
+
+        res.status(200).json({
+            success: true,
+            data: {
+                totalJobs,
+                adminJobsCount,
+                userJobsCount,
+                expiredJobsCount
+            }
+        });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }

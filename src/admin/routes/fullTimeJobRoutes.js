@@ -9,15 +9,21 @@ const {
     getFullTimeJobById,
     adminCreateFullTimeJob,
     getNonFullTimeJobs,
-   
+    getAdminSelfJobs,
+    updateJobStatus,
+    getFullTimeJobStats
 } = require('../controllers/fullTimeJobController');
 
 router.post('/create', verifyAdmin, upload.array('images', 5), adminCreateFullTimeJob);
 router.put('/update/:id', verifyAdmin, upload.array('images', 5), updateFullTimeJob); 
 
 router.get('/all', verifyAdmin, getAllFullTimeJobs);
-router.get("/non-admin-jobs", getNonFullTimeJobs)
+router.get("/non-admin-jobs", getNonFullTimeJobs);
+router.get('/self', verifyAdmin, getAdminSelfJobs);
+router.get('/stats', verifyAdmin, getFullTimeJobStats);
 router.get('/:id', verifyAdmin, getFullTimeJobById); 
+
+router.patch('/status/:id', verifyAdmin, updateJobStatus);
 router.delete('/delete/:id', verifyAdmin, deleteFullTimeJob);
 
 module.exports = router;
