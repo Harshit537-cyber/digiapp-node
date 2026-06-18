@@ -420,53 +420,71 @@ exports.createJobsSubCategory = async (req, res) => {
 
 exports.getSingleSubCategoryById = async (req, res) => {
   try {
-    const { categoryId, subCategoryName } = req.params; 
+    const { type, categoryId, subCategoryName } = req.query; 
+
+    if (!type || !categoryId || !subCategoryName) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing required fields: type, categoryId, and subCategoryName are needed in query"
+      });
+    }
+
     const category = await JobsCategory.findOne(
       { 
         _id: categoryId, 
-        subCategory: subCategoryName
+        type: type, 
+        subCategory: { $regex: new RegExp(`^${subCategoryName.trim()}$`, 'i') }
       },
-      { "subCategory.$": 1, name: 1 } 
+      { "subCategory.$": 1, name: 1, type: 1 } 
     );
 
     if (!category) {
       return res.status(404).json({ 
         success: false, 
-        message: "Sub-category not found in this category" 
+        message: "Sub-category not found. Please check Type, Category ID, and Name." 
       });
     }
 
     res.status(200).json({
       success: true,
-      categoryName: category.name,
-      subCategory: category.subCategory[0]
+      data: {
+        categoryName: category.name,
+        type: category.type,
+        subCategory: category.subCategory[0] 
+      }
     });
 
   } catch (error) {
     console.error("Get Single Sub-Category Error:", error.message);
+    
     if (error.kind === 'ObjectId') {
       return res.status(400).json({ success: false, message: "Invalid Category ID format" });
     }
+    
     res.status(500).json({ success: false, message: "Internal Server Error" });
   }
 };
 
 exports.getAllSubCategoriesByCategory = async (req, res) => {
   try {
-    const { categoryId } = req.params;
+    const { type, categoryId } = req.params;
 
-    const categoryData = await JobsCategory.findById(categoryId).select("subCategory name");
+    const categoryData = await JobsCategory.findOne({
+      _id: categoryId,
+      type: type
+    }).select("subCategory name type");
 
     if (!categoryData) {
       return res.status(404).json({
         success: false,
-        message: "Jobs Category not found"
+        message: "Jobs Category not found with the specified Type and ID"
       });
     }
 
     res.status(200).json({
       success: true,
       categoryName: categoryData.name,
+      jobType: categoryData.type,
       totalSubCategories: categoryData.subCategory.length,
       data: categoryData.subCategory 
     });
@@ -486,67 +504,75 @@ exports.getAllSubCategoriesByCategory = async (req, res) => {
 };
 
 
+
 exports.deleteSubCategory = async (req, res) => {
   try {
-    const { categoryId, subCategoryName } = req.body;
+    const { categoryId, type, subCategoryName } = req.body;
 
-    if (!categoryId || !subCategoryName) {
+    if (!categoryId || !type || !subCategoryName) {
       return res.status(400).json({
         success: false,
-        message: "categoryId and subCategoryName are required"
+        message: "categoryId, type, and subCategoryName are required"
       });
     }
 
-    const updatedCategory = await JobsCategory.findByIdAndUpdate(
-      categoryId,
-      { 
-        $pull: { subCategory: subCategoryName.trim() } 
-      },
-      { new: true } 
-    );
+    const category = await JobsCategory.findOne({ _id: categoryId, type: type });
 
-    if (!updatedCategory) {
+    if (!category) {
       return res.status(404).json({
         success: false,
-        message: "Jobs Category not found"
+        message: "Category not found with this Type and ID"
       });
     }
+
+    const originalLength = category.subCategory.length;
+    category.subCategory = category.subCategory.filter(
+      (item) => item.toLowerCase() !== subCategoryName.trim().toLowerCase()
+    );
+
+    if (category.subCategory.length === originalLength) {
+      return res.status(404).json({
+        success: false,
+        message: `Sub-category '${subCategoryName}' not found in this category`
+      });
+    }
+
+    await category.save();
 
     res.status(200).json({
       success: true,
       message: `Sub-category '${subCategoryName}' deleted successfully`,
-      data: updatedCategory
+      data: category
     });
 
   } catch (error) {
     console.error("Delete Sub-Category Error:", error.message);
-
     if (error.kind === 'ObjectId') {
       return res.status(400).json({ success: false, message: "Invalid Category ID format" });
     }
-
-    res.status(500).json({
-      success: false,
-      message: "Internal Server Error"
-    });
+    res.status(500).json({ success: false, message: "Internal Server Error" });
   }
 };
 
 
-exports.updateSubCategory = async (req, res) => {
+exports.updateSubCategory =async (req, res) => {
   try {
-    const { categoryId, oldSubCategoryName, newSubCategoryName } = req.body;
+    const { categoryId, type, oldSubCategoryName, newSubCategoryName } = req.body;
 
-    if (!categoryId || !oldSubCategoryName || !newSubCategoryName) {
+    if (!categoryId || !type || !oldSubCategoryName || !newSubCategoryName) {
       return res.status(400).json({
         success: false,
-        message: "categoryId, oldSubCategoryName, and newSubCategoryName are required"
+        message: "categoryId, type, oldSubCategoryName, and newSubCategoryName are required"
       });
     }
 
-    const category = await JobsCategory.findById(categoryId);
+    const category = await JobsCategory.findOne({ _id: categoryId, type: type });
+    
     if (!category) {
-      return res.status(404).json({ success: false, message: "Category not found" });
+      return res.status(404).json({ 
+        success: false, 
+        message: "Category not found with this Type and ID" 
+      });
     }
 
     if (category.subCategory.includes(newSubCategoryName.trim())) {
@@ -557,7 +583,11 @@ exports.updateSubCategory = async (req, res) => {
     }
 
     const updatedCategory = await JobsCategory.findOneAndUpdate(
-      { _id: categoryId, subCategory: oldSubCategoryName.trim() },
+      { 
+        _id: categoryId, 
+        type: type, 
+        subCategory: oldSubCategoryName.trim() 
+      },
       { 
         $set: { "subCategory.$": newSubCategoryName.trim() } 
       },
@@ -567,7 +597,7 @@ exports.updateSubCategory = async (req, res) => {
     if (!updatedCategory) {
       return res.status(404).json({
         success: false,
-        message: "Sub-category not found in this category"
+        message: "Sub-category not found in this category (Check spelling/case)"
       });
     }
 
@@ -582,5 +612,3 @@ exports.updateSubCategory = async (req, res) => {
     res.status(500).json({ success: false, message: "Internal Server Error" });
   }
 };
-
-

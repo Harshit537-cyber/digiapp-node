@@ -17,9 +17,9 @@ router.get("/search", adminAuth, searchJobsCategories)
 
 router.delete("/delete/:id", adminAuth, deleteJobsCategory);
 
-router.get("/get-subcategory-byId/:categoryId/:subCategoryName", adminAuth, getSingleSubCategoryById);
+router.get("/get-subcategory-byId", adminAuth, getSingleSubCategoryById);
 
-router.get("/getAll-subCategories/:categoryId", adminAuth, getAllSubCategoriesByCategory);
+router.get("/getAll-subCategories/:type/:categoryId", adminAuth, getAllSubCategoriesByCategory);
 
 router.delete("/delete-subCategory", adminAuth, deleteSubCategory );
 
