@@ -2,30 +2,21 @@ const Job = require("../../models/Job");
 const jobService = require("../../services/job.services");
 const cloudinary = require("../../config/cloudinary");
 const fs = require("fs");
-const Admin = require("../../admin/models/Admin");
+const Admin = require("../../admin/models/Admin")
 
 const uploadFilesToCloudinary = async (files) => {
     if (!files || files.length === 0) return [];
-    try {
-        const uploadPromises = files.map(file =>
-            cloudinary.uploader.upload(file.path, { folder: "jobs" })
-        );
-        const results = await Promise.all(uploadPromises);
-        files.forEach(file => {
-            if (fs.existsSync(file.path)) {
-                fs.unlinkSync(file.path);
-            }
-        });
-        return results.map(result => result.secure_url);
-    } catch (error) {
-        files.forEach(file => {
-            if (fs.existsSync(file.path)) {
-                fs.unlinkSync(file.path);
-            }
-        });
-        throw error;
-    }
+    const uploadPromises = files.map(file =>
+        cloudinary.uploader.upload(file.path, { folder: "jobs" })
+    );
+    const results = await Promise.all(uploadPromises);
+
+
+    files.forEach(file => fs.unlinkSync(file.path));
+
+    return results.map(result => result.secure_url);
 };
+
 
 exports.getJobByIdForAdmin = async (req, res) => {
     try {
@@ -41,37 +32,28 @@ exports.getJobByIdForAdmin = async (req, res) => {
 exports.adminCreateJob = async (req, res) => {
     try {
         const body = req.body;
-        const userId = req.user.id;
+        const userId = req.user.id ;
 
-        if (!body.category || !body.subCategory) {
-            return res.status(400).json({
-                success: false,
-                message: "Category and subCategory are required fields"
-            });
-        }
-
+        // 1. Upload Images to Cloudinary
         const imageUrls = await uploadFilesToCloudinary(req.files);
 
+        // 2. Parse Location & Salary
         const lng = body.location?.coordinates?.[0] || body["location[coordinates][0]"];
         const lat = body.location?.coordinates?.[1] || body["location[coordinates][1]"];
         const address = body.location?.address || body["location[address]"];
 
         let salary = { min: 0, max: 0 };
-        if (body.salaryRange) {
-            salary = typeof body.salaryRange === "string" ? JSON.parse(body.salaryRange) : body.salaryRange;
-        }
+        if (body.salaryRange) salary = typeof body.salaryRange === "string" ? JSON.parse(body.salaryRange) : body.salaryRange;
 
         const jobData = {
             ...body,
             userId,
             jobCategory: "PART_TIME_JOB",
-            category: body.category,
-            subCategory: body.subCategory,
             images: imageUrls,
             salaryRange: salary,
             location: {
                 type: "Point",
-                coordinates: [parseFloat(lng || 0), parseFloat(lat || 0)],
+                coordinates: [parseFloat(lng), parseFloat(lat)],
                 address: address || ""
             },
             expiresAt: body.expiresAt || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
@@ -79,22 +61,22 @@ exports.adminCreateJob = async (req, res) => {
 
         const job = await Job.create(jobData);
 
-        const adminData = await Admin.findById(userId).select("name role");
-        if (!adminData) {
+        const adminData =  await Admin.findById(userId).select("name role");
+
+          if (!adminData) {
             return res.status(404).json({ success: false, message: "Admin details not found" });
         }
-
-        const finalResponseData = job.toObject();
+const finalResponseData = job.toObject();
         finalResponseData.userId = adminData;
 
-        res.status(201).json({
+        res.status(201).json({ 
             success: true,
-            message: "Job created with images",
-            postedBy: "ADMIN",
-            adminName: adminData.name,
-            adminRole: adminData.role,
-            data: finalResponseData
-        });
+             message: "Job created with images", 
+             postedBy: "ADMIN",
+             adminName:  adminData.name,
+             adminRole:adminData.role,
+             data: finalResponseData 
+            });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
@@ -105,10 +87,12 @@ exports.adminUpdateJob = async (req, res) => {
         const body = req.body;
         let updateData = { ...body };
 
+        // 1. Image Update (If new images uploaded)
         if (req.files && req.files.length > 0) {
             updateData.images = await uploadFilesToCloudinary(req.files);
         }
 
+        // 2. Location Handling
         const lng = body.location?.coordinates?.[0] || body["location[coordinates][0]"];
         const lat = body.location?.coordinates?.[1] || body["location[coordinates][1]"];
         if (lng && lat) {
@@ -119,14 +103,12 @@ exports.adminUpdateJob = async (req, res) => {
             };
         }
 
+        // 3. Salary Handling
         if (body.salaryRange && typeof body.salaryRange === "string") {
-            try {
-                updateData.salaryRange = JSON.parse(body.salaryRange);
-            } catch (e) {
-                return res.status(400).json({ success: false, message: "Invalid salaryRange format" });
-            }
+            try { updateData.salaryRange = JSON.parse(body.salaryRange); } catch (e) { }
         }
 
+        // Cleanup flat keys
         const keysToDelete = ["location[coordinates][0]", "location[coordinates][1]", "location[address]"];
         keysToDelete.forEach(key => delete updateData[key]);
 
@@ -155,29 +137,31 @@ exports.adminDeleteJob = async (req, res) => {
 
 exports.getAllJobsForAdmin = async (req, res) => {
     try {
-        const { lat, lng, radius, title, page = 1, limit = 10 } = req.query;
+        const { lat, lng, radius, title , page = 1 , limit = 10} = req.query;
 
         const pageNum = parseInt(page);
         const limitNum = parseInt(limit);
         const skip = (pageNum - 1) * limitNum;
 
-        const admins = await Admin.find().select("_id name role");
+const admins = await Admin.find().select("_id name role");
         const adminIds = admins.map(admin => admin._id);
 
-        const adminMap = {};
+           const adminMap = {};
         admins.forEach(admin => {
             adminMap[admin._id.toString()] = { name: admin.name, role: admin.role };
         });
 
-        let query = {
+      let query = { 
             jobCategory: "PART_TIME_JOB",
-            userId: { $in: adminIds }
+            userId: { $in: adminIds } // <--- सिर्फ Admin द्वारा बनाए गए जॉब्स
         };
+
 
         if (title) {
             query.title = { $regex: title, $options: "i" };
         }
 
+        
         if (lat && lng) {
             const latitude = parseFloat(lat);
             const longitude = parseFloat(lng);
@@ -192,13 +176,15 @@ exports.getAllJobsForAdmin = async (req, res) => {
 
         const totalJobs = await Job.countDocuments(query);
 
+
         const jobs = await Job.find(query)
+
             .sort({ createdAt: -1 })
-            .skip(skip)
+              .skip(skip)
             .limit(limitNum)
             .lean();
 
-        const populatedJobs = jobs.map(job => {
+            const populatedJobs = jobs.map(job => {
             const adminInfo = adminMap[job.userId.toString()];
             return {
                 ...job,
@@ -209,11 +195,11 @@ exports.getAllJobsForAdmin = async (req, res) => {
         res.status(200).json({
             success: true,
             count: populatedJobs.length,
-            pagination: {
+             pagination: {
                 totalJobs,
                 totalPages: Math.ceil(totalJobs / limitNum),
                 currentPage: pageNum,
-                pageSize: populatedJobs.length
+                pageSize:populatedJobs.length
             },
             data: populatedJobs
         });
@@ -221,6 +207,7 @@ exports.getAllJobsForAdmin = async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 };
+
 
 exports.getRegularUserJobs = async (req, res) => {
     try {
@@ -230,9 +217,11 @@ exports.getRegularUserJobs = async (req, res) => {
         const limitNum = parseInt(limit);
         const skip = (pageNum - 1) * limitNum;
 
+    
         const adminIds = await Admin.find().distinct("_id");
 
-        let query = {
+       
+        let query = { 
             jobCategory: "PART_TIME_JOB",
             userId: { $nin: adminIds }
         };
@@ -256,7 +245,7 @@ exports.getRegularUserJobs = async (req, res) => {
         const totalJobs = await Job.countDocuments(query);
 
         const jobs = await Job.find(query)
-            .populate("userId", "fullName role profilePhoto mobile")
+            .populate("userId", "fullName role profilePhoto mobile") 
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(limitNum);
@@ -272,7 +261,9 @@ exports.getRegularUserJobs = async (req, res) => {
             },
             data: jobs
         });
+
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
 };
+
