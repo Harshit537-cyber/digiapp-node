@@ -198,8 +198,9 @@ exports.updateUser = async (req, res) => {
 
     let profilePhotoUrl = null;
 
+      console.log("File received:", req.file); 
+
     if (req.file) {
-      cl
       const localFilePath = req.file.path;
       const uploadResult = await cloudinary.uploader.upload(localFilePath, {
         folder: "user_profiles",
@@ -231,6 +232,7 @@ exports.updateUser = async (req, res) => {
     delete updateData.mobile;
     delete updateData.latitude;
     delete updateData.longitude;
+    delete updateData.password;
 
     const updatedUser = await userService.updateUserById(id, updateData);
 
