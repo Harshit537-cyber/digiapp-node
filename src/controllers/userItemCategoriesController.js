@@ -1,5 +1,7 @@
 const ItemCategory = require("../admin/models/ItemCategory");
 const Item = require("../models/Item");
+const mongoose = require("mongoose")
+
 
 exports.getAllItemCategoriesForUsers = async (req, res) => {
   try {
@@ -69,38 +71,47 @@ exports.getSubCategoriesByItemId = async (req, res) => {
 
 exports.getItemsByFilter = async (req, res) => {
   try {
-    const { categoryId, subCategory } = req.query;
+    const sanitizedQuery = {};
+    Object.keys(req.query).forEach((key) => {
+      sanitizedQuery[key.trim()] = req.query[key].trim();
+    });
+
+    const { categoryId, subCategory } = sanitizedQuery;
     if (!categoryId || !subCategory) {
       return res.status(400).json({
         success: false,
-        message: "Both categoryId and subCategory name are required"
+        message: "Both categoryId and subCategory name are required",
+      });
+    }
+    if (!mongoose.Types.ObjectId.isValid(categoryId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid categoryId format",
       });
     }
 
     const query = {
-      isActive: true, 
-      category: new mongoose.Types.ObjectId(categoryId), 
-   
-      subCategory: { $regex: `^${subCategory.trim()}$`, $options: 'i' },
-      expiryDate: { $gt: new Date() } 
+      isActive: true,
+      category: new mongoose.Types.ObjectId(categoryId),
+      subCategory: { $regex: `^${subCategory}$`, $options: "i" },
+      expiryDate: { $gt: new Date() },
     };
 
     const items = await Item.find(query)
-      .populate('category', 'name') 
-      .populate('user', 'name mobileNumber') 
-      .sort({ createdAt: -1 }); 
+      .populate("category", "name")
+      .populate("user", "name mobileNumber")
+      .sort({ createdAt: -1 });
 
     res.status(200).json({
       success: true,
       count: items.length,
-      data: items
+      data: items,
     });
-
   } catch (error) {
     console.error("Filter Items Error:", error.message);
     res.status(500).json({
       success: false,
-      message: "Internal Server Error"
+      message: "Internal Server Error",
     });
   }
 };

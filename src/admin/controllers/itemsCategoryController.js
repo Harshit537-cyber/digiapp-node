@@ -1,9 +1,8 @@
-const ItemCategory = require('../models/ItemCategory'); 
+const ItemCategory = require('../models/ItemCategory');
 const cloudinary = require('../../config/cloudinary');
 const fs = require('fs');
 
 
-// CATEGORY CONTROLLERS
 exports.createItemCategory = async (req, res) => {
   try {
     const { name, subCategory } = req.body;
@@ -33,14 +32,14 @@ exports.createItemCategory = async (req, res) => {
     }
 
     const uploadResponse = await cloudinary.uploader.upload(req.file.path, {
-      folder: 'item_category_icons' 
+      folder: 'item_category_icons'
     });
 
     const newItemCategory = await ItemCategory.create({
       name,
       image: uploadResponse.secure_url,
       subCategory: subCategory ? (Array.isArray(subCategory) ? subCategory : [subCategory]) : [],
-      createdBy: req.user?.id 
+      createdBy: req.user?.id
     });
 
     if (fs.existsSync(req.file.path)) {
@@ -126,8 +125,8 @@ exports.deleteItemCategory = async (req, res) => {
     if (category.image) {
       try {
         const publicId = category.image.split('/').pop().split('.')[0];
-        const folderName = 'item_category_icons'; 
-        
+        const folderName = 'item_category_icons';
+
         await cloudinary.uploader.destroy(`${folderName}/${publicId}`);
       } catch (cloudinaryErr) {
         console.error("Cloudinary Delete Error:", cloudinaryErr.message);
@@ -223,8 +222,8 @@ exports.addItemSubCategory = async (req, res) => {
     }
     const updatedCategory = await ItemCategory.findByIdAndUpdate(
       categoryId,
-      { 
-        $addToSet: { subCategory: subCategoryName.trim() } 
+      {
+        $addToSet: { subCategory: subCategoryName.trim() }
       },
       { new: true, runValidators: true }
     );
@@ -253,3 +252,109 @@ exports.addItemSubCategory = async (req, res) => {
 };
 
 
+exports.getAllItemSubCategories = async (req, res) => {
+  try {
+    const { categoryId } = req.query;
+
+    if (!categoryId) {
+      return res.status(400).json({ success: false, message: "categoryId is required" });
+    }
+
+    const category = await ItemCategory.findById(categoryId).select("subCategory name");
+
+    if (!category) {
+      return res.status(404).json({ success: false, message: "Category not found" });
+    }
+
+    res.status(200).json({
+      success: true,
+      categoryName: category.name,
+      total: category.subCategory.length,
+      data: category.subCategory
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+
+exports.getSingleItemSubCategory = async (req, res) => {
+  try {
+    const { categoryId, subCategoryName } = req.query;
+
+    const category = await ItemCategory.findOne(
+      {
+        _id: categoryId,
+        subCategory: { $regex: new RegExp(`^${subCategoryName.trim()}$`, 'i') }
+      },
+      { "subCategory.$": 1, name: 1 }
+    );
+
+    if (!category) {
+      return res.status(404).json({ success: false, message: "Sub-category not found" });
+    }
+
+    res.status(200).json({
+      success: true,
+      categoryName: category.name,
+      data: category.subCategory[0]
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+
+exports.updateItemSubCategory = async (req, res) => {
+  try {
+    const { categoryId, oldName, newName } = req.body;
+
+    if (!categoryId || !oldName || !newName) {
+      return res.status(400).json({ success: false, message: "All fields are required" });
+    }
+
+    const category = await ItemCategory.findById(categoryId);
+    if (category.subCategory.includes(newName.trim())) {
+      return res.status(400).json({ success: false, message: "New name already exists" });
+    }
+
+    const updatedDoc = await ItemCategory.findOneAndUpdate(
+      { _id: categoryId, subCategory: oldName.trim() },
+      { $set: { "subCategory.$": newName.trim() } },
+      { new: true }
+    );
+
+    if (!updatedDoc) {
+      return res.status(404).json({ success: false, message: "Sub-category not found to update" });
+    }
+
+    res.status(200).json({ success: true, message: "Updated successfully", data: updatedDoc });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+
+exports.deleteItemSubCategory = async (req, res) => {
+  try {
+    const { categoryId, subCategoryName } = req.query;
+
+    const updatedDoc = await ItemCategory.findByIdAndUpdate(
+      categoryId,
+      { $pull: { subCategory: subCategoryName.trim() } },
+      { new: true }
+    );
+
+    if (!updatedDoc) {
+      return res.status(404).json({ success: false, message: "Category not found" });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `Sub-category '${subCategoryName}' deleted successfully`,
+      data: updatedDoc
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};

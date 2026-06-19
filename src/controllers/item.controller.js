@@ -32,13 +32,9 @@ const postItem = async (req, res) => {
     for (const key in req.body) body[key.trim()] = req.body[key];
 
     const { title, details, category, subCategory, price, call, chat, isFeatured, location } = body;
-
-    // const longitude = body["location[coordinates][0]"];
-    // const latitude = body["location[coordinates][1]"];
-    // const address = body["location[address]"];
-    const longitude = location?.coordinates?.[0];
-    const latitude = location?.coordinates?.[1];
-    const address = location?.address;
+const longitude = body.longitude; 
+    const latitude = body.latitude;
+    const address = body.address
 
     // console.log(title, details, latitude, longitude, address);
     if (!title || !details || !latitude || !longitude) {
@@ -75,7 +71,7 @@ const postItem = async (req, res) => {
 
       location: {
         type: "Point",
-        coordinates: [Number(longitude), Number(latitude)],
+        coordinates: [Number(longitude), Number(latitude)], 
         address: address?.trim(),
       },
 

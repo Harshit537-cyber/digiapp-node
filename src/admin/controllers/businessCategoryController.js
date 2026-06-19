@@ -74,6 +74,7 @@ exports.createCategory = async (req, res) => {
   }
 };
 
+
 exports.searchBusinessCategories = async (req, res) => {
   try {
     const { q } = req.query;
@@ -113,6 +114,152 @@ exports.searchBusinessCategories = async (req, res) => {
 };
 
 
+exports.getCategoryById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const category = await BusinessCategory.findById(id);
+
+    if (!category) {
+      return res.status(404).json({
+        success: false,
+        message: "Business Category not found"
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: category
+    });
+
+  } catch (error) {
+    console.error("Get Category By ID Error:", error.message);
+
+    if (error.kind === 'ObjectId') {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Invalid Category ID format" 
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+
+exports.getAllCategories = async (req, res) => {
+  try {
+    const categories = await BusinessCategory.find({})
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      count: categories.length,
+      data: categories 
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+
+exports.updateBusinessCategory = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const { name, status } = req.body;
+
+    let categoryDoc = await BusinessCategory.findById(id);
+    if (!categoryDoc) {
+      if (req.file) fs.unlinkSync(req.file.path);
+      return res.status(404).json({ success: false, message: "Category not found" });
+    }
+
+    if (req.file) {
+      if (categoryDoc.image) {
+        try {
+          const publicId = categoryDoc.image.split('/').pop().split('.')[0];
+          await cloudinary.uploader.destroy(`category_icons/${publicId}`);
+        } catch (err) {
+          console.error("Cloudinary delete error:", err.message);
+        }
+      }
+
+      const uploadResponse = await cloudinary.uploader.upload(req.file.path, { 
+        folder: 'category_icons' 
+      });
+      categoryDoc.image = uploadResponse.secure_url;
+      
+      if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+    }
+
+    if (name) {
+      categoryDoc.name = name;
+    }
+
+    if (status !== undefined) {
+      categoryDoc.status = String(status) === 'true';
+    }
+
+    const updatedCategory = await categoryDoc.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Business Category updated (Name, Image, and Status only)",
+      data: updatedCategory
+    });
+
+  } catch (error) {
+    if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+    console.error("Update Error:", error.message);
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.deleteCategory = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const category = await BusinessCategory.findById(id);
+    
+    if (!category) {
+      return res.status(404).json({
+        success: false,
+        message: "Category not found"
+      });
+    }
+
+    if (category.image) {
+      try {
+        const publicId = category.image.split('/').pop().split('.')[0];
+        const folderName = 'category_icons'; 
+        
+        await cloudinary.uploader.destroy(`${folderName}/${publicId}`);
+      } catch (cloudinaryErr) {
+        console.error("Cloudinary Delete Error:", cloudinaryErr.message);
+      }
+    }
+    await BusinessCategory.findByIdAndDelete(id);
+
+    res.status(200).json({
+      success: true,
+      message: "Category and associated image deleted successfully"
+    });
+
+  } catch (error) {
+    console.error("Delete Category Error:", error.message);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+
+// sub categories
 
 exports.createSubCategory = async (req, res) => {
   try {
@@ -280,41 +427,48 @@ exports.deleteBusinessSubCategory = async (req, res) => {
 };
 
 
-
-exports.getCategoryById = async (req, res) => {
+exports.getBusinessSingleSubCategory = async (req, res) => {
   try {
-    const { id } = req.params;
+    const { categoryId, subCategoryName } = req.query;
 
-    const category = await BusinessCategory.findById(id);
+    if (!categoryId || !subCategoryName) {
+      return res.status(400).json({
+        success: false,
+        message: "categoryId and subCategoryName are required in query"
+      });
+    }
+    const category = await BusinessCategory.findOne(
+      { 
+        _id: categoryId, 
+        subCategory: { $regex: new RegExp(`^${subCategoryName.trim()}$`, 'i') } 
+      },
+      { "subCategory.$": 1, name: 1 } 
+    );
 
     if (!category) {
       return res.status(404).json({
         success: false,
-        message: "Business Category not found"
+        message: "Sub-category not found in this category"
       });
     }
 
     res.status(200).json({
       success: true,
-      data: category
+      categoryName: category.name,
+      subCategory: category.subCategory[0] 
     });
 
   } catch (error) {
-    console.error("Get Category By ID Error:", error.message);
-
+    console.error("Get Single Sub-Category Error:", error.message);
+    
     if (error.kind === 'ObjectId') {
-      return res.status(400).json({ 
-        success: false, 
-        message: "Invalid Category ID format" 
-      });
+      return res.status(400).json({ success: false, message: "Invalid Category ID format" });
     }
 
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
+    res.status(500).json({ success: false, message: "Internal Server Error" });
   }
 };
+
 
 // exports.updateSubCategory = async (req, res) => {
 //   try {
@@ -401,20 +555,7 @@ exports.getCategoryById = async (req, res) => {
 //   }
 // };
 
-exports.getAllCategories = async (req, res) => {
-  try {
-    const categories = await BusinessCategory.find({})
-      .sort({ createdAt: -1 });
 
-    res.status(200).json({
-      success: true,
-      count: categories.length,
-      data: categories 
-    });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-};
 
 
 
@@ -477,98 +618,9 @@ exports.getAllCategories = async (req, res) => {
 // };
 
 
-exports.deleteCategory = async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const category = await BusinessCategory.findById(id);
-    
-    if (!category) {
-      return res.status(404).json({
-        success: false,
-        message: "Category not found"
-      });
-    }
-
-    if (category.image) {
-      try {
-        const publicId = category.image.split('/').pop().split('.')[0];
-        const folderName = 'category_icons'; 
-        
-        await cloudinary.uploader.destroy(`${folderName}/${publicId}`);
-      } catch (cloudinaryErr) {
-        console.error("Cloudinary Delete Error:", cloudinaryErr.message);
-      }
-    }
-    await BusinessCategory.findByIdAndDelete(id);
-
-    res.status(200).json({
-      success: true,
-      message: "Category and associated image deleted successfully"
-    });
-
-  } catch (error) {
-    console.error("Delete Category Error:", error.message);
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
-  }
-};
 
 
-exports.updateBusinessCategory = async (req, res) => {
-  try {
-    const { id } = req.params;
-    
-    const { name, status } = req.body;
 
-    let categoryDoc = await BusinessCategory.findById(id);
-    if (!categoryDoc) {
-      if (req.file) fs.unlinkSync(req.file.path);
-      return res.status(404).json({ success: false, message: "Category not found" });
-    }
-
-    if (req.file) {
-      if (categoryDoc.image) {
-        try {
-          const publicId = categoryDoc.image.split('/').pop().split('.')[0];
-          await cloudinary.uploader.destroy(`category_icons/${publicId}`);
-        } catch (err) {
-          console.error("Cloudinary delete error:", err.message);
-        }
-      }
-
-      const uploadResponse = await cloudinary.uploader.upload(req.file.path, { 
-        folder: 'category_icons' 
-      });
-      categoryDoc.image = uploadResponse.secure_url;
-      
-      if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
-    }
-
-    if (name) {
-      categoryDoc.name = name;
-    }
-
-    if (status !== undefined) {
-      categoryDoc.status = String(status) === 'true';
-    }
-
-    const updatedCategory = await categoryDoc.save();
-
-    res.status(200).json({
-      success: true,
-      message: "Business Category updated (Name, Image, and Status only)",
-      data: updatedCategory
-    });
-
-  } catch (error) {
-    if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
-    console.error("Update Error:", error.message);
-    res.status(500).json({ success: false, message: error.message });
-  }
-};
 // exports.searchCategory = async (req, res) => {
 //   try {
 //     const { q } = req.query; 
