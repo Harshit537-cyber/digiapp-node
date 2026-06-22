@@ -268,4 +268,4 @@ exports.getAppBanners = async (req, res) => {
       message: error.message
     });
   }
-};
+};   

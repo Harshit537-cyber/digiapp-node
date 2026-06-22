@@ -21,7 +21,11 @@ router.get(
 );
 
 router.get("/get-by-id/:id", adminAuth, categoryCtrl.getCategoryById);
-router.put("/update/:id", adminAuth, upload.single('image'),categoryCtrl.updateBusinessCategory )
+router.put("/update/:id", adminAuth, upload.single('image'),categoryCtrl.updateBusinessCategory );
+router.put("/update-subCategory", adminAuth, categoryCtrl.updateBusinessSubCategory);
+router.get("/get-allSubCategories/:id",adminAuth, categoryCtrl.getSubCategoriesByCategoryId);
+router.get("/getSingleSubCategory", adminAuth, categoryCtrl.getBusinessSingleSubCategory);
+router.delete("/delete-subcategory", adminAuth, categoryCtrl.deleteBusinessSubCategory)
 // router.delete("/delete-subCategory", adminAuth,categoryCtrl.deleteSubCategory);
 
 // router.get("/dropdown-categories", categoryCtrl.getAllCategoriesForDropdown);
