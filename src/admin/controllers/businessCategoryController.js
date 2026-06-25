@@ -470,6 +470,37 @@ exports.getBusinessSingleSubCategory = async (req, res) => {
 };
 
 
+exports.searchSubCategoriesBusiness = async (req, res) => {
+  try {
+    const { query } = req.query; 
+
+    if (!query) {
+      return res.status(400).json({ success: false, message: "Search query is required" });
+    }
+
+    const categories = await BusinessCategory.find({
+      subCategory: { $regex: query, $options: "i" } 
+    }).select("name subCategory");
+
+    const results = categories.map(cat => ({
+      categoryId: cat._id,
+      categoryName: cat.name,
+      matchedSubCategories: cat.subCategory.filter(sub => 
+        sub.toLowerCase().includes(query.toLowerCase())
+      )
+    }));
+
+    res.status(200).json({
+      success: true,
+      count: results.length,
+      data: results
+    });
+
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 // exports.updateSubCategory = async (req, res) => {
 //   try {
 //     const { category, oldSubCategory, newSubCategory } = req.body;

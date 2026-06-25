@@ -12,7 +12,7 @@ const serviceSchema = new mongoose.Schema({
   serviceImages: [{ type: String }],
 });
 
-const businessSchema = new mongoose.Schema(
+const businessSchema = new mongoose.Schema( 
   {
     userId: {
       type: mongoose.Schema.Types.ObjectId,

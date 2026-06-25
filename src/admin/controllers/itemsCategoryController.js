@@ -64,7 +64,39 @@ exports.createItemCategory = async (req, res) => {
   }
 };
 
+exports.searchItemCategory = async (req, res) => {
+  try {
+    const { q } = req.query;
 
+    if (!q) {
+      return res.status(400).json({
+        success: false,
+        message: "Search query 'q' is required"
+      });
+    }
+
+
+    const results = await ItemCategory.find({
+      $or: [
+        { name: { $regex: q, $options: 'i' } },
+        { subCategory: { $regex: q, $options: 'i' } } 
+      ]
+    }).sort({ name: 1 });
+
+    res.status(200).json({
+      success: true,
+      count: results.length,
+      data: results
+    });
+
+  } catch (error) {
+    console.error("Search Item Category Error:", error.message);
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
 
 
 exports.getAllItemCategories = async (req, res) => {
@@ -277,6 +309,38 @@ exports.getAllItemSubCategories = async (req, res) => {
   }
 };
 
+exports.searchItemSubCategories = async (req, res) => {
+  try {
+    const { q } = req.query;
+
+    if (!q) {
+      return res.status(400).json({ success: false, message: "Search query is required" });
+    } 
+
+    const results = await ItemCategory.find({
+      subCategory: { $regex: q, $options: 'i' }
+    }).select('name subCategory image');
+
+    const formattedData = results.map(cat => ({
+      categoryId: cat._id,
+      categoryName: cat.name,
+      categoryImage: cat.image,
+      matchedSubs: cat.subCategory.filter(sub => 
+        sub.toLowerCase().includes(q.toLowerCase())
+      )
+    }));
+
+    res.status(200).json({
+      success: true,
+      count: formattedData.length,
+      data: formattedData
+    });
+
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 
 exports.getSingleItemSubCategory = async (req, res) => {
   try {
@@ -358,3 +422,4 @@ exports.deleteItemSubCategory = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
