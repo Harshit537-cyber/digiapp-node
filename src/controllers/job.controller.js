@@ -5,7 +5,7 @@ const transactionSchema = require('../models/Transitionmodel')
 const mongoose = require('mongoose');
 const User = require('../models/User')
 const JobsCategory = require("../admin/models/JobsCategory")
-const {sendNotification }= require("../utils/notification")
+const {sendNotification , sendToMultiple}= require("../utils/notification")
 
 const postJob = async (req, res) => {
   const session = await mongoose.startSession();
@@ -42,7 +42,7 @@ const postJob = async (req, res) => {
     }
 
     const jobConfig = {
-      LOCAL_JOB: { credits: 10, label: "LOCAL_JOB" ,msg: "Local task"},
+      LOCAL_JOB: { credits: 10, label: "LOCAL_JOB" ,msg: "Local task" },
       PART_TIME_JOB: { credits: 25, label: "PART_TIME_JOB" , msg: "Part-time job"},
       FULL_TIME_JOB: { credits: 25, label: "FULL_TIME_JOB" , msg: "Full-time job"}
     };
@@ -96,6 +96,36 @@ const postJob = async (req, res) => {
         sendNotification(user.fcmToken, title, body, { jobId: job._id.toString() });
     }
 
+try {
+      let targetRole = "";
+      
+      if (jobCategory === "LOCAL_JOB") {
+        targetRole = "SERVICE_PROVIDER";
+      } else if (jobCategory === "PART_TIME_JOB" || jobCategory === "FULL_TIME_JOB") {
+        targetRole = "JOB_SEEKER";
+      }
+
+      if (targetRole) {
+        const targetUsers = await User.find({ 
+          role: targetRole, 
+          fcmToken: { $exists: true, $ne: "" },
+          _id: { $ne: creatorId } 
+        }).select("fcmToken");
+
+        const tokens = targetUsers.map(u => u.fcmToken);
+
+        if (tokens.length > 0) {
+          await sendToMultiple(
+            tokens, 
+            `New ${config.msg} Available!`, 
+            `A new ${config.msg} in ${subCategory} has been posted near you.`, 
+            { jobId: job._id.toString(), type: "NEW_JOB_POSTED" }
+          );
+        }
+      }
+    } catch (bulkError) {
+      console.error("Bulk notification failed to send:", bulkError.message);
+    }
 
     return res.status(201).json({
       success: true,
