@@ -2,6 +2,9 @@ const bloodRequestService = require("../services/bloodRequest.services");
 const response = require("../utils/response");
 const BloodRequest = require("../models/BloodRequest");
 const mongoose = require("mongoose");
+const {sendNotification} = require("../utils/notification");
+
+
 const createBloodRequest = async (req, res) => {
   try {
     console.log("Token User Data:", req.user);
@@ -40,6 +43,29 @@ const createBloodRequest = async (req, res) => {
 
     const bloodRequest =
       await bloodRequestService.createBloodRequest(bloodRequestData);
+
+try {
+      const user = await User.findById(req.user.userId);
+
+      if (user && user.fcmToken) {
+        const title = "Request Created Successfully";
+        const body = `Your request for ${bloodGroup} blood for ${patientName} has been posted.`;
+        const data = {
+          requestId: bloodRequest._id.toString(),
+          type: "BLOOD_REQUEST_CREATED"
+        };
+
+        // Call the helper function
+        await sendNotification(user.fcmToken, title, body, data);
+      } else {
+        console.log("User FCM token not found, skipping notification.");
+      }
+    } catch (notifError) {
+      
+      console.error("Notification failed to send:", notifError.message);
+    }
+
+
     return response.success(
       res,
       "Blood request created successfully",
