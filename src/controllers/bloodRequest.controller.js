@@ -3,7 +3,7 @@ const response = require("../utils/response");
 const BloodRequest = require("../models/BloodRequest");
 const mongoose = require("mongoose");
 const {sendNotification} = require("../utils/notification");
-
+const User = require("../models/User")
 
 const createBloodRequest = async (req, res) => {
   try {
@@ -55,7 +55,6 @@ try {
           type: "BLOOD_REQUEST_CREATED"
         };
 
-        // Call the helper function
         await sendNotification(user.fcmToken, title, body, data);
       } else {
         console.log("User FCM token not found, skipping notification.");
