@@ -4,6 +4,7 @@ const TrustedContact = require("../models/TrustedContact");
 const User = require("../models/User");
 const{ sendNotification} =require("../utils/notification");
 
+
 exports.triggerSOS = async (req, res) => {
   try {
     const { latitude, longitude, address } = req.body;

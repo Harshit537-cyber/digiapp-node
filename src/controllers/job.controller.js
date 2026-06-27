@@ -5,7 +5,7 @@ const transactionSchema = require('../models/Transitionmodel')
 const mongoose = require('mongoose');
 const User = require('../models/User')
 const JobsCategory = require("../admin/models/JobsCategory")
-
+const {sendNotification }= require("../utils/notification")
 
 const postJob = async (req, res) => {
   const session = await mongoose.startSession();
@@ -42,9 +42,9 @@ const postJob = async (req, res) => {
     }
 
     const jobConfig = {
-      LOCAL_JOB: { credits: 10, label: "LOCAL_JOB" },
-      PART_TIME_JOB: { credits: 25, label: "PART_TIME_JOB" },
-      FULL_TIME_JOB: { credits: 25, label: "FULL_TIME_JOB" }
+      LOCAL_JOB: { credits: 10, label: "LOCAL_JOB" ,msg: "Local task"},
+      PART_TIME_JOB: { credits: 25, label: "PART_TIME_JOB" , msg: "Part-time job"},
+      FULL_TIME_JOB: { credits: 25, label: "FULL_TIME_JOB" , msg: "Full-time job"}
     };
 
     const config = jobConfig[jobCategory];
@@ -88,6 +88,14 @@ const postJob = async (req, res) => {
     // ✅ Commit
     await session.commitTransaction();
     session.endSession();
+
+    if (user.fcmToken) {
+        const title = "Success!";
+        const body = `${config.msg} created successfully`;
+        
+        sendNotification(user.fcmToken, title, body, { jobId: job._id.toString() });
+    }
+
 
     return res.status(201).json({
       success: true,

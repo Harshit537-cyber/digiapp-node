@@ -7,6 +7,9 @@ const BloodRequest = require("../models/BloodRequest");
 const itemSchema = require('../models/Item')
 const fs = require("fs");
 const transactionSchema = require("../models/Transitionmodel");
+
+
+
 const createJob = async (jobData, files, userId) => {
   try {
     const imageUrls = [];
@@ -20,12 +23,10 @@ const createJob = async (jobData, files, userId) => {
       }
     }
 
-    // Expiry Logic: Task = 7 days, Job = 15 days
     let daysToAdd = jobData.jobCategory === "Local task" ? 7 : 15;
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + daysToAdd);
 
-    // Helper to parse JSON safely (Frontend sends strings in FormData)
     const safeParse = (data) => {
       try {
         return typeof data === "string" ? JSON.parse(data) : data;
