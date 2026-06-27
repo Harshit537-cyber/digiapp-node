@@ -16,4 +16,8 @@ router.get("/get-by-id/:id", verifyAdmin, couponController.getCouponById);
 router.get("/search-coupon", verifyAdmin, couponController.searchCoupons);
 router.delete("/delete/:id", verifyAdmin, couponController.deleteCoupon);
 
+router.patch("/admin/activate/:id", verifyAdmin, couponController.activateCoupon);
+router.patch("/admin/deactivate/:id", verifyAdmin, couponController.deactivateCoupon);
+
+
 module.exports = router;

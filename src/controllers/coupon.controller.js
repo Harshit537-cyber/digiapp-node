@@ -332,3 +332,41 @@ exports.getAvailableCoupons = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+exports.activateCoupon = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const coupon = await Coupon.findByIdAndUpdate(
+            id, 
+            { isActive: true }, 
+            { new: true }
+        );
+
+        if (!coupon) {
+            return res.status(404).json({ success: false, message: "Coupon not found" });
+        }
+
+        res.status(200).json({ success: true, data: coupon });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+exports.deactivateCoupon = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const coupon = await Coupon.findByIdAndUpdate(
+            id, 
+            { isActive: false }, 
+            { new: true }
+        );
+
+        if (!coupon) {
+            return res.status(404).json({ success: false, message: "Coupon not found" });
+        }
+
+        res.status(200).json({ success: true, data: coupon });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
