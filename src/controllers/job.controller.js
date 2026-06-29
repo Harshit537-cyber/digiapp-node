@@ -5,7 +5,8 @@ const transactionSchema = require('../models/Transitionmodel')
 const mongoose = require('mongoose');
 const User = require('../models/User')
 const JobsCategory = require("../admin/models/JobsCategory")
-const {sendNotification , sendToMultiple}= require("../utils/notification")
+const {sendNotification , sendToMultiple}= require("../utils/notification");
+const JobUnlock = require("../models/JobUnlock");
 
 const postJob = async (req, res) => {
   const session = await mongoose.startSession();
@@ -514,7 +515,65 @@ const searchMyJobsAdvanced = async (req, res) => {
   }
 };
 
+const unlockJob =  async (req, res) => {
+  try {
+    const { jobId } = req.body;
+
+    if (!req.user) {
+      return res.status(401).json({ success: false, message: "User not authenticated" });
+    }
+
+  const userId = req.user?._id || req.user?.id || req.user?.userId;
+    const UNLOCK_COST = 10;
+
+    const job = await Job.findById(jobId);
+    if (!job) {
+      return res.status(404).json({ success: false, message: "Job not found" });
+    }
+
+    const alreadyUnlocked = await JobUnlock.findOne({ userId, jobId });
+    if (alreadyUnlocked) {
+      return res.status(400).json({ success: false, message: "Job already unlocked" });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+        return res.status(404).json({ success: false, message: "User record not found" });
+    }
+
+    if (user.credits < UNLOCK_COST) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Insufficient credits",
+        currentBalance: user.credits 
+      });
+    }
+
+    const updatedUser = await User.findOneAndUpdate(
+      { _id: userId, credits: { $gte: UNLOCK_COST } },
+      { $inc: { credits: -UNLOCK_COST } },
+      { new: true }
+    );
+
+    await JobUnlock.create({ userId, jobId });
+
+    res.status(200).json({
+      success: true,
+      message: "Job unlocked successfully",
+      remainingCredits: updatedUser.credits,
+    });
+
+  } catch (error) {
+    console.error("DEBUG ERROR:", error); // Terminal mein check karein
+    res.status(500).json({ 
+      success: false, 
+      message: "Internal Server Error", 
+      error: error.message // <--- Ye aapko asli wajah batayega
+    });
+  }
+};
+
 
 module.exports = { postJob, getAllJobs, getJobById, updateJob ,deactivateJob , activateJob , searchJobs ,getMyJobs , getTheNearbyLatestJob, getMyActiveJobs, 
   getMyDeactivatedJobs , toggleSaveJob,handleGetJobs,
-    getSavedJobs, getRecentJobs, homeAPI,getMyPostedJobs, searchMyJobsAdvanced};
+    getSavedJobs, getRecentJobs, homeAPI,getMyPostedJobs, searchMyJobsAdvanced, unlockJob};
