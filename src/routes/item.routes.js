@@ -36,7 +36,7 @@ router.post(
 router.put(
   '/update/:id',
   verifyToken,
-  upload.array('images', 5),
+  upload.array('images', 3),
   itemController.updateItem
 );
 
