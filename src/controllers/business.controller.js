@@ -3,6 +3,8 @@ const businessService = require("../services/business.services");
 const cloudinary = require("../config/cloudinary");
 const Business = require("../models/Business");
 const mongoose = require("mongoose");
+const Review = require("../models/Review");
+
 // --- Helper Function: Upload to Cloudinary ---
 const uploadToCloudinary = async (filePath) => {
   if (!filePath) return null;
@@ -113,11 +115,53 @@ const getAllBusinesses = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
 
     const result = await businessService.getAllBusinesses(page, limit);
+ let businesses = result.businesses || (Array.isArray(result) ? result : []);
 
+    if (businesses.length === 0) {
+      return res.status(200).json({ success: true, data: result });
+    }
+ const businessIds = businesses.map(b => new mongoose.Types.ObjectId(b._id));
+    const ratingsData = await Review.aggregate([
+      {
+        $match: { businessId: { $in: businessIds } } 
+      },
+      {
+        $group: {
+          _id: "$businessId",
+          averageRating: { $avg: "$rating" },
+          totalReviews: { $sum: 1 }
+        }
+      }
+    ]);
+
+      console.log("1. Total Businesses Found:", businesses.length);
+    console.log("2. Aggregation Result (ratingsData):", JSON.stringify(ratingsData, null, 2));
+
+    const businessesWithRatings = businesses.map(business => {
+    const b = business.toObject ? business.toObject() : JSON.parse(JSON.stringify(business));
+      
+      const bId = b._id.toString();
+      const ratingInfo = ratingsData.find(r => r._id.toString() === bId);
+      return {
+        ...b,
+        averageRating: ratingInfo ? parseFloat(ratingInfo.averageRating.toFixed(1)) : 0,
+        totalReviews: ratingInfo ? ratingInfo.totalReviews : 0
+      };
+    });
+
+     let finalData;
+    if (result.businesses) {
+      finalData = { ...result, businesses: businessesWithRatings };
+    } else if (Array.isArray(result)) {
+      finalData = businessesWithRatings;
+    } else {
+      finalData = { businesses: businessesWithRatings, ...result };
+    }
+    
     return res.status(200).json({
       success: true,
       message: "Businesses retrieved successfully",
-      data: result,
+    data: finalData,
     });
   } catch (error) {
     return res.status(500).json({
@@ -138,7 +182,23 @@ const getBusinessById = async (req, res) => {
       return res.status(404).json({ success: false, message: "Business not found" });
     }
 
-    return res.status(200).json({ success: true, data: business });
+const reviews = await Review.find({ businessId: id })
+      .populate("userId", "fullName profilePhoto") 
+      .sort("-createdAt"); 
+
+    const totalReviews = reviews.length;
+    const avg = totalReviews > 0 
+      ? reviews.reduce((sum, r) => sum + r.rating, 0) / totalReviews 
+      : 0;
+
+    const businessData = business.toObject ? business.toObject() : business;
+
+    return res.status(200).json({ success: true, data: {
+        ...businessData,
+        averageRating: parseFloat(avg.toFixed(1)), 
+        totalReviews: totalReviews,
+        reviews: reviews 
+      }  });
   } catch (error) {
     return res.status(500).json({ success: false, message: "Error fetching business details", error: error.message });
   }
