@@ -21,7 +21,7 @@ router.get("/search-by-category", verifyToken, jobController.searchMyJobsAdvance
 router.get("/recents", verifyToken, jobController.getRecentJobs)
 
 // Post Job or Task (upto 3 images)
-router.post("/post", verifyToken, upload.array("images", 3), jobController.postJob);
+router.post("/post", verifyToken, upload.array("images", 5), jobController.postJob);
 
 router.get("/all", jobController.getAllJobs);
 router.get("/:id", jobController.getJobById);

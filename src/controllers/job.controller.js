@@ -43,9 +43,9 @@ const postJob = async (req, res) => {
     }
 
     const jobConfig = {
-      LOCAL_JOB: { credits: 10, label: "LOCAL_JOB" ,msg: "Local task" },
-      PART_TIME_JOB: { credits: 25, label: "PART_TIME_JOB" , msg: "Part-time job"},
-      FULL_TIME_JOB: { credits: 25, label: "FULL_TIME_JOB" , msg: "Full-time job"}
+      LOCAL_JOB: { credits: 10, label: "LOCAL_JOB" ,msg: "Local task" ,maxImages: 3},
+      PART_TIME_JOB: { credits: 25, label: "PART_TIME_JOB" , msg: "Part-time job",maxImages: 5},
+      FULL_TIME_JOB: { credits: 25, label: "FULL_TIME_JOB" , msg: "Full-time job",maxImages: 5}
     };
 
     const config = jobConfig[jobCategory];
@@ -54,6 +54,11 @@ const postJob = async (req, res) => {
       throw new Error("Invalid job type");
     }
 
+    const uploadedFilesCount = req.files ? req.files.length : 0;
+    if (uploadedFilesCount > config.maxImages) {
+        throw new Error(`${config.label} allows maximum ${config.maxImages} images. You uploaded ${uploadedFilesCount}.`);
+    }
+    
     req.body.jobCategory = config.label;
 
     const FEATURED_CREDITS = 10;
@@ -564,11 +569,11 @@ const unlockJob =  async (req, res) => {
     });
 
   } catch (error) {
-    console.error("DEBUG ERROR:", error); // Terminal mein check karein
+    console.error("DEBUG ERROR:", error); 
     res.status(500).json({ 
       success: false, 
       message: "Internal Server Error", 
-      error: error.message // <--- Ye aapko asli wajah batayega
+      error: error.message 
     });
   }
 };

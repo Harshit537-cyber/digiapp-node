@@ -29,7 +29,7 @@ router.delete('/unsave/:itemId', verifyToken, itemController.unsaveItem);
 router.post(
   '/post-item',
   verifyToken,
-  upload.array('images', 5),
+  upload.array('images', 3),
   itemController.postItem
 );
 
