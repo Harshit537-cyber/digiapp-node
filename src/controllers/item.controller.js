@@ -24,8 +24,9 @@ const uploadImages = async (files) => {
   return urls;
 };
 
-/* ================= CREATE ================= */
 const postItem = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
   try {
     console.log(req.body);
     const body = {};
@@ -36,7 +37,6 @@ const longitude = body.longitude;
     const latitude = body.latitude;
     const address = body.address
 
-    // console.log(title, details, latitude, longitude, address);
     if (!title || !details || !latitude || !longitude) {
       console.log(title, details, longitude)
       return response.error(
@@ -58,7 +58,20 @@ const longitude = body.longitude;
       return response.error(res, `Invalid sub-category. Select from ${catData.name}`, 400);
     }
 
+    const POST_COST = 25;
+    const FEATURED_ADDON = 25;
+    const isFeaturedTrue = String(isFeatured) === "true";
+    const totalCreditsNeeded = isFeaturedTrue ? (POST_COST + FEATURED_ADDON) : POST_COST;
 
+    const user = await User.findById(req.user.userId).session(session);
+    if (!user) throw new Error("User not found");
+
+    if (user.credits < totalCreditsNeeded) {
+      throw new Error(`Insufficient credits. You need ${totalCreditsNeeded} credits.`);
+    }
+
+    user.credits -= totalCreditsNeeded;
+    await user.save({ session });
     const imageUrls = await uploadImages(req.files);
 
     const item = await itemService.createItem({
@@ -80,14 +93,20 @@ const longitude = body.longitude;
         chat: String(chat) === "true",
       },
 
-      isFeatured: String(isFeatured) === "true",
+      isFeatured: isFeaturedTrue,
 
       images: imageUrls,
       user: req.user.userId,
-    });
+    }, session);
+
+    await session.commitTransaction();
+    session.endSession();
 
     return response.success(res, "Item posted successfully", item);
   } catch (error) {
+        await session.abortTransaction();
+    session.endSession();
+   
     console.error("postItem error:", error);
     return response.error(res, error.message, 500);
   }

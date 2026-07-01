@@ -44,8 +44,8 @@ const postJob = async (req, res) => {
 
     const jobConfig = {
       LOCAL_JOB: { credits: 10, label: "LOCAL_JOB" ,msg: "Local task" ,maxImages: 3},
-      PART_TIME_JOB: { credits: 25, label: "PART_TIME_JOB" , msg: "Part-time job",maxImages: 5},
-      FULL_TIME_JOB: { credits: 25, label: "FULL_TIME_JOB" , msg: "Full-time job",maxImages: 5}
+      PART_TIME_JOB: { credits: 50, label: "PART_TIME_JOB" , msg: "Part-time job",maxImages: 5},
+      FULL_TIME_JOB: { credits: 50, label: "FULL_TIME_JOB" , msg: "Full-time job",maxImages: 5}
     };
 
     const config = jobConfig[jobCategory];
@@ -61,7 +61,7 @@ const postJob = async (req, res) => {
     
     req.body.jobCategory = config.label;
 
-    const FEATURED_CREDITS = 10;
+    const FEATURED_CREDITS = (jobCategory === "LOCAL_JOB") ? 10 : 50;
     const totalCredits = isFeatured ? config.credits + FEATURED_CREDITS : config.credits;
 
     const user = await User.findById(creatorId).session(session);
@@ -529,13 +529,14 @@ const unlockJob =  async (req, res) => {
     }
 
   const userId = req.user?._id || req.user?.id || req.user?.userId;
-    const UNLOCK_COST = 10;
 
     const job = await Job.findById(jobId);
     if (!job) {
       return res.status(404).json({ success: false, message: "Job not found" });
     }
 
+    const UNLOCK_COST = job.jobCategory === "LOCAL_JOB" ? 10 : 25;
+    
     const alreadyUnlocked = await JobUnlock.findOne({ userId, jobId });
     if (alreadyUnlocked) {
       return res.status(400).json({ success: false, message: "Job already unlocked" });
@@ -559,6 +560,10 @@ const unlockJob =  async (req, res) => {
       { $inc: { credits: -UNLOCK_COST } },
       { new: true }
     );
+
+ if (!updatedUser) {
+        throw new Error("Transaction failed. Please try again.");
+    }
 
     await JobUnlock.create({ userId, jobId });
 

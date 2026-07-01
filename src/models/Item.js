@@ -35,7 +35,7 @@ const itemSchema = new mongoose.Schema({
   },
 
   isActive: { type: Boolean, default: true },
-  isFeatured: { type: Boolean, default: false }, // plan priority
+  isFeatured: { type: Boolean, default: false }, 
   user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
 
   expiryDate: {
