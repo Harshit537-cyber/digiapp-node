@@ -181,16 +181,38 @@ const getAllJobs = async (req, res) => {
     const limit = parseInt(req.query.limit) || 8; 
     const category = req.query.category; 
 
-    // Service ko category pass ki
     const { jobs, totalJobs, totalPages } = await jobService.getAllJobs(page, limit, category);
+  let updatedJobs = jobs;
+ if (jobs && jobs.length > 0) {
+      const categoryIds = [...new Set(jobs.map(j => j.category?.toString()).filter(id => id))];
+
+      const categoriesData = await JobsCategory.find({ _id: { $in: categoryIds } }).select('name');
+
+      const catLookup = {};
+      categoriesData.forEach(cat => {
+        catLookup[cat._id.toString()] = cat.name;
+      });
+
+      updatedJobs = jobs.map(job => {
+        const j = job.toObject ? job.toObject() : JSON.parse(JSON.stringify(job));
+        
+        const catIdStr = j.category ? j.category.toString() : null;
+        
+        return {
+          ...j,
+          category: catLookup[catIdStr] || j.category 
+        };
+      });
+    }
+
 
     res.status(200).json({
       success: true,
-      count: jobs.length, 
+      count: updatedJobs.length, 
       totalJobs,         
       totalPages,        
       currentPage: page,
-      data: jobs
+      data: updatedJobs
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
