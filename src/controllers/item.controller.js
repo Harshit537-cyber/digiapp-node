@@ -127,6 +127,33 @@ const getAllItems = async (req, res) => {
     const subCategory = req.query.subCategory;
 
     const result = await itemService.getAllItems(page, limit, category, subCategory);
+let items = result.items || (Array.isArray(result) ? result : []);
+
+    if (items.length > 0) {
+      const categoryIds = [...new Set(items.map(i => i.category?.toString()).filter(id => id))];
+
+      const categoriesData = await ItemCategory.find({ _id: { $in: categoryIds } }).select('name');
+
+      const catLookup = {};
+      categoriesData.forEach(cat => {
+        catLookup[cat._id.toString()] = cat.name;
+      });
+
+      const updatedItems = items.map(item => {
+        const i = item.toObject ? item.toObject() : JSON.parse(JSON.stringify(item));
+        return {
+          ...i,
+          category: i.category ? (catLookup[i.category.toString()] || i.category) : i.category
+        };
+      });
+
+      if (result.items) {
+        result.items = updatedItems;
+      } else if (Array.isArray(result)) {
+        return response.success(res, "Items fetched successfully", updatedItems);
+      }
+    }
+
 
     return response.success(res, "Items fetched successfully", result);
   } catch (error) {
