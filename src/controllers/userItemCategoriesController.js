@@ -115,3 +115,42 @@ exports.getItemsByFilter = async (req, res) => {
     });
   }
 };
+
+
+exports.searchItemCategories = async (req, res) => {
+  try {
+    const { q } = req.query; 
+
+    if (!q || q.trim() === "") {
+      return res.status(400).json({
+        success: false,
+        message: "Search query is required",
+      });
+    }
+
+    const searchRegex = new RegExp(q, "i"); 
+
+    const categories = await ItemCategory.find({
+      $or: [
+        { name: searchRegex },          
+        { subCategory: searchRegex }    
+      ]
+    })
+    .select("name image subCategory")
+    .limit(10)                        
+    .lean();                          
+
+    res.status(200).json({
+      success: true,
+      count: categories.length,
+      data: categories
+    });
+
+  } catch (error) {
+    console.error("Search Item Categories Error:", error.message);
+    res.status(500).json({
+      success: false,
+      message: "Internal Server Error"
+    });
+  }
+};

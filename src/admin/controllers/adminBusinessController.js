@@ -28,7 +28,7 @@ const page = parseInt(req.query.page) || 1;
 
 
          const total = await Business.countDocuments();
-
+   
         const businesses = await Business.find().sort({ createdAt: -1 })
         .skip(skip)
             .limit(limit);

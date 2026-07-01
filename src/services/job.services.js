@@ -23,7 +23,14 @@ const createJob = async (jobData, files, userId) => {
       }
     }
 
-    let daysToAdd = jobData.jobCategory === "Local task" ? 7 : 15;
+  let daysToAdd = 15;
+
+    if (jobData.jobCategory === "LOCAL_JOB") {
+      daysToAdd = 7;
+    } else if (jobData.jobCategory === "PART_TIME_JOB" || jobData.jobCategory === "FULL_TIME_JOB") {
+      daysToAdd = 15;
+    }
+
     const expiresAt = new Date();
     expiresAt.setDate(expiresAt.getDate() + daysToAdd);
 
@@ -34,7 +41,6 @@ const createJob = async (jobData, files, userId) => {
         return undefined;
       }
     };
-
     const newJob = new Job({
       ...jobData,
       userId,

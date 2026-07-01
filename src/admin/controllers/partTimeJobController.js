@@ -153,7 +153,7 @@ const admins = await Admin.find().select("_id name role");
 
       let query = { 
             jobCategory: "PART_TIME_JOB",
-            userId: { $in: adminIds } // <--- सिर्फ Admin द्वारा बनाए गए जॉब्स
+            userId: { $in: adminIds } 
         };
 
 

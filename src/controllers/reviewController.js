@@ -80,3 +80,61 @@ const userId = req.user?._id || req.user?.id || req.user?.userId;
     });
   }
 };
+
+exports.getAllReviewsByBusiness = async (req, res) => {
+  try {
+    const { businessId } = req.params;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const reviews = await Review.find({ businessId })
+      .populate("userId", "fullName profilePhoto") 
+      .sort("-createdAt") 
+      .skip(skip)
+      .limit(limit);
+
+    const totalReviews = await Review.countDocuments({ businessId });
+
+    const allReviewsForStats = await Review.find({ businessId }).select("rating");
+    const avgRating = allReviewsForStats.length > 0
+      ? allReviewsForStats.reduce((acc, curr) => acc + curr.rating, 0) / allReviewsForStats.length
+      : 0;
+
+    res.status(200).json({
+      success: true,
+      data: reviews,
+      stats: {
+        averageRating: parseFloat(avgRating.toFixed(1)),
+        totalReviews
+      },
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(totalReviews / limit)
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.getReviewById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const review = await Review.findById(id)
+      .populate("userId", "fullName profilePhoto")
+      .populate("businessId", "businessName"); 
+
+    if (!review) {
+      return res.status(404).json({ success: false, message: "Review not found" });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: review
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};

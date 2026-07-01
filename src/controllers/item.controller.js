@@ -221,14 +221,42 @@ const deleteItem = async (req, res) => {
 
 /* ================= ACTIVATE / DEACTIVATE ================= */
 // ... (No change in activateItem/deactivateItem)
+// const activateItem = async (req, res) => {
+//   try {
+//     const item = await itemService.activateItem(req.params.id);
+//     return response.success(res, "Item activated", item);
+//   } catch (error) {
+//     return response.error(res, error.message, 500);
+//   }
+// };
+
 const activateItem = async (req, res) => {
+  const { id } = req.params;
+
   try {
-    const item = await itemService.activateItem(req.params.id);
-    return response.success(res, "Item activated", item);
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return response.error(res, "Invalid Item ID format", 400);
+    }
+
+    const item = await itemService.activateItem(id);
+
+    if (!item) {
+      return response.error(res, "Item not found or already deleted", 404);
+    }
+
+    // 5. Success Response
+    return response.success(res, "Item activated successfully", item, 200);
+
   } catch (error) {
-    return response.error(res, error.message, 500);
+    // 6. Logging for Debugging (Server Side)
+    console.error(`[ActivateItem Error] ID: ${id} | Error: ${error.message}`);
+
+    // 7. Generic Error for Client
+    return response.error(res, "An internal server error occurred", 500);
   }
 };
+
+
 
 const deactivateItem = async (req, res) => {
   try {
