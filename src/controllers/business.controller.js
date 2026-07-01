@@ -4,7 +4,7 @@ const cloudinary = require("../config/cloudinary");
 const Business = require("../models/Business");
 const mongoose = require("mongoose");
 const Review = require("../models/Review");
-
+const BusinessCategory = require('../admin/models/BusinessCategory');
 // --- Helper Function: Upload to Cloudinary ---
 const uploadToCloudinary = async (filePath) => {
   if (!filePath) return null;
@@ -120,6 +120,15 @@ const getAllBusinesses = async (req, res) => {
     if (businesses.length === 0) {
       return res.status(200).json({ success: true, data: result });
     }
+
+   const categoryIds = businesses.map(b => b.category).filter(id => id);  
+    const categoriesFromDb = await BusinessCategory.find({ _id: { $in: categoryIds } }).select('name');
+  const catLookup = {};
+    categoriesFromDb.forEach(c => {
+      catLookup[c._id.toString()] = c.name;
+    });
+
+
  const businessIds = businesses.map(b => new mongoose.Types.ObjectId(b._id));
     const ratingsData = await Review.aggregate([
       {
@@ -141,9 +150,16 @@ const getAllBusinesses = async (req, res) => {
     const b = business.toObject ? business.toObject() : JSON.parse(JSON.stringify(business));
       
       const bId = b._id.toString();
-      const ratingInfo = ratingsData.find(r => r._id.toString() === bId);
-      return {
+     
+     
+     const ratingInfo = ratingsData.find(r => r._id.toString() === bId);
+    
+             const categoryIdStr = b.category ? b.category.toString() : null;
+      const categoryName = catLookup[categoryIdStr] || null;
+    
+     return {
         ...b,
+             category: categoryName,
         averageRating: ratingInfo ? parseFloat(ratingInfo.averageRating.toFixed(1)) : 0,
         totalReviews: ratingInfo ? ratingInfo.totalReviews : 0
       };

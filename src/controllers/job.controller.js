@@ -8,6 +8,7 @@ const JobsCategory = require("../admin/models/JobsCategory")
 const {sendNotification , sendToMultiple}= require("../utils/notification");
 const JobUnlock = require("../models/JobUnlock");
 
+
 const postJob = async (req, res) => {
   const session = await mongoose.startSession();
   session.startTransaction();
@@ -64,6 +65,17 @@ const postJob = async (req, res) => {
     const FEATURED_CREDITS = (jobCategory === "LOCAL_JOB") ? 10 : 50;
     const totalCredits = isFeatured ? config.credits + FEATURED_CREDITS : config.credits;
 
+let daysToExpire = 7; 
+    if (jobCategory === "LOCAL_JOB" && isFeatured) {
+        daysToExpire = 3; 
+    } else {
+        daysToExpire = 7; 
+    }
+
+    const expiryDate = new Date();
+    expiryDate.setDate(expiryDate.getDate() + daysToExpire);
+    req.body.expiresAt = expiryDate;
+
     const user = await User.findById(creatorId).session(session);
 
     if (!user) throw new Error("User not found");
@@ -91,7 +103,6 @@ const postJob = async (req, res) => {
       balanceAfter: user.credits
     }], { session });
 
-    // ✅ Commit
     await session.commitTransaction();
     session.endSession();
 

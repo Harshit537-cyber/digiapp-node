@@ -34,7 +34,7 @@ const postItem = async (req, res) => {
     for (const key in req.body) body[key.trim()] = req.body[key];
 
     const { title, details, category, subCategory, price, call, chat, isFeatured, location } = body;
-const longitude = body.longitude; 
+    const longitude = body.longitude;
     const latitude = body.latitude;
     const address = body.address
 
@@ -46,7 +46,7 @@ const longitude = body.longitude;
         400,
       );
     }
- if (!category || !subCategory) {
+    if (!category || !subCategory) {
       return response.error(res, "Category and Sub-category are required", 400);
     }
 
@@ -63,6 +63,10 @@ const longitude = body.longitude;
     const FEATURED_ADDON = 25;
     const isFeaturedTrue = String(isFeatured) === "true";
     const totalCreditsNeeded = isFeaturedTrue ? (POST_COST + FEATURED_ADDON) : POST_COST;
+
+    const days = isFeaturedTrue ? 3 : 7;
+    const expiryDate = new Date();
+    expiryDate.setDate(expiryDate.getDate() + days);
 
     const user = await User.findById(req.user.userId).session(session);
     if (!user) throw new Error("User not found");
@@ -85,7 +89,7 @@ const longitude = body.longitude;
 
       location: {
         type: "Point",
-        coordinates: [Number(longitude), Number(latitude)], 
+        coordinates: [Number(longitude), Number(latitude)],
         address: address?.trim(),
       },
 
@@ -95,7 +99,7 @@ const longitude = body.longitude;
       },
 
       isFeatured: isFeaturedTrue,
-
+      expiryDate: expiryDate,
       images: imageUrls,
       user: req.user.userId,
     }, session);
@@ -105,9 +109,9 @@ const longitude = body.longitude;
 
     return response.success(res, "Item posted successfully", item);
   } catch (error) {
-        await session.abortTransaction();
+    await session.abortTransaction();
     session.endSession();
-   
+
     console.error("postItem error:", error);
     return response.error(res, error.message, 500);
   }
@@ -121,7 +125,7 @@ const getAllItems = async (req, res) => {
 
     const category = req.query.category;
     const subCategory = req.query.subCategory;
-    
+
     const result = await itemService.getAllItems(page, limit, category, subCategory);
 
     return response.success(res, "Items fetched successfully", result);
@@ -407,20 +411,20 @@ const getNearbyItemsLists = async (req, res) => {
 
     const lat = parseFloat(latitude);
     const lng = parseFloat(longitude);
-    const distanceInDegrees = 20 / 111.12; 
+    const distanceInDegrees = 20 / 111.12;
 
     const items = await Item.find({
       isActive: true,
       expiryDate: { $gt: new Date() },
-      "location.coordinates.1": { 
-        $gte: lat - distanceInDegrees, 
-        $lte: lat + distanceInDegrees 
+      "location.coordinates.1": {
+        $gte: lat - distanceInDegrees,
+        $lte: lat + distanceInDegrees
       },
-      "location.coordinates.0": { 
-        $gte: lng - distanceInDegrees, 
-        $lte: lng + distanceInDegrees 
+      "location.coordinates.0": {
+        $gte: lng - distanceInDegrees,
+        $lte: lng + distanceInDegrees
       }
-    }).limit(50); 
+    }).limit(50);
 
     return res.status(200).json({
       success: true,
