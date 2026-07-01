@@ -44,5 +44,5 @@ const itemSchema = new mongoose.Schema({
   }
 
 }, { timestamps: true });
-
+itemSchema.index({ location: "2dsphere" });
 module.exports = mongoose.model('Item', itemSchema);

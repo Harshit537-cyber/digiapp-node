@@ -4,7 +4,8 @@ const response = require("../utils/response");
 const cloudinary = require("../config/cloudinary");
 const fs = require("fs");
 const Item = require("../models/Item");
-const ItemCategory = require("../admin/models/ItemCategory")
+const ItemCategory = require("../admin/models/ItemCategory");
+const User = require("../models/User")
 
 /* ================= IMAGE UPLOAD ================= */
 const uploadImages = async (files) => {
@@ -396,7 +397,41 @@ const getCategoriesData = async (req, res) => {
   }
 };
 
+const getNearbyItemsLists = async (req, res) => {
+  try {
+    const { longitude, latitude } = req.query;
 
+    if (!longitude || !latitude) {
+      return res.status(400).json({ success: false, message: "Location missing" });
+    }
+
+    const lat = parseFloat(latitude);
+    const lng = parseFloat(longitude);
+    const distanceInDegrees = 20 / 111.12; 
+
+    const items = await Item.find({
+      isActive: true,
+      expiryDate: { $gt: new Date() },
+      "location.coordinates.1": { 
+        $gte: lat - distanceInDegrees, 
+        $lte: lat + distanceInDegrees 
+      },
+      "location.coordinates.0": { 
+        $gte: lng - distanceInDegrees, 
+        $lte: lng + distanceInDegrees 
+      }
+    }).limit(50); 
+
+    return res.status(200).json({
+      success: true,
+      count: items.length,
+      data: items,
+    });
+  } catch (error) {
+    console.error("Nearby Logic Error:", error);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
 module.exports = {
   postItem,
   getAllItems,
@@ -413,5 +448,6 @@ module.exports = {
   unsaveItem,
   getSavedItems,
   searchSavedItems,
-  getCategoriesData
+  getCategoriesData,
+  getNearbyItemsLists
 }

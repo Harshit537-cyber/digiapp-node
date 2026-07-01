@@ -22,6 +22,8 @@ router.get("/geCategories", verifyToken, itemController.getCategoriesData)
 
 router.get("/search/save-Items", verifyToken, itemController.searchSavedItems)
 router.get('/saved-items', verifyToken, itemController.getSavedItems);
+router.get("/nearby-items", verifyToken, itemController.getNearbyItemsLists)
+
 
 router.post('/save/:itemId', verifyToken, itemController.saveItem);
 router.delete('/unsave/:itemId', verifyToken, itemController.unsaveItem);
