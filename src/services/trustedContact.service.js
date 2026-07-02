@@ -1,4 +1,4 @@
-const TrustedContact = require('../models/TrustedContact');
+ const TrustedContact = require('../models/TrustedContact');
 
 module.exports = {
   createContact: async (data) => await TrustedContact.create(data),

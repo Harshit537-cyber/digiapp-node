@@ -451,18 +451,32 @@ const getNearbyItemsLists = async (req, res) => {
         $gte: lng - distanceInDegrees,
         $lte: lng + distanceInDegrees
       }
-    }).limit(50);
+    }).limit(50).lean();
+
+const dataWithNames = await Promise.all(items.map(async (item) => {
+      if (item.category) {
+        const categoryDoc = await ItemCategory.findById(item.category).select('name');
+        
+        return {
+          ...item,
+          category: categoryDoc ? categoryDoc.name : item.category
+        };
+      }
+      return item;
+    }));
 
     return res.status(200).json({
       success: true,
-      count: items.length,
-      data: items,
+      count:  dataWithNames.length,
+      data: dataWithNames,
     });
   } catch (error) {
     console.error("Nearby Logic Error:", error);
     return res.status(500).json({ success: false, message: error.message });
   }
 };
+
+
 module.exports = {
   postItem,
   getAllItems,
