@@ -1,6 +1,6 @@
 const express = require("express");
 const adminAuth = require('../middlewares/adminAuth');
-const { createItemCategory ,getAllItemCategories,getItemCategoryById,deleteItemCategory, addItemSubCategory, updateItemCategory, searchItemCategory} = require("../controllers/itemsCategoryController");
+const { createItemCategory ,getAllItemCategories,getItemCategoryById,getSingleItemSubCategory,deleteItemCategory, getAllItemSubCategories,addItemSubCategory, updateItemCategory, searchItemCategory} = require("../controllers/itemsCategoryController");
 const router = express.Router();
 const upload = require('../../middlewares/upload');
 
@@ -12,6 +12,8 @@ router.delete("/delete/:id", adminAuth,deleteItemCategory );
 router.post("/create-subcategory", adminAuth, addItemSubCategory);
 router.put("/update-category/:id", adminAuth, upload.single('image'), updateItemCategory);
 router.get("/search-category", adminAuth, searchItemCategory);
+router.get("/getAllSubCategories", adminAuth, getAllItemSubCategories);
+router.get("/getSingleItemSubCategory", adminAuth, getSingleItemSubCategory)
 
 
 module.exports = router;

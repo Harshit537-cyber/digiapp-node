@@ -1,7 +1,7 @@
 const ItemCategory = require('../models/ItemCategory');
 const cloudinary = require('../../config/cloudinary');
 const fs = require('fs');
-
+const mongoose = require('mongoose');
 
 exports.createItemCategory = async (req, res) => {
   try {
@@ -342,32 +342,51 @@ exports.searchItemSubCategories = async (req, res) => {
 };
 
 
-exports.getSingleItemSubCategory = async (req, res) => {
+exports.getSingleItemSubCategory = async (req, res, next) => {
   try {
-    const { categoryId, subCategoryName } = req.query;
+    const categoryId = req.query.categoryId?.trim();
+    const subCategoryName = (req.query.subCategoryName || req.query['subCategoryName '])?.trim();
+
+    if (!categoryId || !subCategoryName) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Missing required query parameters: categoryId and subCategoryName" 
+      });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(categoryId)) {
+      return res.status(400).json({ success: false, message: "Invalid Category ID format" });
+    }
 
     const category = await ItemCategory.findOne(
       {
         _id: categoryId,
-        subCategory: { $regex: new RegExp(`^${subCategoryName.trim()}$`, 'i') }
+        subCategory: { $regex: new RegExp(`^${subCategoryName}$`, 'i') }
       },
       { "subCategory.$": 1, name: 1 }
-    );
+    ).lean();
 
-    if (!category) {
-      return res.status(404).json({ success: false, message: "Sub-category not found" });
+    if (!category || !category.subCategory || category.subCategory.length === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        message: `Sub-category '${subCategoryName}' not found in category '${categoryId}'` 
+      });
     }
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
-      categoryName: category.name,
+      meta: {
+        categoryName: category.name,
+        searchQuery: subCategoryName
+      },
       data: category.subCategory[0]
     });
+
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    console.error("Error in getSingleItemSubCategory:", error);
+    res.status(500).json({ success: false, message: "Internal Server Error" });
   }
 };
-
 
 exports.updateItemSubCategory = async (req, res) => {
   try {
