@@ -45,7 +45,7 @@ const registerBusiness = async (req, res) => {
       return res.status(400).json({ success: false, message: "Please upload all required images (Business, ID, and Owner)" });
     }
 
-  const BusinessCategory = require('../admin/models/BusinessCategory'); // Model import karein
+  const BusinessCategory = require('../admin/models/BusinessCategory'); 
     const catData = await BusinessCategory.findById(category);
     
     if (!catData) {

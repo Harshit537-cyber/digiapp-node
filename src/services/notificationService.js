@@ -32,6 +32,13 @@ class NotificationService {
                 await admin.messaging().subscribeToTopic(token, catTopic);
                 console.log(`Subscribed to category topic: ${catTopic}`);
             }
+
+            if (user.bloodGroup) {
+                const bloodVal = user.bloodGroup.replace(/\+/g, "_plus").replace(/-/g, "_minus");
+                const bloodTopic = this.formatTopic("blood", bloodVal);
+                await admin.messaging().subscribeToTopic(token, bloodTopic);
+                console.log(`Subscribed to blood topic: ${bloodTopic}`);
+            }
         } catch (error) {
             console.error("FCM Subscription Sync Error:", error.message);
         }

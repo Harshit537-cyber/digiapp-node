@@ -1,12 +1,21 @@
 const User = require("../../models/User");
 const NotificationService = require("../../services/notificationService");
+const ScheduledNotification = require("../models/ScheduledNotification");
+
 
 exports.sendAdminNotification = async (req, res) => {
   try {
-    const { targetType, targetValue, title, body, imageUrl, extraData } = req.body;
+    const { targetType, targetValue, title, body, scheduledAt,imageUrl, extraData } = req.body;
 
-    if (!title || !body) {
+     if (!title || !body) {
       return res.status(400).json({ success: false, message: "Title and Body are required" });
+    }
+if (scheduledAt) {
+      await ScheduledNotification.create({
+        title, body, imageUrl, extraData, targetType, targetValue,
+        scheduledAt: new Date(scheduledAt)
+      });
+      return res.status(200).json({ success: true, message: "Notification Scheduled!" });
     }
 
     let notificationParams = { 
@@ -31,6 +40,13 @@ exports.sendAdminNotification = async (req, res) => {
       case "CATEGORY":
         if (!targetValue) return res.status(400).json({ message: "Category/Role missing" });
         notificationParams.target = NotificationService.formatTopic("cat", targetValue);
+        notificationParams.isTopic = true;
+        break;
+
+ case "BLOOD_GROUP":
+        if (!targetValue) return res.status(400).json({ message: "Blood group missing" });
+        const bloodVal = targetValue.replace(/\+/g, "_plus").replace(/-/g, "_minus");
+        notificationParams.target = NotificationService.formatTopic("blood", bloodVal);
         notificationParams.isTopic = true;
         break;
 
