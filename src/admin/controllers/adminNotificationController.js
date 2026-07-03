@@ -56,6 +56,12 @@ exports.sendAdminNotification = async (req, res) => {
         notificationParams.isTopic = true;
         break;
 
+case "USER_TYPE":
+        if (!targetValue) return res.status(400).json({ message: "User type missing" });
+        notificationParams.target = NotificationService.formatTopic("cat", targetValue);
+        notificationParams.isTopic = true;
+        break;
+
       case "USER":
         const user = await User.findById(targetValue).select("fcmToken");
         if (!user || !user.fcmToken) {

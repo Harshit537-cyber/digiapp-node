@@ -6,11 +6,17 @@ const mongoose = require('mongoose');
 exports.createBanner =  async (req, res) => {
   let localFilePath = null;
   try {
-    const { title, description, isActive, position } = req.body;
+    const { name, bannerType } = req.body;
 
-    if (!title) {
+    if (!name || !bannerType) {
       if (req.file) fs.unlinkSync(req.file.path);
-      return res.status(400).json({ success: false, message: "Banner title is required" });
+      return res.status(400).json({ success: false, message: "Name and bannerType are required" });
+    }
+
+    const validTypes = ["FIRST", "SECOND", "THIRD", "FOURTH", "FIFTH", "SHOP_IMAGE"];
+    if (!validTypes.includes(bannerType)) {
+      if (req.file) fs.unlinkSync(req.file.path);
+      return res.status(400).json({ success: false, message: "Invalid banner type" });
     }
 
     if (!req.file) {
@@ -23,30 +29,30 @@ exports.createBanner =  async (req, res) => {
       folder: 'app_banners'
     });
 
-    const newBanner = await Banner.create({
-      title: title.trim(),
-      description: description ? description.trim() : "",
-      imageUrl: uploadResponse.secure_url, 
-      isActive: isActive === undefined ? true : (String(isActive) === 'true'),
-      position: position,
-      createdBy: req.user.userId 
-    });
+    const updatedBanner = await Banner.findOneAndUpdate(
+      { bannerType: bannerType }, 
+      { 
+        name: name.trim(),
+        imageUrl: uploadResponse.secure_url 
+      }, 
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
 
     if (fs.existsSync(localFilePath)) {
       fs.unlinkSync(localFilePath);
     }
 
-    return res.status(201).json({
+    return res.status(200).json({
       success: true,
-      message: "Banner created successfully",
-      data: newBanner
+      message: `${bannerType} updated successfully`,
+      data: updatedBanner
     });
 
   } catch (error) {
     if (localFilePath && fs.existsSync(localFilePath)) {
       fs.unlinkSync(localFilePath);
     }
-    console.error("Banner Create Error:", error.message);
+    console.error("Banner Update Error:", error.message);
     return res.status(500).json({
       success: false,
       message: error.message || "Internal Server Error"

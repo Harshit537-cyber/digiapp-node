@@ -316,6 +316,7 @@ exports.getAvailableCoupons = async (req, res) => {
 
 exports.updateFCMToken = async (req, res) => {
   try {
+    
     const { fcmToken } = req.body;
     const userId = req.user.userId;
 
@@ -325,7 +326,7 @@ exports.updateFCMToken = async (req, res) => {
         message: "FCM Token is required"
       });
     }
-
+    
     const updatedUser = await User.findByIdAndUpdate(
       userId,
       { fcmToken: fcmToken },
@@ -352,7 +353,7 @@ exports.updateFCMToken = async (req, res) => {
 };
 
 
-
+  
 exports.homeScreenImages = async (req, res) => {
   try {
 

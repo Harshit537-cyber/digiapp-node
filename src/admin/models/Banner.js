@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 const bannerSchema = new mongoose.Schema({
-  title: { 
+  name: { 
     type: String, 
     required: true,
     trim: true 
@@ -12,24 +12,12 @@ const bannerSchema = new mongoose.Schema({
     required: true 
   },
 
-  description: { 
-    type: String, 
-    trim: true,
-    default: "" 
-  },
-
-  isActive: { 
-    type: Boolean, 
-    default: true 
-  },
-
-  position: {
+  bannerType: {
     type: String,
-    enum: ["TOP", "MIDDLE", "BOTTOM", "SIDEBAR"], 
-    default: "TOP"
-  },
-
-  
+    enum: ["FIRST", "SECOND", "THIRD", "FOURTH", "FIFTH", "SHOP_IMAGE"], 
+    required: true,
+    unique: true 
+  }
 
 }, { timestamps: true });
 

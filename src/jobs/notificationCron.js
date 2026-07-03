@@ -59,6 +59,14 @@ cron.schedule("* * * * *", async () => {
                         }
                         break;
 
+                    case "USER_TYPE":
+                        if (notif.targetValue) {
+                            notificationParams.target = NotificationService.formatTopic("cat", notif.targetValue);
+                            notificationParams.isTopic = true;
+                            targetFound = true;
+                        }
+                        break;
+
                     case "GENDER":
                         if (notif.targetValue) {
                             notificationParams.target = NotificationService.formatTopic("gender", notif.targetValue);
