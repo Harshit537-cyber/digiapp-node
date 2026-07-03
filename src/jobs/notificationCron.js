@@ -50,6 +50,23 @@ cron.schedule("* * * * *", async () => {
                         }
                         break;
 
+                    case "BLOOD_GROUP":
+                        if (notif.targetValue) {
+                            const bloodVal = notif.targetValue.replace(/\+/g, "_plus").replace(/-/g, "_minus");
+                            notificationParams.target = NotificationService.formatTopic("blood", bloodVal);
+                            notificationParams.isTopic = true;
+                            targetFound = true;
+                        }
+                        break;
+
+                    case "GENDER":
+                        if (notif.targetValue) {
+                            notificationParams.target = NotificationService.formatTopic("gender", notif.targetValue);
+                            notificationParams.isTopic = true;
+                            targetFound = true;
+                        }
+                        break;
+
                     case "USER":
                         const user = await User.findById(notif.targetValue).select("fcmToken");
                         if (user && user.fcmToken) {
@@ -62,7 +79,7 @@ cron.schedule("* * * * *", async () => {
 
                 if (targetFound) {
                     const result = await NotificationService.sendNotification(notificationParams);
-                    
+
                     if (result.success) {
                         notif.status = "sent";
                         console.log(`[Cron] Notification sent successfully: ${notif._id}`);

@@ -5,12 +5,12 @@ const ScheduledNotification = require("../models/ScheduledNotification");
 
 exports.sendAdminNotification = async (req, res) => {
   try {
-    const { targetType, targetValue, title, body, scheduledAt,imageUrl, extraData } = req.body;
+    const { targetType, targetValue, title, body, scheduledAt, imageUrl, extraData } = req.body;
 
-     if (!title || !body) {
+    if (!title || !body) {
       return res.status(400).json({ success: false, message: "Title and Body are required" });
     }
-if (scheduledAt) {
+    if (scheduledAt) {
       await ScheduledNotification.create({
         title, body, imageUrl, extraData, targetType, targetValue,
         scheduledAt: new Date(scheduledAt)
@@ -18,11 +18,11 @@ if (scheduledAt) {
       return res.status(200).json({ success: true, message: "Notification Scheduled!" });
     }
 
-    let notificationParams = { 
-      title, 
-      body, 
-      imageUrl: imageUrl || "", 
-      data: extraData || {} 
+    let notificationParams = {
+      title,
+      body,
+      imageUrl: imageUrl || "",
+      data: extraData || {}
     };
 
     switch (targetType) {
@@ -43,14 +43,19 @@ if (scheduledAt) {
         notificationParams.isTopic = true;
         break;
 
- case "BLOOD_GROUP":
+      case "BLOOD_GROUP":
         if (!targetValue) return res.status(400).json({ message: "Blood group missing" });
         const bloodVal = targetValue.replace(/\+/g, "_plus").replace(/-/g, "_minus");
         notificationParams.target = NotificationService.formatTopic("blood", bloodVal);
         notificationParams.isTopic = true;
         break;
 
-        
+      case "GENDER":
+        if (!targetValue) return res.status(400).json({ message: "Gender value missing" });
+        notificationParams.target = NotificationService.formatTopic("gender", targetValue);
+        notificationParams.isTopic = true;
+        break;
+
       case "USER":
         const user = await User.findById(targetValue).select("fcmToken");
         if (!user || !user.fcmToken) {
@@ -67,10 +72,10 @@ if (scheduledAt) {
     const result = await NotificationService.sendNotification(notificationParams);
 
     if (result.success) {
-      return res.status(200).json({ 
-        success: true, 
-        message: `Notification sent to ${targetType}`, 
-        fcmId: result.response 
+      return res.status(200).json({
+        success: true,
+        message: `Notification sent to ${targetType}`,
+        fcmId: result.response
       });
     } else {
       return res.status(500).json({ success: false, error: result.error });

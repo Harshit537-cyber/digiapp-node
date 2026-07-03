@@ -11,6 +11,7 @@ class NotificationService {
         return `${prefix}_${cleanValue}`;
     }
     static async syncUserTopics(token, user) {
+          console.log("FULL USER OBJECT RECEIVED:", JSON.stringify(user)); 
         try {
             if (!token) {
                 console.log("No token found for subscription");
@@ -39,6 +40,13 @@ class NotificationService {
                 await admin.messaging().subscribeToTopic(token, bloodTopic);
                 console.log(`Subscribed to blood topic: ${bloodTopic}`);
             }
+
+            if (user.gender) {
+                const genderTopic = this.formatTopic("gender", user.gender);
+                await admin.messaging().subscribeToTopic(token, genderTopic);
+                console.log(`Subscribed to gender topic: ${genderTopic}`);
+            }
+
         } catch (error) {
             console.error("FCM Subscription Sync Error:", error.message);
         }
@@ -63,15 +71,15 @@ class NotificationService {
                     },
                 },
                 apns: {
-                    payload: { 
-                        aps: { 
-                            sound: "default", 
+                    payload: {
+                        aps: {
+                            sound: "default",
                             badge: 1,
-                            "mutable-content": 1 
-                        } 
+                            "mutable-content": 1
+                        }
                     },
                     fcm_options: {
-                        image: imageUrl 
+                        image: imageUrl
                     }
                 },
             };

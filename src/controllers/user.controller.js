@@ -335,7 +335,13 @@ exports.updateFCMToken = async (req, res) => {
     if (!updatedUser) {
       return res.status(404).json({ success: false, message: "User not found" });
     }
-    NotificationService.syncUserTopics(fcmToken, updatedUser);
+
+    console.log("DEBUG: Syncing for user:", updatedUser.fullName);
+    console.log("DEBUG: Gender:", updatedUser.gender);
+    console.log("DEBUG: BloodGroup:", updatedUser.bloodGroup);
+
+
+   await  NotificationService.syncUserTopics(fcmToken, updatedUser);
     return res.status(200).json({
       success: true,
       message: "FCM Token updated successfully"
