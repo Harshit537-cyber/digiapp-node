@@ -63,7 +63,16 @@ class NotificationService {
                     },
                 },
                 apns: {
-                    payload: { aps: { sound: "default", badge: 1 } },
+                    payload: { 
+                        aps: { 
+                            sound: "default", 
+                            badge: 1,
+                            "mutable-content": 1 
+                        } 
+                    },
+                    fcm_options: {
+                        image: imageUrl 
+                    }
                 },
             };
 
