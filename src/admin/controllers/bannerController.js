@@ -138,7 +138,7 @@ exports.getAllBanners =  async (req, res) => {
 };
 
 
-exports.updateBanner = async (req, res) => {
+exports.updateBanner =  async (req, res) => {
   let localFilePath = null;
   try {
     const { id } = req.params;
@@ -147,6 +147,14 @@ exports.updateBanner = async (req, res) => {
     if (!banner) {
       if (req.file) fs.unlinkSync(req.file.path);
       return res.status(404).json({ success: false, message: "Banner not found" });
+    }
+
+    if (req.body.bannerType) {
+        const validTypes = ["FIRST", "SECOND", "THIRD", "FOURTH", "FIFTH", "SHOP_IMAGE"];
+        if (!validTypes.includes(req.body.bannerType)) {
+            if (req.file) fs.unlinkSync(req.file.path);
+            return res.status(400).json({ success: false, message: "Invalid banner type" });
+        }
     }
 
     const updateData = { ...req.body };
@@ -159,8 +167,9 @@ exports.updateBanner = async (req, res) => {
 
       if (banner.imageUrl) {
         const urlParts = banner.imageUrl.split('/');
-        const fileName = urlParts[urlParts.length - 1].split('.')[0];
-        await cloudinary.uploader.destroy(`app_banners/${fileName}`);
+        const fileNameWithExt = urlParts[urlParts.length - 1];
+        const publicId = fileNameWithExt.split('.')[0];
+        await cloudinary.uploader.destroy(`app_banners/${publicId}`);
       }
 
       updateData.imageUrl = uploadResponse.secure_url;
@@ -185,10 +194,10 @@ exports.updateBanner = async (req, res) => {
 
   } catch (error) {
     if (localFilePath && fs.existsSync(localFilePath)) fs.unlinkSync(localFilePath);
+    console.error("Update Error:", error.message); 
     return res.status(500).json({ success: false, message: error.message });
   }
 };
-
 
 exports.deleteBanner = async (req, res) => {
   try {
@@ -259,20 +268,28 @@ exports.searchBanners =  async (req, res) => {
 
 exports.getAppBanners = async (req, res) => {
   try {
-    const banners = await Banner.find({ isActive: true })
-      .select('-createdBy') 
-      .sort({ createdAt: -1 });
+    const banners = await Banner.find({}).select("-__v");
+
+    if (!banners || banners.length === 0) {
+        return res.status(200).json({ success: true, count: 0, data: [] });
+    }
+    const bannerOrder = ["FIRST", "SECOND", "THIRD", "FOURTH", "FIFTH", "SHOP_IMAGE"];
+    
+    const sortedBanners = banners.sort((a, b) => {
+      return bannerOrder.indexOf(a.bannerType) - bannerOrder.indexOf(b.bannerType);
+    });
 
     return res.status(200).json({
       success: true,
-      count: banners.length,
-      data: banners
+      count: sortedBanners.length,
+      data: sortedBanners
     });
+
   } catch (error) {
+    console.error("Get Banners Error:", error.message);
     return res.status(500).json({
       success: false,
       message: error.message
     });
   }
-};   
-
+};

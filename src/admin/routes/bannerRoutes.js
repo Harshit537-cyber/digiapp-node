@@ -6,7 +6,7 @@ const verifyToken = require("../../middlewares/auth.middlewares");
 
 const { createBanner, getAllBanners, getBannerById, updateBanner, deleteBanner, searchBanners, getAppBanners } = require("../controllers/bannerController");
 
-router.post("/create", adminAuth,upload.single("image", 1), createBanner);
+router.post("/create", adminAuth,upload.single("image"), createBanner);
 
 router.get("/all", adminAuth, getAllBanners);
 
