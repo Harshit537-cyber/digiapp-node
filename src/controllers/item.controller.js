@@ -183,7 +183,11 @@ const getItemById = async (req, res) => {
 
     const item = await itemService.getItemById(id);
     if (!item) return response.error(res, "Item not found", 404);
-
+     const categoryDoc = await ItemCategory.findById(item.category);
+    
+    if (categoryDoc) {
+      item._doc.category = categoryDoc.name; 
+    }
     return response.success(res, "Item fetched", item);
   } catch (error) {
     return response.error(res, error.message, 500);
