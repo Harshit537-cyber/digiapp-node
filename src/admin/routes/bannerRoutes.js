@@ -12,7 +12,7 @@ router.get("/all", adminAuth, getAllBanners);
 
 router.get("/getById/:id", adminAuth, getBannerById);
 
-router.put("/update/:id", adminAuth, upload.single("image", 1), updateBanner);
+router.put("/update/:id", adminAuth, upload.single("image"), updateBanner);
 
 router.delete("/delete/:id", adminAuth, deleteBanner);
 
