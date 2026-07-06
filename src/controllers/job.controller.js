@@ -222,7 +222,14 @@ const getAllJobs = async (req, res) => {
 const getJobById = async (req, res) => {
   try {
     const job = await jobService.getJobById(req.params.id);
-    res.status(200).json({ success: true, data: job });
+      const catData = await JobsCategory.findById(job.category);
+    
+    const jobWithCategoryName = {
+        ...job.toObject(),
+        category: catData ? catData.name : job.category 
+    };
+
+    res.status(200).json({ success: true, data: jobWithCategoryName });
   } catch (error) {
     res.status(404).json({ success: false, message: error.message });
   }

@@ -7,7 +7,7 @@ const BloodRequest = require("../models/BloodRequest");
 const itemSchema = require('../models/Item')
 const fs = require("fs");
 const transactionSchema = require("../models/Transitionmodel");
-
+const JobsCategory = require("../../src/admin/models/JobsCategory")
 
 
 const createJob = async (jobData, files, userId) => {

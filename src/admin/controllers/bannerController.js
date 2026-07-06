@@ -225,20 +225,24 @@ exports.deleteBanner = async (req, res) => {
   }
 };
 
-exports.searchBanners =  async (req, res) => {
+exports.searchBanners =   async (req, res) => {
   try {
     const { q, position, isActive, page = 1, limit = 10 } = req.query;
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
     let query = {};
+
     if (q) {
-      query.$or = [
-        { title: { $regex: q, $options: 'i' } },
-        { description: { $regex: q, $options: 'i' } }
-      ];
+      query.name = { $regex: q, $options: 'i' }; 
     }
-    if (position) query.position = position;
-    if (isActive) query.isActive = isActive === 'true';
+
+    if (position) {
+      query.bannerType = position; 
+    }
+
+    if (isActive) {
+      query.isActive = isActive === 'true';
+    }
 
     const [banners, total] = await Promise.all([
       Banner.find(query)
@@ -261,10 +265,10 @@ exports.searchBanners =  async (req, res) => {
     });
 
   } catch (error) {
+    console.error("Search Error:", error.message);
     return res.status(500).json({ success: false, message: error.message });
   }
 };
-
 
 exports.getAppBanners = async (req, res) => {
   try {
