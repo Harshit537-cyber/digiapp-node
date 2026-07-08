@@ -28,7 +28,7 @@ router.get("/:id", jobController.getJobById);
 router.put("/update/:id", verifyToken, upload.array("images", 3), jobController.updateJob);
 router.post("/unblock", verifyToken, jobController.unlockJob)
 
-router.patch("/deactivate/:id", verifyToken, jobController.deactivateJob); 
+router.delete("/deactivate/:id", verifyToken, jobController.deactivateJob); 
 
 router.patch("/activate/:id", verifyToken, jobController.activateJob);
 

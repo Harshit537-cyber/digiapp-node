@@ -165,12 +165,19 @@ try {
 };
 
 
-const deactivateJob = async (req, res) => {
+const deactivateJob =  async (req, res) => {
   try {
-    const updatedJob = await jobService.deactivateJob(req.params.id, req.user.userId);
-    res.status(200).json({ success: true, message: "Post deactivated", data: updatedJob });
+    await jobService.deactivateJob(req.params.id, req.user.userId);
+    
+    res.status(200).json({ 
+      success: true, 
+      message: "Post has been permanently deleted from the database." 
+    });
   } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
+    res.status(500).json({ 
+      success: false, 
+      message: error.message 
+    });
   }
 };
 

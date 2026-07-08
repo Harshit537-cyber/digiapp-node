@@ -93,14 +93,16 @@ const deductCredits = async (userId, amount, reason, referenceId) => {
 
 const deactivateJob = async (jobId, userId) => {
   const job = await Job.findById(jobId);
+
   if (!job) throw new Error("Job not found");
 
   if (job.userId.toString() !== userId.toString()) {
-    throw new Error("Unauthorized: You can only deactivate your own posts");
+    throw new Error("Unauthorized: You can only delete your own posts");
   }
 
-  job.status = "closed";
-  return await job.save();
+  await Job.findByIdAndDelete(jobId); 
+
+  return { message: "Job deleted permanently from database" };
 };
 
 const getAllJobs = async (page, limit, category) => {
