@@ -314,12 +314,56 @@ const activateItem = async (req, res) => {
 
 
 
-const deactivateItem = async (req, res) => {
+const deactivateItem =  async (req, res) => {
+  const { id: itemId } = req.params;
+  const userId = req.user?.userId;
+
   try {
-    const item = await itemService.deactivateItem(req.params.id);
-    return response.success(res, "Item deactivated", item);
+    if (!mongoose.Types.ObjectId.isValid(itemId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid Item ID format."
+      });
+    }
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized. Please login again."
+      });
+    }
+
+    const item = await Item.findById(itemId);
+
+    if (!item) {
+      return res.status(404).json({
+        success: false,
+        message: "Item not found."
+      });
+    }
+
+
+    if (item.user.toString() !== userId.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: "Unauthorized: You can only delete your own items."
+      });
+    }
+
+    await Item.findByIdAndDelete(itemId);
+
+    return res.status(200).json({
+      success: true,
+      message: "Your item has been successfully and permanently removed."
+    });
+
   } catch (error) {
-    return response.error(res, error.message, 500);
+    console.error(`[DEACTIVATE_ITEM_ERROR] | ItemID: ${itemId} | UserID: ${userId} | Error: ${error.message}`);
+
+    return res.status(500).json({
+      success: false,
+      message: "An internal server error occurred while deleting the item."
+    });
   }
 };
 

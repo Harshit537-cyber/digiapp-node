@@ -44,7 +44,7 @@ router.put(
 
 router.delete('/delete/:id', verifyToken, itemController.deleteItem);
 router.patch('/activate/:id', verifyToken, itemController.activateItem);
-router.patch('/deactivate/:id', verifyToken, itemController.deactivateItem);
+router.delete('/deactivate/:id', verifyToken, itemController.deactivateItem);
 
 /* ================= DYNAMIC ROUTE (ALWAYS LAST) ================= */
 router.get('/:id', itemController.getItemById);     // ALWAYS last
