@@ -65,11 +65,12 @@ const postJob = async (req, res) => {
     const FEATURED_CREDITS = (jobCategory === "LOCAL_JOB") ? 10 : 50;
     const totalCredits = isFeatured ? config.credits + FEATURED_CREDITS : config.credits;
 
-let daysToExpire = 7; 
-    if (jobCategory === "LOCAL_JOB" && isFeatured) {
-        daysToExpire = 3; 
-    } else {
-        daysToExpire = 7; 
+ let daysToExpire = 7; 
+    
+    if (jobCategory === "LOCAL_JOB") {
+        daysToExpire = isFeatured ? 3 : 7; 
+    } else if (jobCategory === "PART_TIME_JOB" || jobCategory === "FULL_TIME_JOB") {
+        daysToExpire = 15; 
     }
 
     const expiryDate = new Date();
@@ -182,9 +183,12 @@ const getAllJobs = async (req, res) => {
     const category = req.query.category; 
 
     const { jobs, totalJobs, totalPages } = await jobService.getAllJobs(page, limit, category);
-  let updatedJobs = jobs;
- if (jobs && jobs.length > 0) {
-      const categoryIds = [...new Set(jobs.map(j => j.category?.toString()).filter(id => id))];
+  const now = new Date();
+    const activeJobs = jobs.filter(job => job.expiresAt && new Date(job.expiresAt) > now);
+  
+    let updatedJobs = activeJobs;
+ if (activeJobs.length > 0) {
+      const categoryIds = [...new Set(activeJobs.map(j => j.category?.toString()).filter(id => id))];
 
       const categoriesData = await JobsCategory.find({ _id: { $in: categoryIds } }).select('name');
 
@@ -193,7 +197,7 @@ const getAllJobs = async (req, res) => {
         catLookup[cat._id.toString()] = cat.name;
       });
 
-      updatedJobs = jobs.map(job => {
+      updatedJobs =activeJobs.map(job => {
         const j = job.toObject ? job.toObject() : JSON.parse(JSON.stringify(job));
         
         const catIdStr = j.category ? j.category.toString() : null;
@@ -218,6 +222,9 @@ const getAllJobs = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+
+
 
 const getJobById = async (req, res) => {
   try {

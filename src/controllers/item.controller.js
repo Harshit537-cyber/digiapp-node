@@ -59,6 +59,7 @@ const postItem = async (req, res) => {
       return response.error(res, `Invalid sub-category. Select from ${catData.name}`, 400);
     }
 
+
     const POST_COST = 25;
     const FEATURED_ADDON = 25;
     const isFeaturedTrue = String(isFeatured) === "true";

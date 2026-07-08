@@ -75,4 +75,7 @@ const jobSchema = new mongoose.Schema(
 
 jobSchema.index({ location: "2dsphere" });
 
+jobSchema.index({ "expiresAt": 1 }, { expireAfterSeconds: 0 });
+
+
 module.exports = mongoose.model("Job", jobSchema);

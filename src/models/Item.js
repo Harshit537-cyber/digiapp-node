@@ -40,9 +40,11 @@ const itemSchema = new mongoose.Schema({
 
   expiryDate: {
     type: Date,
-    default: () => Date.now() + 7 * 24 * 60 * 60 * 1000
+     required: true 
   }
 
 }, { timestamps: true });
 itemSchema.index({ location: "2dsphere" });
+itemSchema.index({ "expiryDate": 1 }, { expireAfterSeconds: 0 });
+
 module.exports = mongoose.model('Item', itemSchema);
