@@ -885,6 +885,7 @@ exports.createPlan = async (req, res) => {
 };
 
 
+
 exports.updatePlan = async (req, res) => {
   try {
     const { planId } = req.params;
@@ -915,6 +916,48 @@ exports.updatePlan = async (req, res) => {
       message: error.message || "Internal Server Error" 
     });
   }
+};
+
+exports.updateShopPlan = async (req, res) => {
+    try {
+        const { planId } = req.params;
+
+        const validShopPlans = ["shop_plan", "shop_lite", "shop_pro"];
+        
+        if (!validShopPlans.includes(planId)) {
+            return res.status(400).json({
+                success: false,
+                message: "Invalid Plan ID. This endpoint only updates Shop Plan, Shop Lite, or Shop Pro."
+            });
+        }
+
+        const updatedPlan = await PlanConfig.findOneAndUpdate(
+            { planId }, 
+            { $set: req.body }, 
+            { new: true, runValidators: true }
+        );
+
+        if (!updatedPlan) {
+            return res.status(404).json({ 
+                success: false, 
+                message: `Plan with ID '${planId}' was not found in the system.` 
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: `${planId.replace("_", " ").toUpperCase()} updated successfully`,
+            data: updatedPlan
+        });
+
+    } catch (error) {
+        console.error("Update Plan Error:", error);
+        const statusCode = error.name === 'ValidationError' ? 400 : 500;
+        return res.status(statusCode).json({ 
+            success: false, 
+            message: error.message || "Internal Server Error" 
+        });
+    }
 };
 
 

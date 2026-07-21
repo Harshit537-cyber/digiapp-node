@@ -33,6 +33,8 @@ router.post(
   userController.register
 );
 
+router.post("/firebase-auth", userController.verifyOTP);
+
 router.post("/update-fcm-token", verifyToken, userController.updateFCMToken);
 
 router.post("/login", userController.login);

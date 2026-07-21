@@ -3,6 +3,7 @@ const NotificationService = require("../../services/notificationService");
 const ScheduledNotification = require("../models/ScheduledNotification");
 
 
+
 exports.sendAdminNotification = async (req, res) => {
   try {
     const { targetType, targetValue, title, body, scheduledAt, imageUrl, extraData } = req.body;
@@ -91,3 +92,6 @@ case "USER_TYPE":
     res.status(500).json({ success: false, error: error.message });
   }
 };
+
+
+

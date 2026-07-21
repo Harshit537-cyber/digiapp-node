@@ -116,7 +116,6 @@ const postJob = async (req, res) => {
 
 try {
       let targetRole = "";
-      
       if (jobCategory === "LOCAL_JOB") {
         targetRole = "SERVICE_PROVIDER";
       } else if (jobCategory === "PART_TIME_JOB" || jobCategory === "FULL_TIME_JOB") {
@@ -638,6 +637,6 @@ const unlockJob =  async (req, res) => {
 };
 
 
-module.exports = { postJob, getAllJobs, getJobById, updateJob ,deactivateJob , activateJob , searchJobs ,getMyJobs , getTheNearbyLatestJob, getMyActiveJobs, 
+module.exports = { postJob, getAllJobs, getJobById, homeAPI,updateJob ,deactivateJob , activateJob , searchJobs ,getMyJobs , getTheNearbyLatestJob, getMyActiveJobs, 
   getMyDeactivatedJobs , toggleSaveJob,handleGetJobs,
-    getSavedJobs, getRecentJobs, homeAPI,getMyPostedJobs, searchMyJobsAdvanced, unlockJob};
+    getSavedJobs, getRecentJobs,getMyPostedJobs, searchMyJobsAdvanced, unlockJob};

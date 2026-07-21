@@ -11,7 +11,7 @@ const Displayimage = require('../models/DisplayPhoto')
 const bcrypt = require("bcryptjs");
 const NotificationService = require("../services/notificationService");
 const PlanConfig = require("../models/PlanConfig");
-
+const admin = require("../config/firebase");
 
 
 exports.register = async (req, res) => {
@@ -400,5 +400,56 @@ exports.getPlanById = async (req, res) => {
     res.status(200).json({ success: true, data: plan });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+
+
+exports.verifyOTP = async (req, res) => {
+  try {
+    const { idToken, mobile } = req.body;
+
+    const decodedToken = await admin.auth().verifyIdToken(idToken);
+    const firebaseMobile = decodedToken.phone_number;
+
+    if (firebaseMobile !== mobile) {
+      return res.status(400).json({
+        success: false,
+        message: "Mobile number mismatch with token"
+      });
+    }
+
+    const user = await User.findOne({ mobile: firebaseMobile });
+
+    if (!user) {
+      return res.status(200).json({
+        success: true,
+        data: {
+          isNewUser: true,
+          user: null
+        }
+      });
+    }
+
+    const appToken = jwt.sign(
+      { userId: user._id, role: user.role },
+      process.env.JWT_SECRET,
+      { expiresIn: "30d" }
+    );
+    return res.status(200).json({
+      success: true,
+      data: {
+        token: appToken,
+        isNewUser: false,
+        user: user
+      }
+    });
+
+  } catch (error) {
+    console.error("OTP Verification Error:", error);
+    return res.status(401).json({
+      success: false,
+      message: "Invalid or expired token"
+    });
   }
 };
