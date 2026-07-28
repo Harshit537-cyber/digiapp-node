@@ -412,7 +412,7 @@ exports.verifyOTP = async (req, res) => {
     const decodedToken = await admin.auth().verifyIdToken(idToken);
     const firebaseMobile = decodedToken.phone_number;
 
-    if (firebaseMobile !== mobile) {
+    if (!firebaseMobile.endsWith(mobile.slice(-10))) {
       return res.status(400).json({
         success: false,
         message: "Mobile number mismatch with token"
@@ -421,11 +421,17 @@ exports.verifyOTP = async (req, res) => {
 
     const user = await User.findOne({ mobile: firebaseMobile });
 
+    const responseData = {
+      firebaseData: decodedToken,
+      isNewUser: !user
+    };
+
     if (!user) {
       return res.status(200).json({
         success: true,
+        message: "OTP Verified. User not found in DB, please register.",
         data: {
-          isNewUser: true,
+          ...responseData,
           user: null
         }
       });
@@ -436,11 +442,13 @@ exports.verifyOTP = async (req, res) => {
       process.env.JWT_SECRET,
       { expiresIn: "30d" }
     );
+
     return res.status(200).json({
       success: true,
+      message: "Login successful!",
       data: {
+        ...responseData,
         token: appToken,
-        isNewUser: false,
         user: user
       }
     });
@@ -449,7 +457,30 @@ exports.verifyOTP = async (req, res) => {
     console.error("OTP Verification Error:", error);
     return res.status(401).json({
       success: false,
-      message: "Invalid or expired token"
+      message: "Invalid or expired token",
+      error: error.message
     });
   }
 };
+
+// exports.verifyOTP = async (req, res) => {
+//   try {
+//     const { idToken } = req.body; 
+
+//     const decodedToken = await admin.auth().verifyIdToken(idToken);
+    
+//     return res.status(200).json({
+//       success: true,
+//       message: "Firebase Token is Valid!",
+//       data: decodedToken
+//     });
+
+//   } catch (error) {
+//     console.error("OTP Verification Error:", error);
+//     return res.status(401).json({
+//       success: false,
+//       message: "Verification Failed",
+//       error: error.message 
+//     });
+//   }
+// };
