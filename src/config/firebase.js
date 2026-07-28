@@ -1,11 +1,13 @@
 const admin = require("firebase-admin");
-const path = require("path");
 
-const serviceAccount = require(path.resolve(__dirname, "../../src/service-account.json"));
+const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
 
+if (serviceAccount.private_key) {
+  serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
+}
+console.log("firebase initialise successfully")
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount)
 });
-
 
 module.exports = admin;
