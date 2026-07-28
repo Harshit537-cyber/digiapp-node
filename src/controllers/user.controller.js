@@ -463,24 +463,3 @@ exports.verifyOTP = async (req, res) => {
   }
 };
 
-// exports.verifyOTP = async (req, res) => {
-//   try {
-//     const { idToken } = req.body; 
-
-//     const decodedToken = await admin.auth().verifyIdToken(idToken);
-    
-//     return res.status(200).json({
-//       success: true,
-//       message: "Firebase Token is Valid!",
-//       data: decodedToken
-//     });
-
-//   } catch (error) {
-//     console.error("OTP Verification Error:", error);
-//     return res.status(401).json({
-//       success: false,
-//       message: "Verification Failed",
-//       error: error.message 
-//     });
-//   }
-// };
