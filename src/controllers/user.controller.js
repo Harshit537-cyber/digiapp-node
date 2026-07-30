@@ -17,11 +17,13 @@ const admin = require("../config/firebase");
 exports.register = async (req, res) => {
   try {
     const body = { ...req.body };
-    const { mobile, email, password, latitude, longitude, address, ...restBody } = body;
+    const { mobile, email, latitude,password, longitude, address, ...restBody } = body;
     console.log(mobile, latitude, longitude, address, restBody)
 
-    if (!mobile || !email || !password) {
-      return response.error(res, "Mobile number , email, password are required", 400);
+
+  if (!mobile || !email) {
+      if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+      return response.error(res, "Mobile number and email are required", 400);
     }
 
     const existingEmail = await User.findOne({ email }); // Adjust based on your userService
@@ -44,8 +46,12 @@ exports.register = async (req, res) => {
     }
 
 
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
+     let hashedPassword;
+    if (password) {
+      const salt = await bcrypt.genSalt(10);
+      hashedPassword = await bcrypt.hash(password, salt);
+    }
+
 
     let profilePhotoUrl = null;
 
@@ -62,7 +68,7 @@ exports.register = async (req, res) => {
       ...restBody,
       mobile,
       email,
-      password: hashedPassword,
+      ...(hashedPassword && { password: hashedPassword }), 
       profilePhoto: profilePhotoUrl,
       ...(address && { address }),
       credits: 100

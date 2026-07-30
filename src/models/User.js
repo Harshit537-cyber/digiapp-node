@@ -22,7 +22,7 @@ const UserSchema = new Schema(
     
     password: {
       type: String,
-      required: true
+      required: false
     },
     gender: {
       type: String,
