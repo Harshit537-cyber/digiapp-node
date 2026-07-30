@@ -12,7 +12,7 @@ const serviceSchema = new mongoose.Schema({
   serviceImages: [{ type: String }],
 });
 
-const businessSchema = new mongoose.Schema( 
+const businessSchema = new mongoose.Schema(
   {
     userId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -23,15 +23,15 @@ const businessSchema = new mongoose.Schema(
     // Text Fields
     businessName: { type: String, required: true },
     details: { type: String, required: true },
-   category: { 
-      type: mongoose.Schema.Types.ObjectId, 
-      ref: 'BusinessCategory', 
-      required: true 
+    category: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'BusinessCategory',
+      required: true
     },
 
-     subCategory: { 
-      type: String, 
-      required: true 
+    subCategory: {
+      type: String,
+      required: true
     },
     // location: { type: String, required: true },
     location: {
@@ -66,33 +66,30 @@ const businessSchema = new mongoose.Schema(
 
 
     subscription: {
-    planName: { type: String, enum: ["None", "Lite", "Pro+"], default: "Lite" },
-    planType: { type: String, enum: ["Monthly", "Yearly", "Trial"], default: "Trial" },
-    expiryDate: { type: Date },
-    isTrialUsed: { type: Boolean, default: false }
-},
-// Badge
-    backgroundImage: {
-      type: String,
-      default: "",
+      planName: { type: String, enum: ["None", "Lite", "Pro+", "Trial"], default: "Trial" },
+      planType: { type: String, enum: ["Monthly", "Yearly", "Trial", "None"], default: "Trial" },
+      expiryDate: { type: Date },
+      isTrialUsed: { type: Boolean, default: false }
     },
 
     // Admin Verification Flow
     status: {
       type: String,
-      enum: ["Pending", "Approved", "Rejected"],
+      enum: ["Pending", "Approved", "Rejected","Expired", "Active"],
       default: "Pending",
       required: true,
     },
 
-    
-    badge:{
-       type: String,
-      enum: ["Trusted", "Normal", "Trial"],
-      default: "Trial",
-      required: true,
-    },
 
+    badge: {
+      type: [String],
+      enum: ["None", "Verified", "Trusted", "Trial"],
+      default: "Trial",
+    },
+    backgroundImage: {
+      type: String,
+      default: "",
+    },
     services: [serviceSchema],
   },
   { timestamps: true },

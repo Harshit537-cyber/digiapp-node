@@ -35,16 +35,19 @@ const registerBusiness = async (req, res) => {
     }
     console.log(req.body)
    
-    const { businessName, details, category, subCategory, location, address, ownerName, mobileNumber, whatsappNumber } = req.body;
+       const { businessName, details, category, subCategory, location, address, ownerName, mobileNumber, whatsappNumber } = req.body;
     const { businessImages, nationalId, ownerImage } = req.files || {};
 
-     console.log('bussiness id : ', businessImages, nationalId, ownerImage );
-     console.log(businessImages,nationalId,ownerImage)
-
-    if (!businessImages || !nationalId || !ownerImage) {
-      return res.status(400).json({ success: false, message: "Please upload all required images (Business, ID, and Owner)" });
+    if (!businessImages || businessImages.length === 0) {
+      return res.status(400).json({ success: false, message: "Business image upload must compulsory" });
+    }
+    if (businessImages.length > 1) {
+      return res.status(400).json({ success: false, message: "In Free Trial You have upload only 1 image." });
     }
 
+    if (!nationalId || !ownerImage) {
+      return res.status(400).json({ success: false, message: "Please upload all required images (ID and Owner Image)" });
+    }
   const BusinessCategory = require('../admin/models/BusinessCategory'); 
     const catData = await BusinessCategory.findById(category);
     
@@ -66,7 +69,7 @@ const registerBusiness = async (req, res) => {
     const ownerImageUrl = await uploadToCloudinary(ownerImage[0].path);
 
   const trialExpiry = new Date();
-    trialExpiry.setMonth(trialExpiry.getMonth() + 3); 
+    trialExpiry.setMonth(trialExpiry.getMonth() + 1); 
 
     const businessData = {
       userId,
@@ -74,7 +77,7 @@ const registerBusiness = async (req, res) => {
       details,
       category,      
       subCategory,  
-      location,
+    location, 
       address,
       ownerName,
       mobileNumber,
@@ -82,11 +85,13 @@ const registerBusiness = async (req, res) => {
       businessImages: businessImageUrls,
       nationalIdImage: nationalIdUrl,
       ownerImage: ownerImageUrl,
-      badge: "Trial", 
       status: "Pending",
+      badge: ["Trial"],      
+      backgroundImage: "",   
+      services: [],   
       subscription: {
-        plan: "Lite",        
-        type: "Trial",      
+        planName: "Trial",        
+        planType: "Trial",      
         expiryDate: trialExpiry,
         isTrialUsed: true    
       }
