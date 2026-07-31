@@ -858,7 +858,14 @@ exports.displayImage = async (req, res) => {
 
 exports.createPlan = async (req, res) => {
   try {
-    const { planId, name, price, credits, category, description } = req.body;
+    const { planId, name, price, credits, category, duration, description } = req.body;
+
+    if (category === 'SUBSCRIPTION' && (!duration || duration === 'NONE')) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Subscription plans must have a duration (MONTHLY or YEARLY)!" 
+      });
+    }
 
     const existing = await PlanConfig.findOne({ planId });
     if (existing) {
@@ -869,8 +876,9 @@ exports.createPlan = async (req, res) => {
       planId,
       name,
       price,
-      credits,
+      credits: category === 'CREDIT' ? credits : 0, 
       category,
+      duration: category === 'SUBSCRIPTION' ? duration : 'NONE', 
       description
     });
 
@@ -883,7 +891,6 @@ exports.createPlan = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
-
 
 
 exports.updatePlan = async (req, res) => {
@@ -1083,5 +1090,71 @@ exports.searchPlans = async (req, res) => {
 
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+
+// user shops card plans list
+
+exports.getPlansByName =async (req, res) => {
+  try {
+    let { name } = req.query;
+
+    if (!name) {
+      return res.status(400).json({ success: false, message: "Plan name is required" });
+    }
+    let searchName = name.replace(/\s/g, '+'); 
+
+    searchName = searchName.trim();
+
+    console.log("Original from URL:", name);
+    console.log("Fixed Search Name:", searchName);
+
+    const plans = await PlanConfig.find({ 
+      category: 'SUBSCRIPTION', 
+      name: searchName 
+    }).sort({ price: 1 });
+
+    if (plans.length === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        message: `No plans found for ${searchName}.` 
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: plans
+    });
+
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.getShopPlanById = async (req, res) => {
+  try {
+    const { planId } = req.params; 
+
+    const plan = await PlanConfig.findOne({ planId });
+
+    if (!plan) {
+      return res.status(404).json({ 
+        success: false, 
+        message: "Plan not found!" 
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: plan
+    });
+
+  } catch (error) {
+    return res.status(500).json({ 
+      success: false, 
+      message: "Server error", 
+      error: error.message 
+    });
   }
 };

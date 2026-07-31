@@ -9,28 +9,16 @@ const mongoose = require("mongoose");
 
 exports.createOrder = async (req, res) => {
   try {
-    const { purpose, metadata, planId, businessId } = req.body;
-
-
+    const { planId, businessId } = req.body; 
     const userId = req.user.userId;
-
-    if (!userId) {
-      return res.status(401).json({
-        success: false,
-        message: "User ID missing in token payload. Please Login again."
-      });
-    }
-
 
     const plan = await PlanConfig.findOne({ planId });
     if (!plan) {
       return res.status(404).json({ success: false, message: "Invalid Plan selected." });
     }
-    const finalAmount = plan.price;
-
 
     const options = {
-      amount: finalAmount * 100,
+      amount: plan.price * 100, 
       currency: "INR",
       receipt: `rcpt_${Date.now()}`
     };
@@ -41,25 +29,25 @@ exports.createOrder = async (req, res) => {
       userId: userId,
       orderId: order.id,
       businessId: businessId || null,
-      amount: finalAmount,
-      category: purpose === 'CREDIT' ? 'CREDIT_PURCHASE' : 'PLAN_UPGRADE',
-      metadata: metadata,
+      amount: plan.price,
+      category: plan.category === 'CREDIT' ? 'CREDIT_PURCHASE' : 'PLAN_UPGRADE',
+      metadata: {
+        planConfigId: plan._id, 
+        planName: plan.name,    
+        planType: plan.duration, 
+        creditsToBanner: plan.credits,
+        planId: plan.planId
+      },
       status: 'Pending'
     });
 
     await newTransaction.save();
-
     res.json({ success: true, order });
 
   } catch (err) {
-    console.error("Order Logic Error:", err);
-    res.status(500).json({
-      success: false,
-      message: "Database Error: " + err.message
-    });
+    res.status(500).json({ success: false, message: err.message });
   }
 };
-
 
 exports.verifyPayment = async (req, res) => {
   try {
@@ -74,49 +62,54 @@ exports.verifyPayment = async (req, res) => {
     }
 
     const trx = await TransactionRecord.findOne({ orderId: razorpay_order_id });
-    if (!trx) {
-      return res.status(404).json({ success: false, message: "Transaction Record Not Found" });
-    }
-
+    if (!trx) return res.status(404).json({ success: false, message: "Transaction Record Not Found" });
 
     if (trx.category === 'CREDIT_PURCHASE') {
       await User.findByIdAndUpdate(trx.userId, {
-        $inc: { credits: trx.metadata.creditsAdded }
+        $inc: { credits: trx.metadata.creditsToBanner }
       });
     }
 
-    else if (trx.category === 'SUBSCRIPTION_UPGRADE') {
+    else if (trx.category === 'PLAN_UPGRADE') {
       const { planName, planType } = trx.metadata;
 
-      let newBadge = (planName === "Pro+") ? "Trusted" : "Normal";
+      let newBadges = ["Verified"];
+      if (planName === "Pro+") {
+        newBadges = ["Verified", "Trusted"];
+      }
 
-      let days = planType === "Monthly" ? 30 : 365;
       let newExpiry = new Date();
-      newExpiry.setDate(newExpiry.getDate() + days);
+      if (planType === "MONTHLY") {
+        newExpiry.setMonth(newExpiry.getMonth() + 1);
+      } else if (planType === "YEARLY") {
+        newExpiry.setFullYear(newExpiry.getFullYear() + 1);
+      }
 
       await Business.findOneAndUpdate(
-        { userId: trx.userId },
+        { _id: trx.businessId }, 
         {
-          badge: newBadge,
-          "subscription.planName": planName,
-          "subscription.planType": planType,
-          "subscription.expiryDate": newExpiry,
-          status: "Approved"
+          $set: {
+            "subscription.planName": planName,
+            "subscription.planType": planType === "MONTHLY" ? "Monthly" : "Yearly",
+            "subscription.expiryDate": newExpiry,
+            "badge": newBadges
+          },
+          $pull: { status: { $in: ["Expired", "Pending"] } }, 
+          $addToSet: { status: { $each: ["Approved", "Active"] } }
         }
       );
     }
+
     trx.status = 'Success';
     trx.paymentId = razorpay_payment_id;
     await trx.save();
 
-    res.json({ success: true, message: "DB Updated as per plan conditions" });
+    res.json({ success: true, message: "Payment Verified and Shop Activated Successfully!" });
 
   } catch (error) {
-    console.error("Verification Error:", error);
     res.status(500).json({ success: false, error: error.message });
   }
 };
-
 exports.getTransactionHistory = async (req, res) => {
   try {
     const tokenUserId = req.user.userId;

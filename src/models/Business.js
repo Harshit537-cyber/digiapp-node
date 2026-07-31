@@ -74,7 +74,7 @@ const businessSchema = new mongoose.Schema(
 
     // Admin Verification Flow
     status: {
-      type: String,
+      type: [String],
       enum: ["Pending", "Approved", "Rejected","Expired", "Active"],
       default: "Pending",
       required: true,

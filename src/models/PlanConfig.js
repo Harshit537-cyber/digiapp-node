@@ -7,6 +7,11 @@ const planConfigSchema = new mongoose.Schema({
   price: { type: Number, required: true },
   credits: { type: Number, default: 0 },
   category: { type: String, enum: ['CREDIT', 'SUBSCRIPTION'], required: true },
+   duration: { 
+    type: String, 
+    enum: ['MONTHLY', 'YEARLY', 'NONE'], 
+    default: 'NONE' 
+  },
   description: String
 }, { timestamps: true });
 

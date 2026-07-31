@@ -85,7 +85,7 @@ const registerBusiness = async (req, res) => {
       businessImages: businessImageUrls,
       nationalIdImage: nationalIdUrl,
       ownerImage: ownerImageUrl,
-      status: "Pending",
+      status:  ["Pending"],
       badge: ["Trial"],      
       backgroundImage: "",   
       services: [],   
@@ -112,6 +112,76 @@ const registerBusiness = async (req, res) => {
     });
   }
 };
+
+const addServiceListing = async (req, res) => {
+  try {
+    const { businessId, serviceTitle, serviceDetails } = req.body;
+    const business = await Business.findById(businessId);
+
+    if (!business) {
+      return res.status(404).json({ success: false, message: "Business not found" });
+    }
+    if (!business.status.includes("Active")) {
+      return res.status(403).json({ 
+        success: false, 
+        message: "Your subscription plan is not active. Please upgrade or renew to add services." 
+      });
+    }
+
+    const plan = business.subscription.planName;
+    const currentServiceCount = business.services.length;
+
+    let limit = 0;
+    if (plan === "Trial") {
+      return res.status(403).json({ 
+        success: false,
+        message: "Service listings are not allowed in the Free Trial. Please upgrade to Lite or Pro+ to use this feature." 
+      });
+    } else if (plan === "Lite") {
+      limit = 5;
+    } else if (plan === "Pro+") {
+      limit = 10;
+    }
+
+    if (currentServiceCount >= limit) {
+      return res.status(400).json({ 
+        success: false, 
+        message: `You have reached the maximum limit of ${limit} premium listings for the ${plan} plan.` 
+      });
+    }
+
+    let imageUrls = [];
+    if (req.files && req.files.length > 0) {
+      imageUrls = await Promise.all(
+        req.files.map((file) => uploadToCloudinary(file.path))
+      );
+    }
+
+    business.services.push({
+      serviceTitle,
+      serviceDetails,
+      serviceImages: imageUrls
+    });
+
+    await business.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Premium service listing added successfully!",
+      totalServicesInPlan: business.services.length
+    });
+
+  } catch (error) {
+    return res.status(500).json({ 
+      success: false,
+      message: "An internal server error occurred while adding the service listing.",
+      error: error.message 
+    });
+  }
+};
+
+
+
 
 // --- 2. Get All Businesses (With Pagination) ---
 const getAllBusinesses = async (req, res) => {

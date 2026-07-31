@@ -23,10 +23,13 @@ const {
     getPlans,
     deletePlan,
     getPlanById,
-    searchPlans
+    searchPlans,
+    getPlansByName,
+   getShopPlanById 
 } = require('../controllers/adminController'); // Correct path relative to adminRoutes.js
 const verifyAdmin = require('../middlewares/adminAuth'); // Ensure this path is correct
 const upload = require('../../middlewares/upload'); // Correct path relative to adminRoutes.js
+const verifyToken = require('../../middlewares/auth.middlewares');
 
 // Public Admin Routes (for Admin authentication)
 router.post('/register', adminRegister);
@@ -62,6 +65,8 @@ router.patch('/user-status/:id', verifyAdmin, toggleUserStatus);
 router.post('/users/create', verifyAdmin, upload.single('profilePhoto'), createUserByAdmin);
 router.put('/users/update/:id', verifyAdmin, upload.single('profilePhoto'), updateUserByAdmin);
 router.delete('/users/delete/:id', verifyAdmin, deleteUserByAdmin);
+router.get("/shops-plans", verifyToken, getPlansByName);
+router.get("/plan/:planId", verifyToken,  getShopPlanById );
 
 // Job Management Routes (Protected by verifyAdmin, with file uploads)
 router.get('/jobs', verifyAdmin, getAllJobsForAdmin);

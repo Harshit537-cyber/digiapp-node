@@ -13,7 +13,7 @@ const bloodRoutes = require("./admin/routes/bloodRequestRoutes");
 const saveJobsAll = require("./routes/saved.routes")
 const chatRoutes = require("./routes/chat.routes")
 const verifiedBusinessRoutes = require("./admin/routes/verifiedBusinessRoutes"); 
-
+const startExpiryCheck = require('./utils/expiryCron');
 const adminCategoryRoutes = require('../src/admin/routes/businessCategoryRoutes');
  const userCategoryRoutes  = require('./routes/user.routes');
 
@@ -28,6 +28,7 @@ require("dotenv").config();
 
 const app = express();
 connectDB();
+startExpiryCheck();
 
 
 app.use(cors()); 
