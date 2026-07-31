@@ -10,11 +10,26 @@ const mongoose = require("mongoose");
 exports.createOrder = async (req, res) => {
   try {
     const { planId, businessId } = req.body; 
-    const userId = req.user.userId;
+    const userId = req.user.userId; 
 
     const plan = await PlanConfig.findOne({ planId });
     if (!plan) {
       return res.status(404).json({ success: false, message: "Invalid Plan selected." });
+    }
+
+    if (plan.category === 'SUBSCRIPTION') {
+      if (!businessId) {
+        return res.status(400).json({ success: false, message: "Business ID is required for this plan." });
+      }
+
+      const business = await Business.findOne({ _id: businessId, userId: userId });
+      
+      if (!business) {
+        return res.status(403).json({ 
+          success: false, 
+          message: "Unauthorized! This business does not belong to your account." 
+        });
+      }
     }
 
     const options = {
@@ -25,10 +40,11 @@ exports.createOrder = async (req, res) => {
 
     const order = await razorpay.orders.create(options);
 
+    // 4. Transaction Record
     const newTransaction = new TransactionRecord({
       userId: userId,
       orderId: order.id,
-      businessId: businessId || null,
+      businessId: plan.category === 'SUBSCRIPTION' ? businessId : null,
       amount: plan.price,
       category: plan.category === 'CREDIT' ? 'CREDIT_PURCHASE' : 'PLAN_UPGRADE',
       metadata: {
@@ -45,6 +61,7 @@ exports.createOrder = async (req, res) => {
     res.json({ success: true, order });
 
   } catch (err) {
+    console.error("Order Error:", err);
     res.status(500).json({ success: false, message: err.message });
   }
 };
