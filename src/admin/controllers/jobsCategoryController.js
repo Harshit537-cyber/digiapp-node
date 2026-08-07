@@ -2,8 +2,6 @@ const JobsCategory = require('../models/JobsCategory');
 const cloudinary = require('../../config/cloudinary');
 const fs = require('fs');
 
-
-
 exports.createJobsCategory = async (req, res) => {
   try {
     const { name, type, subCategory } = req.body;

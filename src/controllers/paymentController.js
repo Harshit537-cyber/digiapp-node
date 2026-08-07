@@ -164,7 +164,7 @@ exports.getUserCredits = async (req, res) => {
     if (!user) {
       return res.status(404).json({
         success: false,
-        message: "User nahi mila"
+        message: "User Not found"
       });
     }
 
