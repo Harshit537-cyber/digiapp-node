@@ -59,26 +59,25 @@ exports.verifyOtp = async (req, res) => {
     if (!otpRecord) return res.status(400).json({ success: false, message: "Invalid or expired OTP" });
 
     await Otp.deleteOne({ _id: otpRecord._id });
+    
     const user = await User.findOne({ mobile });
     if (user) {
-      const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '30d' });
+      
+      const userResponse = user.toObject();
+      delete userResponse.password; 
+
       return res.status(200).json({
         success: true,
         newUser: false,
-        token,
-        user
+        user: userResponse
       });
+
     } else {
-      const registrationToken = jwt.sign(
-        { mobile, verified: true }, 
-        process.env.JWT_SECRET, 
-        { expiresIn: '15m' }
-      );
+      
       return res.status(200).json({
         success: true,
         newUser: true,
-        registrationToken,
-        message: "OTP Verified. ."
+        message: "OTP Verified. Please proceed to registration."
       });
     }
   } catch (error) {
