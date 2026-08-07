@@ -69,5 +69,6 @@ app.use("/api/admin/itemCategories", require("../src/admin/routes/itemCategories
 app.use("/api/user/itemCategories", require("../src/routes/userItemCategoriesRoutes"));
 app.use("/api/admin/banner", require("../src/admin/routes/bannerRoutes"));
 app.use("/api/review", require("../src/routes/reviewRoutes"))
+app.use("/api/otp", require("./routes/otpRoutes"));
 
 module.exports = app;
