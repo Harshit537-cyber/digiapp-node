@@ -113,74 +113,80 @@ const registerBusiness = async (req, res) => {
   }
 };
 
-const addServiceListing = async (req, res) => {
+const addBusinessServiceListing = async (req, res) => {
   try {
+    const loggedInUserId = req.user.id || req.user._id || req.user.userId;
     const { businessId, serviceTitle, serviceDetails } = req.body;
-    const business = await Business.findById(businessId);
 
+    // 1. Business Dhundo
+    const business = await Business.findById(businessId);
     if (!business) {
       return res.status(404).json({ success: false, message: "Business not found" });
     }
+
+    if (business.userId.toString() !== loggedInUserId.toString()) {
+      return res.status(403).json({ 
+        success: false, 
+        message: "Unauthorized! You can only add services to your own business." 
+      });
+    }
+
     if (!business.status.includes("Active")) {
       return res.status(403).json({ 
         success: false, 
-        message: "Your subscription plan is not active. Please upgrade or renew to add services." 
+        message: "Your subscription plan is not active." 
       });
     }
 
-    const plan = business.subscription.planName;
-    const currentServiceCount = business.services.length;
-
-    let limit = 0;
-    if (plan === "Trial") {
+    if (business.subscription.planName === "Trial") {
       return res.status(403).json({ 
         success: false,
-        message: "Service listings are not allowed in the Free Trial. Please upgrade to Lite or Pro+ to use this feature." 
+        message: "Service listings are not allowed in the Free Trial. Please upgrade." 
       });
-    } else if (plan === "Lite") {
-      limit = 5;
-    } else if (plan === "Pro+") {
-      limit = 10;
     }
 
-    if (currentServiceCount >= limit) {
+    const MAX_SERVICE_LIMIT = 5;
+    if (business.services.length >= MAX_SERVICE_LIMIT) {
       return res.status(400).json({ 
         success: false, 
-        message: `You have reached the maximum limit of ${limit} premium listings for the ${plan} plan.` 
+        message: `You have reached the maximum limit of ${MAX_SERVICE_LIMIT} service listings.` 
       });
     }
 
-    let imageUrls = [];
-    if (req.files && req.files.length > 0) {
-      imageUrls = await Promise.all(
-        req.files.map((file) => uploadToCloudinary(file.path))
-      );
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ success: false, message: "Please upload at least one image for the service." });
+    }
+    if (req.files.length > 1) {
+      return res.status(400).json({ success: false, message: "Only 1 image is allowed per service listing." });
     }
 
+    const result = await uploadToCloudinary(req.files[0].path);
+    const imageUrl = result; 
+
+    // 8. Service Push and Save
     business.services.push({
       serviceTitle,
       serviceDetails,
-      serviceImages: imageUrls
+      serviceImages: [imageUrl] 
     });
 
     await business.save();
 
     return res.status(200).json({
       success: true,
-      message: "Premium service listing added successfully!",
-      totalServicesInPlan: business.services.length
+      message: "Service listing added successfully!",
+      totalServices: business.services.length,
+  addedService: business.services[business.services.length - 1] 
     });
 
   } catch (error) {
     return res.status(500).json({ 
       success: false,
-      message: "An internal server error occurred while adding the service listing.",
+      message: "Internal server error.",
       error: error.message 
     });
   }
 };
-
-
 
 
 // --- 2. Get All Businesses (With Pagination) ---
@@ -877,5 +883,6 @@ module.exports = {
   deleteBusinessImage ,
   searchBusinesses,
   getMyPostedBusinesses,
-  searchMyBusinesses
+  searchMyBusinesses,
+  addBusinessServiceListing
 };

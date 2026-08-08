@@ -16,6 +16,7 @@ const handleOtpSending = async (mobile) => {
   return true;
 };
 
+
 exports.requestOtp = async (req, res) => {
   try {
     const { mobile } = req.body;

@@ -77,7 +77,7 @@ router.put(
 router.patch(
   '/:id/background-image',
   verifyToken,
-  upload.single('backgroundImage'), // 'backgroundImage' field name in Form-Data
+  upload.single('backgroundImage'), 
   businessController.setBackgroundImage
 );
 
@@ -104,6 +104,7 @@ router.delete(
 );
 
 
+router.post('/add-business-service', verifyToken,upload.array('serviceImages', 10), businessController.addBusinessServiceListing);
 
 
 router.patch(
