@@ -188,6 +188,82 @@ const addBusinessServiceListing = async (req, res) => {
   }
 };
 
+const addGalleryImages = async (req, res) => {
+  try {
+    const loggedInUserId = req.user.id || req.user._id || req.user.userId;
+    const { businessId } = req.body;
+
+    const business = await Business.findById(businessId);
+    if (!business) {
+      return res.status(404).json({ success: false, message: "Business not found" });
+    }
+
+    if (business.userId.toString() !== loggedInUserId.toString()) {
+      return res.status(403).json({ 
+        success: false, 
+        message: "Unauthorized! You can only manage your own business gallery." 
+      });
+    }
+
+    if (!business.status.includes("Active")) {
+      return res.status(403).json({ 
+        success: false, 
+        message: "Your business is not active. Please check your subscription status." 
+      });
+    }
+
+    const plan = business.subscription.planName;
+    let limit = 0;
+
+    if (plan === "Lite") {
+      limit = 5;
+    } else if (plan === "Pro+") {
+      limit = 15;
+    } else {
+      return res.status(403).json({ 
+        success: false, 
+        message: `Gallery images are not allowed in the ${plan} plan. Please upgrade.` 
+      });
+    }
+
+    const currentImagesCount = business.businessImages.length;
+    const newFilesCount = req.files ? req.files.length : 0;
+
+    if (newFilesCount === 0) {
+      return res.status(400).json({ success: false, message: "No images provided for upload." });
+    }
+
+    if (currentImagesCount + newFilesCount > limit) {
+      return res.status(400).json({ 
+        success: false, 
+        message: `Limit exceeded! Your ${plan} plan allows only ${limit} images. You already have ${currentImagesCount}.` 
+      });
+    }
+
+    const uploadPromises = req.files.map((file) => uploadToCloudinary(file.path));
+    const newImageUrls = await Promise.all(uploadPromises);
+
+    business.businessImages.push(...newImageUrls);
+    await business.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Gallery images uploaded successfully!",
+      totalImages: business.businessImages.length,
+      limitForPlan: limit,
+      gallery: business.businessImages 
+    });
+
+  } catch (error) {
+    return res.status(500).json({ 
+      success: false,
+      message: "Internal server error while uploading gallery images.",
+      error: error.message 
+    });
+  }
+};
+
+
 
 // --- 2. Get All Businesses (With Pagination) ---
 const getAllBusinesses = async (req, res) => {
@@ -884,5 +960,6 @@ module.exports = {
   searchBusinesses,
   getMyPostedBusinesses,
   searchMyBusinesses,
-  addBusinessServiceListing
+  addBusinessServiceListing,
+  addGalleryImages
 };

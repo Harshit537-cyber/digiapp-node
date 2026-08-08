@@ -105,7 +105,7 @@ router.delete(
 
 
 router.post('/add-business-service', verifyToken,upload.array('serviceImages', 10), businessController.addBusinessServiceListing);
-
+router.post("/add-gallery-images", verifyToken, upload.array("businessImages", 15), businessController.addGalleryImages);
 
 router.patch(
   '/:id/add-images',
