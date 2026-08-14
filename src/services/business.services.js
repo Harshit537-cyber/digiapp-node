@@ -11,18 +11,34 @@ const createBusiness = async (data) => {
 };
 
 // 2. Get All Businesses
-const getAllBusinesses = async (page = 1, limit = 10) => {
+const getAllBusinesses = async (page = 1, limit = 10, lat, lng, radius = 5) => {
   try {
     const skip = (page - 1) * limit;
+        let query = { status: 'Approved' };
+
+if (lat && lng) {
+      query.location = {
+        $near: {
+          $geometry: {
+            type: "Point",
+            coordinates: [parseFloat(lng), parseFloat(lat)], // MongoDB mein [lng, lat] hota hai
+          },
+          $maxDistance: radius * 1000, // KM ko Meters mein badla (e.g., 5km = 5000m)
+        },
+      };
+    }
+
+        let findQuery = Business.find(query);
+        if (!lat || !lng) {
+      findQuery = findQuery.sort({ createdAt: -1 });
+    }
 
     // Find only businesses with 'Approved' status
-    const businesses = await Business.find({ status: 'Approved' }) // <<<--- ADD THIS FILTER
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit);
+     const businesses = await findQuery.skip(skip).limit(limit);
+    let countQuery = { status: 'Approved' };
 
     // Count only the 'Approved' businesses
-    const totalBusinesses = await Business.countDocuments({ status: 'Approved' }); // <<<--- ADD THIS FILTER
+    const totalBusinesses = await Business.countDocuments(countQuery); // <<<--- ADD THIS FILTER
 
     return {
       businesses,

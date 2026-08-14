@@ -188,6 +188,35 @@ const addBusinessServiceListing = async (req, res) => {
   }
 };
 
+const getServiceListings = async (req, res) => {
+  try {
+    const { businessId } = req.params; 
+
+    const business = await Business.findById(businessId).select("services businessName");
+
+    if (!business) {
+      return res.status(404).json({
+        success: false,
+        message: "Business not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      businessName: business.businessName,
+      totalServices: business.services.length,
+      services: business.services, 
+    });
+    
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error while fetching services.",
+      error: error.message,
+    });
+  }
+};
+
 const addGalleryImages = async (req, res) => {
   try {
     const loggedInUserId = req.user.id || req.user._id || req.user.userId;
@@ -263,13 +292,41 @@ const addGalleryImages = async (req, res) => {
   }
 };
 
+const getGalleryImages = async (req, res) => {
+  try {
+    const { businessId } = req.params;
+    const business = await Business.findById(businessId).select("businessImages businessName");
 
+    if (!business) {
+      return res.status(404).json({
+        success: false,
+        message: "Business not found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      businessName: business.businessName,
+      totalImages: business.businessImages.length,
+      images: business.businessImages, 
+    });
+
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error while fetching gallery images.",
+      error: error.message,
+    });
+  }
+};
 
 // --- 2. Get All Businesses (With Pagination) ---
 const getAllBusinesses = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
+const { lat, lng } = req.query;
+    const radius = Math.min(parseInt(req.query.radius) || 5, 100); 
 
     const result = await businessService.getAllBusinesses(page, limit);
  let businesses = result.businesses || (Array.isArray(result) ? result : []);
@@ -322,6 +379,21 @@ const getAllBusinesses = async (req, res) => {
       };
     });
 
+ businessesWithRatings.sort((a, b) => {
+      const aIsTrusted = a.badge && a.badge.includes("Trusted") ? 1 : 0;
+      const bIsTrusted = b.badge && b.badge.includes("Trusted") ? 1 : 0;
+
+      if (aIsTrusted !== bIsTrusted) {
+        return bIsTrusted - aIsTrusted; // Trusted upar aayenge (1 > 0)
+      }
+
+      if (b.averageRating !== a.averageRating) {
+        return b.averageRating - a.averageRating; // High rating upar
+      }
+
+      return 0; // Agar sab kuch same hai toh order mat badlo
+    });
+    
      let finalData;
     if (result.businesses) {
       finalData = { ...result, businesses: businessesWithRatings };
@@ -349,11 +421,13 @@ const getAllBusinesses = async (req, res) => {
 const getBusinessById = async (req, res) => {
   try {
     const { id } = req.params;
+     console.log("Fetching details for Business ID:", id);
     const business = await businessService.getBusinessById(id);
 
     if (!business) {
       return res.status(404).json({ success: false, message: "Business not found" });
     }
+console.log("Business found:", business.businessName);
 
 const reviews = await Review.find({ businessId: id })
       .populate("userId", "fullName profilePhoto") 
@@ -365,6 +439,7 @@ const reviews = await Review.find({ businessId: id })
       : 0;
 
     const businessData = business.toObject ? business.toObject() : business;
+console.log(`Stats: Total Reviews - ${totalReviews}, Avg Rating - ${avg.toFixed(1)}`);
 
     return res.status(200).json({ success: true, data: {
         ...businessData,
