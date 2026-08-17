@@ -76,6 +76,7 @@ exports.verifyOtp = async (req, res) => {
 
       const userResponse = user.toObject();
       delete userResponse.password;
+       delete userResponse.token;
 
       return res.status(200).json({
         success: true,
