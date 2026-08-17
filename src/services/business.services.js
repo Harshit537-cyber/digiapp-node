@@ -21,9 +21,9 @@ if (lat && lng) {
         $near: {
           $geometry: {
             type: "Point",
-            coordinates: [parseFloat(lng), parseFloat(lat)], // MongoDB mein [lng, lat] hota hai
+            coordinates: [parseFloat(lng), parseFloat(lat)],
           },
-          $maxDistance: radius * 1000, // KM ko Meters mein badla (e.g., 5km = 5000m)
+          $maxDistance: radius * 1000, 
         },
       };
     }

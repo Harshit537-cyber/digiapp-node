@@ -54,27 +54,38 @@ exports.resendOtp = async (req, res) => {
 exports.verifyOtp = async (req, res) => {
   try {
     const { mobile, otp } = req.body;
-    if (!mobile || !otp) return res.status(400).json({ success: false, message: "Details missing" });
+    if (!mobile || !otp) {
+      return res.status(400).json({ success: false, message: "Details missing" });
+    }
 
     const otpRecord = await Otp.findOne({ mobile, otp });
-    if (!otpRecord) return res.status(400).json({ success: false, message: "Invalid or expired OTP" });
+    if (!otpRecord) {
+      return res.status(400).json({ success: false, message: "Invalid or expired OTP" });
+    }
 
     await Otp.deleteOne({ _id: otpRecord._id });
     
     const user = await User.findOne({ mobile });
+
     if (user) {
-      
+      const token = jwt.sign(
+        { userId: user._id }, 
+        process.env.JWT_SECRET , 
+        { expiresIn: "30d" } 
+      );
+
       const userResponse = user.toObject();
-      delete userResponse.password; 
+      delete userResponse.password;
 
       return res.status(200).json({
         success: true,
         newUser: false,
+        message: "Login successful",
+        token: token, 
         user: userResponse
       });
 
     } else {
-      
       return res.status(200).json({
         success: true,
         newUser: true,

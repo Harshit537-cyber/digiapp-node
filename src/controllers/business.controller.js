@@ -384,16 +384,16 @@ const { lat, lng } = req.query;
       const bIsTrusted = b.badge && b.badge.includes("Trusted") ? 1 : 0;
 
       if (aIsTrusted !== bIsTrusted) {
-        return bIsTrusted - aIsTrusted; // Trusted upar aayenge (1 > 0)
+        return bIsTrusted - aIsTrusted; 
       }
 
       if (b.averageRating !== a.averageRating) {
-        return b.averageRating - a.averageRating; // High rating upar
+        return b.averageRating - a.averageRating; 
       }
 
-      return 0; // Agar sab kuch same hai toh order mat badlo
+      return 0;
     });
-    
+
      let finalData;
     if (result.businesses) {
       finalData = { ...result, businesses: businessesWithRatings };
