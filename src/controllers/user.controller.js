@@ -26,7 +26,7 @@ exports.register = async (req, res) => {
       return response.error(res, "Mobile number and email are required", 400);
     }
 
-    const existingEmail = await User.findOne({ email }); // Adjust based on your userService
+    const existingEmail = await User.findOne({ email }); 
     if (existingEmail) {
       if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
       return response.error(res, "User already registered with this email address", 409);

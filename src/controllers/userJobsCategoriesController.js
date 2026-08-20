@@ -73,7 +73,7 @@ exports.getSubCategoriesByJobCategoryId = async (req, res) => {
 
 exports.getJobsByFilter = async (req, res) => {
   try {
-    const { jobCategory, categoryId, subCategory } = req.query;
+    const { jobCategory, categoryId, subCategory,lat, lng, radius  } = req.query;
 
     if (!jobCategory || !categoryId || !subCategory) {
       return res.status(400).json({
@@ -89,10 +89,24 @@ exports.getJobsByFilter = async (req, res) => {
       subCategory: { $regex: `^${subCategory.trim()}$`, $options: 'i' }
     };
 
+if (lat && lng) {
+      const radiusInKm = radius ? parseFloat(radius) : 5; 
+      const radiusInRadians = radiusInKm / 6378.1;
+
+      query.location = {
+        $geoWithin: {
+          $centerSphere: [[parseFloat(lng), parseFloat(lat)], radiusInRadians],
+        },
+      };
+    }
+
     const jobs = await Job.find(query)
       .populate('userId', 'name mobileNumber') 
       .populate('category', 'name') 
-      .sort({ createdAt: -1 }); 
+    .sort({ 
+        isFeatured: -1, 
+        createdAt: -1 
+      });
 
     res.status(200).json({
       success: true,

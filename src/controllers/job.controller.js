@@ -461,7 +461,7 @@ const getRecentJobs = async (req, res) => {
 
 const handleGetJobs = async (req, res) => {
   try {
-    const { jobCategory } = req.query; 
+    const { jobCategory, lat, lng, radius } = req.query; 
     const isLoggedIn = !!req.user; 
 
     let filter = {};
@@ -485,8 +485,21 @@ const handleGetJobs = async (req, res) => {
       
     }
 
-    // Database se jobs find karein
-    const jobs = await Job.find(filter).sort({ createdAt: -1 });
+if (lat && lng) {
+      const radiusInKm = radius ? parseFloat(radius) : 5; 
+      const radiusInRadians = radiusInKm / 6378.1; 
+
+      filter.location = {
+        $geoWithin: {
+          $centerSphere: [[parseFloat(lng), parseFloat(lat)], radiusInRadians],
+        },
+      };
+    }
+
+    filter.status = "active";
+
+
+    const jobs = await Job.find(filter).sort({ isFeatured: -1,createdAt: -1 });
 
     res.status(200).json({
       success: true,

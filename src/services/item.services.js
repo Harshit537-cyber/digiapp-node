@@ -10,7 +10,7 @@ const createItem = async (data) => {
 };
 
 /* ---------------- GET ALL (FEATURED FIRST) ---------------- */
-const getAllItems = async (page = 1, limit = 10, category, subCategory) => {
+const getAllItems = async (page = 1, limit = 10, category, subCategory,lat, lng, radius) => {
   const skip = (page - 1) * limit;
 
  let query = { isActive: true };
@@ -23,10 +23,21 @@ const getAllItems = async (page = 1, limit = 10, category, subCategory) => {
     query.subCategory = subCategory;
   }
 
+if (lat && lng) {
+    const radiusInKm = radius ? parseFloat(radius) : 5; // Default 5km radius
+    const radiusInRadians = radiusInKm / 6378.1;
+
+    query.location = {
+      $geoWithin: {
+        $centerSphere: [[parseFloat(lng), parseFloat(lat)], radiusInRadians],
+      },
+    };
+  }
+
   const totalItems = await Item.countDocuments(query);
 
   const items = await Item.find(query)
-    .sort({ isFeatured: -1, createdAt: -1 }) 
+    .sort({ isFeatured: -1, createdAt: -1 })
     .skip(skip)
     .limit(limit)
     .populate("user", "name");

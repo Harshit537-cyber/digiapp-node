@@ -127,7 +127,9 @@ const getAllItems = async (req, res) => {
     const category = req.query.category;
     const subCategory = req.query.subCategory;
 
-    const result = await itemService.getAllItems(page, limit, category, subCategory);
+  const { lat, lng, radius } = req.query;
+
+    const result = await itemService.getAllItems(page, limit, category, subCategory, lat, lng, radius);
 let items = result.items || (Array.isArray(result) ? result : []);
 
     if (items.length > 0) {
