@@ -320,93 +320,74 @@ const getGalleryImages = async (req, res) => {
   }
 };
 
-// --- 2. Get All Businesses (With Pagination) ---
 const getAllBusinesses = async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
-const { lat, lng } = req.query;
+    const { lat, lng } = req.query;
+    
     const radius = Math.min(parseInt(req.query.radius) || 5, 100); 
 
-    const result = await businessService.getAllBusinesses(page, limit);
- let businesses = result.businesses || (Array.isArray(result) ? result : []);
+    const result = await businessService.getAllBusinesses(page, limit, lat, lng, radius);
+    let businesses = result.businesses || [];
 
     if (businesses.length === 0) {
       return res.status(200).json({ success: true, data: result });
     }
 
-   const categoryIds = businesses.map(b => b.category).filter(id => id);  
-    const categoriesFromDb = await BusinessCategory.find({ _id: { $in: categoryIds } }).select('name');
-  const catLookup = {};
-    categoriesFromDb.forEach(c => {
-      catLookup[c._id.toString()] = c.name;
-    });
+const categoryIds = businesses
+  .map(b => b.category)
+  .filter(id => mongoose.Types.ObjectId.isValid(id));
+      const categoriesFromDb = await BusinessCategory.find({ _id: { $in: categoryIds } }).select('name');
+    const catLookup = {};
+    categoriesFromDb.forEach(c => { catLookup[c._id.toString()] = c.name; });
 
-
- const businessIds = businesses.map(b => new mongoose.Types.ObjectId(b._id));
+    const businessIds = businesses.map(b => new mongoose.Types.ObjectId(b._id));
     const ratingsData = await Review.aggregate([
-      {
-        $match: { businessId: { $in: businessIds } } 
-      },
-      {
-        $group: {
-          _id: "$businessId",
-          averageRating: { $avg: "$rating" },
-          totalReviews: { $sum: 1 }
-        }
-      }
+      { $match: { businessId: { $in: businessIds } } },
+      { $group: { _id: "$businessId", averageRating: { $avg: "$rating" }, totalReviews: { $sum: 1 } } }
     ]);
 
-      console.log("1. Total Businesses Found:", businesses.length);
-    console.log("2. Aggregation Result (ratingsData):", JSON.stringify(ratingsData, null, 2));
-
     const businessesWithRatings = businesses.map(business => {
-    const b = business.toObject ? business.toObject() : JSON.parse(JSON.stringify(business));
+      const b = business; 
+      const ratingInfo = ratingsData.find(r => r._id.toString() === b._id.toString());
       
-      const bId = b._id.toString();
-     
-     
-     const ratingInfo = ratingsData.find(r => r._id.toString() === bId);
-    
-             const categoryIdStr = b.category ? b.category.toString() : null;
-      const categoryName = catLookup[categoryIdStr] || null;
-    
-     return {
+      const distInKm = b.distance ? b.distance / 1000 : 0;
+      const distanceBucket = Math.floor(distInKm / 5); 
+
+      return {
         ...b,
-             category: categoryName,
+        category: catLookup[b.category?.toString()] || null,
         averageRating: ratingInfo ? parseFloat(ratingInfo.averageRating.toFixed(1)) : 0,
-        totalReviews: ratingInfo ? ratingInfo.totalReviews : 0
+        totalReviews: ratingInfo ? ratingInfo.totalReviews : 0,
+        distanceBucket: distanceBucket 
       };
     });
 
- businessesWithRatings.sort((a, b) => {
+    businessesWithRatings.sort((a, b) => {
+      if (a.distanceBucket !== b.distanceBucket) {
+        return a.distanceBucket - b.distanceBucket;
+      }
+
       const aIsTrusted = a.badge && a.badge.includes("Trusted") ? 1 : 0;
       const bIsTrusted = b.badge && b.badge.includes("Trusted") ? 1 : 0;
-
       if (aIsTrusted !== bIsTrusted) {
         return bIsTrusted - aIsTrusted; 
       }
 
       if (b.averageRating !== a.averageRating) {
-        return b.averageRating - a.averageRating; 
+        return b.averageRating - a.averageRating;
       }
 
       return 0;
     });
 
-     let finalData;
-    if (result.businesses) {
-      finalData = { ...result, businesses: businessesWithRatings };
-    } else if (Array.isArray(result)) {
-      finalData = businessesWithRatings;
-    } else {
-      finalData = { businesses: businessesWithRatings, ...result };
-    }
+    let finalData = { ...result, businesses: businessesWithRatings };
     
     return res.status(200).json({
       success: true,
       message: "Businesses retrieved successfully",
-    data: finalData,
+      data: finalData,
     });
   } catch (error) {
     return res.status(500).json({
@@ -416,7 +397,6 @@ const { lat, lng } = req.query;
     });
   }
 };
-
 // --- 3. Get Single Business By ID ---
 const getBusinessById = async (req, res) => {
   try {

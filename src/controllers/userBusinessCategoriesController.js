@@ -1,6 +1,7 @@
 const BusinessCategory = require('../admin/models/BusinessCategory'); 
 const Business = require("../models/Business");
-const mongoose = require('mongoose')
+const mongoose = require('mongoose');
+const Review = require("../models/Review");
 
 exports.getAllCategoriesForUsers = async (req, res) => {
   try {
@@ -70,9 +71,10 @@ exports.getSubCategoriesByCategoryId = async (req, res) => {
 
 
 
-exports.getBusinessesBySubCategory = async (req, res) => {
+exports.getBusinessesBySubCategory =  async (req, res) => {
   try {
-    const { subCategory, categoryId } = req.query;
+    const { subCategory, categoryId, lat, lng } = req.query;
+    const radius = Math.min(parseInt(req.query.radius) || 5, 300); 
 
     if (!subCategory || !categoryId) {
       return res.status(400).json({
@@ -81,35 +83,99 @@ exports.getBusinessesBySubCategory = async (req, res) => {
       });
     }
 
-    const query = {
-      category: new mongoose.Types.ObjectId(categoryId), 
-      subCategory: { $regex: `^${subCategory.trim()}$`, $options: 'i' } 
-    };
+    let pipeline = [];
 
-    const businesses = await Business.find(query)
-      .populate('category', 'name image') 
-      .sort({ createdAt: -1 }); 
+    if (lat && lng) {
+      pipeline.push({
+        $geoNear: {
+          near: {
+            type: "Point",
+            coordinates: [parseFloat(lng), parseFloat(lat)],
+          },
+          distanceField: "distance",
+          maxDistance: radius * 1000,
+          query: { 
+            category: new mongoose.Types.ObjectId(categoryId),
+            subCategory: { $regex: `^${subCategory.trim()}$`, $options: 'i' },
+          status: { $in: ['Approved', 'Active'] }
+          },
+          spherical: true,
+        },
+      });
+    } else {
+      pipeline.push({
+        $match: {
+          category: new mongoose.Types.ObjectId(categoryId),
+          subCategory: { $regex: `^${subCategory.trim()}$`, $options: 'i' },
+          status: 'Approved'
+        }
+      });
+    }
+
+    pipeline.push({
+      $lookup: {
+        from: "businesscategories", 
+        localField: "category",
+        foreignField: "_id",
+        as: "categoryDetails"
+      }
+    });
+    pipeline.push({ $unwind: { path: "$categoryDetails", preserveNullAndEmptyArrays: true } });
+
+    const businesses = await Business.aggregate(pipeline);
+
+    if (businesses.length === 0) {
+      return res.status(200).json({ success: true, count: 0, data: [] });
+    }
+
+    const businessIds = businesses.map(b => new mongoose.Types.ObjectId(b._id));
+    const ratingsData = await Review.aggregate([
+      { $match: { businessId: { $in: businessIds } } },
+      { $group: { _id: "$businessId", averageRating: { $avg: "$rating" }, totalReviews: { $sum: 1 } } }
+    ]);
+
+    const businessesWithRatings = businesses.map(b => {
+      const ratingInfo = ratingsData.find(r => r._id.toString() === b._id.toString());
+      
+      const distInKm = b.distance ? b.distance / 1000 : 0;
+      const distanceBucket = Math.floor(distInKm / 5);
+
+      return {
+        ...b,
+        category: b.categoryDetails ? b.categoryDetails.name : null,
+        averageRating: ratingInfo ? parseFloat(ratingInfo.averageRating.toFixed(1)) : 0,
+        totalReviews: ratingInfo ? ratingInfo.totalReviews : 0,
+        distanceBucket: distanceBucket
+      };
+    });
+
+    businessesWithRatings.sort((a, b) => {
+      if (a.distanceBucket !== b.distanceBucket) {
+        return a.distanceBucket - b.distanceBucket;
+      }
+
+      const aIsTrusted = a.badge && a.badge.includes("Trusted") ? 1 : 0;
+      const bIsTrusted = b.badge && b.badge.includes("Trusted") ? 1 : 0;
+      if (aIsTrusted !== bIsTrusted) {
+        return bIsTrusted - aIsTrusted; 
+      }
+
+      if (b.averageRating !== a.averageRating) {
+        return b.averageRating - a.averageRating;
+      }
+
+      return 0;
+    });
 
     res.status(200).json({
       success: true,
-      count: businesses.length,
-      data: businesses
+      count: businessesWithRatings.length,
+      data: businessesWithRatings
     });
 
   } catch (error) {
     console.error("Filter Business Error:", error.message);
-    
-    if (error.kind === 'ObjectId') {
-        return res.status(400).json({ success: false, message: "Invalid Category ID format" });
-    }
-
-    res.status(500).json({
-      success: false,
-      message: "Internal Server Error"
-    });
+    res.status(500).json({ success: false, message: "Internal Server Error" });
   }
 };
-
-
-
 

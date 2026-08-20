@@ -11,34 +11,39 @@ const createBusiness = async (data) => {
 };
 
 // 2. Get All Businesses
-const getAllBusinesses = async (page = 1, limit = 10, lat, lng, radius = 5) => {
+const getAllBusinesses =  async (page = 1, limit = 10, lat, lng, radius = 5) => {
   try {
     const skip = (page - 1) * limit;
-        let query = { status: 'Approved' };
+    let pipeline = [];
 
-if (lat && lng) {
-      query.location = {
-        $near: {
-          $geometry: {
+    if (lat && lng) {
+      pipeline.push({
+        $geoNear: {
+          near: {
             type: "Point",
             coordinates: [parseFloat(lng), parseFloat(lat)],
           },
-          $maxDistance: radius * 1000, 
+          distanceField: "distance", 
+          maxDistance: radius * 1000, 
+          query: { status: 'Approved' },
+          spherical: true,
         },
-      };
+      });
+    } else {
+      pipeline.push({ $match: { status: 'Approved' } });
+      pipeline.push({ $sort: { createdAt: -1 } });
     }
 
-        let findQuery = Business.find(query);
-        if (!lat || !lng) {
-      findQuery = findQuery.sort({ createdAt: -1 });
-    }
+    pipeline.push({
+      $facet: {
+        metadata: [{ $count: "total" }],
+        data: [{ $skip: skip }, { $limit: limit }],
+      },
+    });
 
-    // Find only businesses with 'Approved' status
-     const businesses = await findQuery.skip(skip).limit(limit);
-    let countQuery = { status: 'Approved' };
-
-    // Count only the 'Approved' businesses
-    const totalBusinesses = await Business.countDocuments(countQuery); // <<<--- ADD THIS FILTER
+    const result = await Business.aggregate(pipeline);
+    const businesses = result[0].data;
+    const totalBusinesses = result[0].metadata[0]?.total || 0;
 
     return {
       businesses,
@@ -50,7 +55,6 @@ if (lat && lng) {
     throw error;
   }
 };
-
 // 3. Get Business By ID
 const getBusinessById = async (id) => {
   try {
