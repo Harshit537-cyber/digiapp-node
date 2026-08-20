@@ -133,7 +133,9 @@ const deleteBloodRequest = async (req, res) => {
 /* 🔹 GET all blood requests */
 const getAllBloodRequests = async (req, res) => {
   try {
-    const requests = await bloodRequestService.getAllBloodRequests();
+        const { lat, lng, radius } = req.query;
+
+    const requests = await bloodRequestService.getAllBloodRequests(lat, lng, radius);
     return response.success(res, "All blood requests fetched", requests);
   } catch (error) {
     console.error(error);

@@ -17,8 +17,20 @@ const deleteBloodRequestById = async (id) => {
   return await BloodRequest.findByIdAndDelete(id);
 };
 
-const getAllBloodRequests = async () => {
-  return await BloodRequest.find().sort({ createdAt: -1 });
+const getAllBloodRequests = async (lat, lng, radius) => {
+    let query = {};
+    if (lat && lng) {
+    const radiusInKm = radius ? parseFloat(radius) : 5; 
+    const radiusInRadians = radiusInKm / 6378.1;
+
+    query.location = {
+      $geoWithin: {
+        $centerSphere: [[parseFloat(lng), parseFloat(lat)], radiusInRadians],
+      },
+    };
+  }
+
+  return await BloodRequest.find(query).sort({ createdAt: -1 });
 };
 
 const getBloodRequestById = async (id) => {
