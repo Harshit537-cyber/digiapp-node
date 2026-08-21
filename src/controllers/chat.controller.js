@@ -68,7 +68,7 @@ exports.getInbox = async (req, res) => {
           user: {
             _id: { $ifNull: ["$userDetails._id", "$otherUserId"] },
             fullName: { $ifNull: ["$userDetails.fullName", "Unknown User"] },
-            profilePic: "$userDetails.profilePic"
+            profilePic: "$userDetails.profilePhoto"
           }
         }
       },
@@ -98,14 +98,36 @@ exports.getChatMessages =  async (req, res) => {
       ]
     })
     .sort({ timestamp: 1 }) 
-    .populate("sender", "fullName profilePic")
-    .populate("receiver", "fullName profilePic");
+    .populate("sender", "fullName profilePhoto")
+    .populate("receiver", "fullName profilePhoto");
 
     console.log(`Found ${messages.length} messages between ${myId} and ${otherId}`);
 
     res.status(200).json(messages);
   } catch (error) {
     console.error("Error fetching history by User ID:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+exports.deleteMessage = async (req, res) => {
+  try {
+    const { messageId } = req.params;
+    const myId = req.user.userId || req.user.id; 
+
+    const message = await Message.findById(messageId);
+
+    if (!message) {
+      return res.status(404).json({ message: "Message not found" });
+    }
+
+    if (message.sender.toString() !== myId.toString()) {
+      return res.status(403).json({ message: "You can only delete your own messages" });
+    }
+    await Message.findByIdAndDelete(messageId);
+    res.status(200).json({ message: "Message deleted successfully" });
+
+  } catch (error) {
     res.status(500).json({ error: error.message });
   }
 };
