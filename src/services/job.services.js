@@ -262,20 +262,23 @@ const getNearbyLatestJobs = async (latitude, longitude) => {
     const now = new Date();
     /* ================= JOBS ================= */
 
-    const totalJobsCount = await Job.countDocuments({});
+    const totalJobsCount = await Job.countDocuments({jobCategory: "LOCAL_JOB", 
+      status: "active",
+      expiresAt: { $gte: now } });
 
     let jobs = await Job.aggregate([
       {
         $geoNear: {
           near: { type: "Point", coordinates: userCoordinates },
           distanceField: "distance",
-          maxDistance: 5000,
+          maxDistance: 10000,
           spherical: true,
         },
       },
       {
         $match: {
           status: "active",
+          jobCategory: "LOCAL_JOB",
           expiresAt: { $gte: new Date() },
         },
       },
@@ -287,9 +290,9 @@ const getNearbyLatestJobs = async (latitude, longitude) => {
         },
       },
       {
-        $sort: { createdAt: -1, distance: 1 },
+        $sort: {isFeatured: -1,  createdAt: -1, distance: 1 },
       },
-      { $limit: 30 },
+      { $limit: 40 },
     ]);
 
     /* Fill remaining jobs */
@@ -298,6 +301,8 @@ const getNearbyLatestJobs = async (latitude, longitude) => {
 
       const extraJobs = await Job.find({
         status: "active",
+          jobCategory: "LOCAL_JOB",
+          expiresAt: { $gte: now },
         _id: { $nin: jobs.map((j) => j._id) },
       })
         .sort({ isFeatured: -1, createdAt: -1 })
@@ -587,3 +592,7 @@ module.exports = {
   deductCredits,
   getJobsList,
 };
+
+
+
+
