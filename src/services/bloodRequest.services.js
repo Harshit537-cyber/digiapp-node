@@ -73,7 +73,6 @@ const getUrgentAndLast24HoursRequests = async () => {
 };
 
 
-// Sab exports ek saath niche likhein
 module.exports = {
   createBloodRequest,
   updateBloodRequest,
