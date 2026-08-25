@@ -12,6 +12,7 @@ const bcrypt = require("bcryptjs");
 const NotificationService = require("../services/notificationService");
 const PlanConfig = require("../models/PlanConfig");
 const admin = require("../config/firebase");
+const moment = require("moment");
 
 
 exports.register = async (req, res) => {
@@ -469,3 +470,77 @@ exports.verifyOTP = async (req, res) => {
   }
 };
 
+exports.getUserGrowthStats = async (req, res) => {
+  try {
+    const adminId = req.user.id || req.user._id ||req.user.userId;
+
+    if (!adminId) {
+      return res.status(401).json({ success: false, message: "Unauthorized: No user ID found" });
+    }
+
+
+    const { filter } = req.query; 
+
+    let startDate, endDate, format, unit;
+
+    // Filter logic
+    if (filter === "weekly") {
+      startDate = moment().subtract(7, "days").startOf("day");
+      endDate = moment().endOf("day");
+      format = "%Y-%m-%d";
+      unit = "days";
+    } else if (filter === "yearly") {
+      startDate = moment().subtract(1, "year").startOf("month");
+      endDate = moment().endOf("month");
+      format = "%Y-%m";
+      unit = "months";
+    } else {
+      startDate = moment().subtract(30, "days").startOf("day");
+      endDate = moment().endOf("day");
+      format = "%Y-%m-%d";
+      unit = "days";
+    }
+
+    const stats = await User.aggregate([
+      {
+        $match: {
+          createdAt: { $gte: startDate.toDate(), $lte: endDate.toDate() },
+        },
+      },
+      {
+        $group: {
+          _id: { $dateToString: { format: format, date: "$createdAt" } },
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { _id: 1 } },
+    ]);
+
+    const resultData = [];
+    const labels = [];
+    let current = moment(startDate);
+
+    while (current <= endDate) {
+      const dateStr = current.format(unit === "months" ? "YYYY-MM" : "YYYY-MM-DD");
+      const labelStr = current.format(unit === "months" ? "MMM YYYY" : "MMM DD");
+      
+      const found = stats.find((item) => item._id === dateStr);
+      
+      labels.push(labelStr);
+      resultData.push(found ? found.count : 0);
+      
+      current.add(1, unit);
+    }
+
+    res.status(200).json({
+      success: true,
+      requestedBy: adminId, 
+      labels,
+      data: resultData,
+      totalUsersInRange: resultData.reduce((a, b) => a + b, 0),
+    });
+
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};

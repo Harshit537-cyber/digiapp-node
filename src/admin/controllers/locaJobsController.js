@@ -278,7 +278,7 @@ exports.getRegularUserLocalJobs = async (req, res) => {
         },
       };
     }
-
+// 6a82f2c865ca038e6de10728
     const totalJobs = await Job.countDocuments(query);
 
     const jobs = await Job.find(query)

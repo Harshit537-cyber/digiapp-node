@@ -5,6 +5,7 @@ const verifyToken = require("../middlewares/auth.middlewares");
 const upload = require("../middlewares/upload");
 const userController = require("../controllers/user.controller");
 const cat = require("../controllers/category.controller");
+const verifyAdmin = require("../admin/middlewares/adminAuth");
 
 // -------------------- USER ROUTES --------------------
 
@@ -61,6 +62,8 @@ router.delete(
   verifyToken,
   userController.deleteUser
 );
+
+router.get("/graph-stats",verifyAdmin, userController.getUserGrowthStats);
 
 // -------------------- CATEGORY ROUTES --------------------
 
