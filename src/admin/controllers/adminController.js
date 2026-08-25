@@ -14,7 +14,7 @@ const PlanConfig = require("../../models/PlanConfig");
 // --- REGISTER API (For Admins) ---
 exports.adminRegister = async (req, res) => {
   try {
-    const { email, password , name} = req.body;
+    const { email, password, name } = req.body;
 
     const existingAdmin = await Admin.findOne({ email });
     if (existingAdmin) {
@@ -82,50 +82,50 @@ exports.adminLogin = async (req, res) => {
 
 // Search Admins
 exports.searchAdmins = async (req, res) => {
-    try {
-        const { query } = req.query; 
+  try {
+    const { query } = req.query;
 
-        if (!query) {
-            return res.status(400).json({ message: "Search term is required" });
-        }
-
-        // Search logic using $or
-        const admins = await Admin.find({
-            $or: [
-                { name: { $regex: query, $options: 'i' } },  
-                { email: { $regex: query, $options: 'i' } } 
-            ]
-        }).select('-password'); 
-
-        res.status(200).json({
-            count: admins.length,
-            admins
-        });
-    } catch (error) {
-        res.status(500).json({ message: "Search failed", error: error.message });
+    if (!query) {
+      return res.status(400).json({ message: "Search term is required" });
     }
+
+    // Search logic using $or
+    const admins = await Admin.find({
+      $or: [
+        { name: { $regex: query, $options: 'i' } },
+        { email: { $regex: query, $options: 'i' } }
+      ]
+    }).select('-password');
+
+    res.status(200).json({
+      count: admins.length,
+      admins
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Search failed", error: error.message });
+  }
 };
 
 exports.getAllAdmins = async (req, res) => {
   try {
-      const page = parseInt(req.query.page) || 1;
+    const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
-     const skip = (page - 1) * limit;
+    const skip = (page - 1) * limit;
     const admins = await Admin.find().select("-password")
-     .skip(skip)
+      .skip(skip)
       .limit(limit)
-      .sort({createdAt: -1});
+      .sort({ createdAt: -1 });
 
 
 
-  const totalAdmins = await Admin.countDocuments();
+    const totalAdmins = await Admin.countDocuments();
     res.status(200).json({
-       page,
+      page,
       limit,
       totalAdmins,
       admins
-     
-  });
+
+    });
   } catch (error) {
     console.error("Error in getAllAdmins:", error);
     res.status(500).json({ message: "Server Error", error: error.message });
@@ -206,13 +206,24 @@ exports.getDashboardStats = async (req, res) => {
       updatedAt: { $gte: thirtyDaysAgo },
     });
 
-
-       const partTimeJobs = await Job.countDocuments({ jobCategory: "PART_TIME_JOB" });
+    const totalJobs = await Job.countDocuments();
+    const partTimeJobs = await Job.countDocuments({ jobCategory: "PART_TIME_JOB" });
 
     // 6. Full Time Jobs Count
+
     const fullTimeJobs = await Job.countDocuments({ jobCategory: "FULL_TIME_JOB" });
-     const totalBusinesses = await Business.countDocuments();
-     const totalItems = await Item.countDocuments();
+    const activeLocalJobs = await Job.countDocuments({
+      jobCategory: "LOCAL_JOB",
+      status: "active"
+    });
+
+
+    const totalBusinesses = await Business.countDocuments();
+
+    const liteBusinesses = await Business.countDocuments({ "subscription.planName": "Lite" }); // LITE COUNT
+    const proPlusBusinesses = await Business.countDocuments({ "subscription.planName": "Pro+" }); // PRO+ COUNT
+    const trialBusinesses = await Business.countDocuments({ "subscription.planName": "Trial" });
+    const totalItems = await Item.countDocuments();
     // 7. Total Blood Requests Count
     const totalBloodRequests = await BloodRequest.countDocuments();
 
@@ -226,10 +237,15 @@ exports.getDashboardStats = async (req, res) => {
         activeNow,
         monthlyActive,
         totalDownloads,
-        partTimeJobs,         
-        fullTimeJobs,         
-        totalBloodRequests,   
+        totalJobs,
+        partTimeJobs,
+        fullTimeJobs,
+        activeLocalJobs,
+        totalBloodRequests,
         totalBusinesses,
+        liteBusinesses,        // Added
+        proPlusBusinesses,     // Added
+        trialBusinesses,
         totalItems,
       },
     });
@@ -861,9 +877,9 @@ exports.createPlan = async (req, res) => {
     const { planId, name, price, credits, category, duration, description } = req.body;
 
     if (category === 'SUBSCRIPTION' && (!duration || duration === 'NONE')) {
-      return res.status(400).json({ 
-        success: false, 
-        message: "Subscription plans must have a duration (MONTHLY or YEARLY)!" 
+      return res.status(400).json({
+        success: false,
+        message: "Subscription plans must have a duration (MONTHLY or YEARLY)!"
       });
     }
 
@@ -876,9 +892,9 @@ exports.createPlan = async (req, res) => {
       planId,
       name,
       price,
-      credits: category === 'CREDIT' ? credits : 0, 
+      credits: category === 'CREDIT' ? credits : 0,
       category,
-      duration: category === 'SUBSCRIPTION' ? duration : 'NONE', 
+      duration: category === 'SUBSCRIPTION' ? duration : 'NONE',
       description
     });
 
@@ -896,17 +912,17 @@ exports.createPlan = async (req, res) => {
 exports.updatePlan = async (req, res) => {
   try {
     const { planId } = req.params;
-    
+
     const updatedPlan = await PlanConfig.findOneAndUpdate(
       { planId },
-      { $set: req.body }, 
+      { $set: req.body },
       { new: true, runValidators: true }
     );
 
     if (!updatedPlan) {
-      return res.status(404).json({ 
-        success: false, 
-        message: "Plan not found with the given ID" 
+      return res.status(404).json({
+        success: false,
+        message: "Plan not found with the given ID"
       });
     }
 
@@ -918,53 +934,53 @@ exports.updatePlan = async (req, res) => {
 
   } catch (error) {
     const statusCode = error.name === 'ValidationError' ? 400 : 500;
-    res.status(statusCode).json({ 
-      success: false, 
-      message: error.message || "Internal Server Error" 
+    res.status(statusCode).json({
+      success: false,
+      message: error.message || "Internal Server Error"
     });
   }
 };
 
 exports.updateShopPlan = async (req, res) => {
-    try {
-        const { planId } = req.params;
+  try {
+    const { planId } = req.params;
 
-        const validShopPlans = ["shop_plan", "shop_lite", "shop_pro"];
-        
-        if (!validShopPlans.includes(planId)) {
-            return res.status(400).json({
-                success: false,
-                message: "Invalid Plan ID. This endpoint only updates Shop Plan, Shop Lite, or Shop Pro."
-            });
-        }
+    const validShopPlans = ["shop_plan", "shop_lite", "shop_pro"];
 
-        const updatedPlan = await PlanConfig.findOneAndUpdate(
-            { planId }, 
-            { $set: req.body }, 
-            { new: true, runValidators: true }
-        );
-
-        if (!updatedPlan) {
-            return res.status(404).json({ 
-                success: false, 
-                message: `Plan with ID '${planId}' was not found in the system.` 
-            });
-        }
-
-        return res.status(200).json({
-            success: true,
-            message: `${planId.replace("_", " ").toUpperCase()} updated successfully`,
-            data: updatedPlan
-        });
-
-    } catch (error) {
-        console.error("Update Plan Error:", error);
-        const statusCode = error.name === 'ValidationError' ? 400 : 500;
-        return res.status(statusCode).json({ 
-            success: false, 
-            message: error.message || "Internal Server Error" 
-        });
+    if (!validShopPlans.includes(planId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid Plan ID. This endpoint only updates Shop Plan, Shop Lite, or Shop Pro."
+      });
     }
+
+    const updatedPlan = await PlanConfig.findOneAndUpdate(
+      { planId },
+      { $set: req.body },
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedPlan) {
+      return res.status(404).json({
+        success: false,
+        message: `Plan with ID '${planId}' was not found in the system.`
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: `${planId.replace("_", " ").toUpperCase()} updated successfully`,
+      data: updatedPlan
+    });
+
+  } catch (error) {
+    console.error("Update Plan Error:", error);
+    const statusCode = error.name === 'ValidationError' ? 400 : 500;
+    return res.status(statusCode).json({
+      success: false,
+      message: error.message || "Internal Server Error"
+    });
+  }
 };
 
 
@@ -979,23 +995,23 @@ exports.deletePlan = async (req, res) => {
     const deletedPlan = await PlanConfig.findOneAndDelete({ planId });
 
     if (!deletedPlan) {
-      return res.status(404).json({ 
-        success: false, 
-        message: `Plan with ID '${planId}' not found!` 
+      return res.status(404).json({
+        success: false,
+        message: `Plan with ID '${planId}' not found!`
       });
     }
 
     return res.status(200).json({
       success: true,
       message: "Plan deleted successfully",
-      deletedId: planId 
+      deletedId: planId
     });
 
   } catch (error) {
-    res.status(500).json({ 
-      success: false, 
-      message: "Internal Server Error", 
-      error: error.message 
+    res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+      error: error.message
     });
   }
 };
@@ -1011,7 +1027,7 @@ exports.getPlans = async (req, res) => {
         .sort({ category: 1, price: 1 })
         .skip(skip)
         .limit(limit)
-        .lean(), 
+        .lean(),
       PlanConfig.countDocuments()
     ]);
 
@@ -1028,10 +1044,10 @@ exports.getPlans = async (req, res) => {
     });
 
   } catch (error) {
-    res.status(500).json({ 
-      success: false, 
-      message: "Error fetching plans", 
-      error: error.message 
+    res.status(500).json({
+      success: false,
+      message: "Error fetching plans",
+      error: error.message
     });
   }
 };
@@ -1041,12 +1057,12 @@ exports.getPlanById = async (req, res) => {
   try {
     const { planId } = req.params;
 
-    const plan = await PlanConfig.findOne({ planId }).lean(); 
+    const plan = await PlanConfig.findOne({ planId }).lean();
 
     if (!plan) {
-      return res.status(404).json({ 
-        success: false, 
-        message: `Plan with ID ${planId} not found!` 
+      return res.status(404).json({
+        success: false,
+        message: `Plan with ID ${planId} not found!`
       });
     }
 
@@ -1056,10 +1072,10 @@ exports.getPlanById = async (req, res) => {
     });
 
   } catch (error) {
-    res.status(500).json({ 
-      success: false, 
-      message: "Error fetching plan details", 
-      error: error.message 
+    res.status(500).json({
+      success: false,
+      message: "Error fetching plan details",
+      error: error.message
     });
   }
 };
@@ -1067,16 +1083,16 @@ exports.getPlanById = async (req, res) => {
 
 exports.searchPlans = async (req, res) => {
   try {
-    const { q } = req.query; 
-    
+    const { q } = req.query;
+
     let filter = {};
 
     if (q) {
       filter.$or = [
-        { name: { $regex: q, $options: 'i' } },      
-        { description: { $regex: q, $options: 'i' } }, 
-        { planId: { $regex: q, $options: 'i' } },      
-        { category: { $regex: q, $options: 'i' } }     
+        { name: { $regex: q, $options: 'i' } },
+        { description: { $regex: q, $options: 'i' } },
+        { planId: { $regex: q, $options: 'i' } },
+        { category: { $regex: q, $options: 'i' } }
       ];
     }
 
@@ -1096,29 +1112,29 @@ exports.searchPlans = async (req, res) => {
 
 // user shops card plans list
 
-exports.getPlansByName =async (req, res) => {
+exports.getPlansByName = async (req, res) => {
   try {
     let { name } = req.query;
 
     if (!name) {
       return res.status(400).json({ success: false, message: "Plan name is required" });
     }
-    let searchName = name.replace(/\s/g, '+'); 
+    let searchName = name.replace(/\s/g, '+');
 
     searchName = searchName.trim();
 
     console.log("Original from URL:", name);
     console.log("Fixed Search Name:", searchName);
 
-    const plans = await PlanConfig.find({ 
-      category: 'SUBSCRIPTION', 
-      name: searchName 
+    const plans = await PlanConfig.find({
+      category: 'SUBSCRIPTION',
+      name: searchName
     }).sort({ price: 1 });
 
     if (plans.length === 0) {
-      return res.status(404).json({ 
-        success: false, 
-        message: `No plans found for ${searchName}.` 
+      return res.status(404).json({
+        success: false,
+        message: `No plans found for ${searchName}.`
       });
     }
 
@@ -1134,14 +1150,14 @@ exports.getPlansByName =async (req, res) => {
 
 exports.getShopPlanById = async (req, res) => {
   try {
-    const { planId } = req.params; 
+    const { planId } = req.params;
 
     const plan = await PlanConfig.findOne({ planId });
 
     if (!plan) {
-      return res.status(404).json({ 
-        success: false, 
-        message: "Plan not found!" 
+      return res.status(404).json({
+        success: false,
+        message: "Plan not found!"
       });
     }
 
@@ -1151,10 +1167,10 @@ exports.getShopPlanById = async (req, res) => {
     });
 
   } catch (error) {
-    return res.status(500).json({ 
-      success: false, 
-      message: "Server error", 
-      error: error.message 
+    return res.status(500).json({
+      success: false,
+      message: "Server error",
+      error: error.message
     });
   }
 };
