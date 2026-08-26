@@ -64,6 +64,7 @@ router.delete(
 );
 
 router.get("/graph-stats",verifyAdmin, userController.getUserGrowthStats);
+router.get("/get-summary", verifyAdmin, userController.getUserSummaryStats);
 
 // -------------------- CATEGORY ROUTES --------------------
 

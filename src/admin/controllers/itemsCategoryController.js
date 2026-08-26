@@ -101,13 +101,26 @@ exports.searchItemCategory = async (req, res) => {
 
 exports.getAllItemCategories = async (req, res) => {
   try {
-    const categories = await ItemCategory.find({ status: true }).sort({ name: 1 });
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const totalCategories = await ItemCategory.countDocuments();
+
+    const categories = await ItemCategory.find({})
+      .sort({ name: 1 }) 
+      .skip(skip)        
+      .limit(limit);    
 
     res.status(200).json({
       success: true,
-      count: categories.length,
+      count: categories.length,     
+      totalItems: totalCategories,  
+      currentPage: page,
+      totalPages: Math.ceil(totalCategories / limit),
       data: categories
     });
+
   } catch (error) {
     console.error("Get All Item Categories Error:", error.message);
     res.status(500).json({ success: false, message: "Internal Server Error" });

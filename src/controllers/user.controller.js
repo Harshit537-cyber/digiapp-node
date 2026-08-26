@@ -544,3 +544,54 @@ exports.getUserGrowthStats = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+
+
+exports.getUserSummaryStats = async (req, res) => {
+  try {
+    const adminId = req.user.id || req.user._id || req.user.userId;
+    if (!adminId) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
+
+    const stats = await User.aggregate([
+      {
+        $facet: {
+          statusCount: [
+            { $group: { _id: "$status", count: { $sum: 1 } } }
+          ],
+          roleCount: [
+            { $group: { _id: "$role", count: { $sum: 1 } } }
+          ],
+          genderCount: [
+            { $group: { _id: "$gender", count: { $sum: 1 } } }
+          ],
+          // 4. Total Users
+          total: [
+            { $count: "count" }
+          ]
+        }
+      }
+    ]);
+
+    const formatStats = (arr) => {
+      return arr.reduce((acc, curr) => {
+        acc[curr._id] = curr.count;
+        return acc;
+      }, {});
+    };
+
+    res.status(200).json({
+      success: true,
+      data: {
+        totalUsers: stats[0].total[0]?.count || 0,
+        byStatus: formatStats(stats[0].statusCount),
+        byRole: formatStats(stats[0].roleCount),
+        byGender: formatStats(stats[0].genderCount)
+      }
+    });
+
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
