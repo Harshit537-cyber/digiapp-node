@@ -4,6 +4,7 @@ const fs = require("fs");
 const mongoose = require("mongoose");
 const Admin = require("../../admin/models/Admin");
 const User = require("../../models/User");
+const JobUnlock = require("../../models/JobUnlock");
 
 const getSingleValue = (val) => Array.isArray(val) ? val[0] : val;
 
@@ -301,16 +302,86 @@ exports.getNonFullTimeJobs = async (req, res) => {
             };
         }
 
+ const fullTimeJobStats = await Job.aggregate([
+            { $match: { jobCategory: "FULL_TIME_JOB", userId: { $nin: adminIds } } },
+            {
+                $group: {
+                    _id: null,
+                    totalFullTimeJobs: { $sum: 1 }, 
+                    activeCount: { $sum: { $cond: [{ $eq: ["$status", "active"] }, 1, 0] } }, 
+                    expiredCount: { $sum: { $cond: [{ $eq: ["$status", "expired"] }, 1, 0] } }, 
+                    featuredCount: { $sum: { $cond: ["$isFeatured", 1, 0] } }, 
+                    totalPostingCredits: { $sum: "$creditsSpent" } 
+                }
+            }
+        ]);
+
+        const fullTimeUnlockStats = await JobUnlock.aggregate([
+            {
+                $lookup: {
+                    from: "jobs", 
+                    localField: "jobId",
+                    foreignField: "_id",
+                    as: "jobInfo"
+                }
+            },
+            { $unwind: "$jobInfo" },
+            { 
+                $match: { 
+                    "jobInfo.jobCategory": "FULL_TIME_JOB", 
+                    "jobInfo.userId": { $nin: adminIds } 
+                } 
+            },
+            {
+                $group: {
+                    _id: null,
+                    totalUnlocks: { $sum: 1 }, 
+                    totalUnlockCredits: { $sum: "$creditsSpent" }
+                }
+            }
+        ]);
+
+        const stats = fullTimeJobStats[0] || { totalFullTimeJobs: 0, activeCount: 0, expiredCount: 0, featuredCount: 0, totalPostingCredits: 0 };
+        const unlockStats = fullTimeUnlockStats[0] || { totalUnlocks: 0, totalUnlockCredits: 0 };
+
+
         const totalJobs = await Job.countDocuments(query);
 
         const jobs = await Job.find(query)
             .populate("userId", "fullName role profilePhoto mobile") 
             .sort({ createdAt: -1 })
             .skip(skip)
-            .limit(limitNum);
+            .limit(limitNum)
+            .lean();
+
+ const jobsWithUnlockDetails = await Promise.all(
+            jobs.map(async (job) => {
+                const unlocks = await JobUnlock.find({ jobId: job._id })
+                    .populate("userId", "fullName profilePhoto mobile email role")
+                    .lean();
+
+                return {
+                    ...job,
+                    jobUnlockCount: unlocks.length,
+                    unlockedByUsers: unlocks.map(u => u.userId) 
+                };
+            })
+        );
 
         res.status(200).json({
             success: true,
+            analytics: {
+                totalFullTimeJobs: stats.totalFullTimeJobs,
+                activeFullTimeJobs: stats.activeCount,
+                expiredFullTimeJobs: stats.expiredCount,
+                featuredFullTimeJobs: stats.featuredCount,
+                totalUnlocksAcrossAllJobs: unlockStats.totalUnlocks,
+                credits: {
+                    postingCreditsSpent: stats.totalPostingCredits,
+                    unlockCreditsSpent: unlockStats.totalUnlockCredits,
+                    totalCreditsSpent: stats.totalPostingCredits + unlockStats.totalUnlockCredits
+                }
+            },
             count: jobs.length,
             pagination: {
                 totalJobs,
@@ -318,7 +389,7 @@ exports.getNonFullTimeJobs = async (req, res) => {
                 currentPage: pageNum,
                 pageSize: jobs.length
             },
-            data: jobs
+            data: jobsWithUnlockDetails
         });
 
     } catch (error) {

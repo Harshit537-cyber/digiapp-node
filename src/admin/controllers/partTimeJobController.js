@@ -2,7 +2,8 @@ const Job = require("../../models/Job");
 const jobService = require("../../services/job.services");
 const cloudinary = require("../../config/cloudinary");
 const fs = require("fs");
-const Admin = require("../../admin/models/Admin")
+const Admin = require("../../admin/models/Admin");
+const JobUnlock = require("../../models/JobUnlock");
 
 const uploadFilesToCloudinary = async (files) => {
     if (!files || files.length === 0) return [];
@@ -242,24 +243,93 @@ exports.getRegularUserJobs = async (req, res) => {
             };
         }
 
+         const partTimeJobStats = await Job.aggregate([
+            { $match: { jobCategory: "PART_TIME_JOB", userId: { $nin: adminIds } } },
+            {
+                $group: {
+                    _id: null,
+                    totalPartTimeJobs: { $sum: 1 },
+                    activeCount: { $sum: { $cond: [{ $eq: ["$status", "active"] }, 1, 0] } },
+                    expiredCount: { $sum: { $cond: [{ $eq: ["$status", "expired"] }, 1, 0] } }, 
+                    featuredCount: { $sum: { $cond: ["$isFeatured", 1, 0] } }, 
+                    totalPostingCredits: { $sum: "$creditsSpent" } 
+                }
+            }
+        ]);
+
+      
+        const partTimeUnlockStats = await JobUnlock.aggregate([
+            {
+                $lookup: {
+                    from: "jobs",
+                    localField: "jobId",
+                    foreignField: "_id",
+                    as: "jobInfo"
+                }
+            },
+            { $unwind: "$jobInfo" },
+            { 
+                $match: { 
+                    "jobInfo.jobCategory": "PART_TIME_JOB", 
+                    "jobInfo.userId": { $nin: adminIds } 
+                } 
+            },
+            {
+                $group: {
+                    _id: null,
+                    totalUnlocks: { $sum: 1 }, 
+                    totalUnlockCredits: { $sum: "$creditsSpent" } 
+                }
+            }
+        ]);
+
+        const stats = partTimeJobStats[0] || { totalPartTimeJobs: 0, activeCount: 0, expiredCount: 0, featuredCount: 0, totalPostingCredits: 0 };
+        const unlockStats = partTimeUnlockStats[0] || { totalUnlocks: 0, totalUnlockCredits: 0 };
+
         const totalJobs = await Job.countDocuments(query);
 
         const jobs = await Job.find(query)
             .populate("userId", "fullName role profilePhoto mobile") 
             .sort({ createdAt: -1 })
             .skip(skip)
-            .limit(limitNum);
+            .limit(limitNum)
+            .lean();
+
+const jobsWithUnlockDetails = await Promise.all(
+            jobs.map(async (job) => {
+                const unlocks = await JobUnlock.find({ jobId: job._id })
+                    .populate("userId", "fullName profilePhoto mobile email role") 
+                    .lean();
+
+                return {
+                    ...job,
+                    jobUnlockCount: unlocks.length,
+                    unlockedByUsers: unlocks.map(u => u.userId) 
+                };
+            })
+        );
 
         res.status(200).json({
             success: true,
-            count: jobs.length,
+            analytics: {
+                totalPartTimeJobs: stats.totalPartTimeJobs,
+                activeJobs: stats.activeCount,
+                expiredJobs: stats.expiredCount,
+                featuredJobs: stats.featuredCount,
+                totalUnlocksAcrossAllJobs: unlockStats.totalUnlocks,
+                credits: {
+                    postingCreditsSpent: stats.totalPostingCredits,
+                    unlockCreditsSpent: unlockStats.totalUnlockCredits,
+                    totalCreditsSpent: stats.totalPostingCredits + unlockStats.totalUnlockCredits
+                }
+            },
             pagination: {
                 totalJobs,
                 totalPages: Math.ceil(totalJobs / limitNum),
                 currentPage: pageNum,
                 pageSize: jobs.length
             },
-            data: jobs
+            data: jobsWithUnlockDetails
         });
 
     } catch (error) {

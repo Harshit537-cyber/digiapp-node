@@ -48,9 +48,16 @@ exports.createBloodRequest = async (req, res) => {
 
 exports.getAllBloodRequests = async (req, res) => {
     try {
+         const totalRequests = await BloodRequest.countDocuments();
+         const activeRequests = await BloodRequest.countDocuments({ status: "Active" });
         const requests = await BloodRequest.find().sort({ createdAt: -1 });
         res.status(200).json({ 
             success: true, 
+             analytics: {
+                totalRequests: totalRequests,     
+                activeRequests: activeRequests,   
+                deactiveRequests: totalRequests - activeRequests 
+            },
             count: requests.length,
             data: requests 
         });
@@ -149,7 +156,7 @@ exports.deleteBloodRequest = async (req, res) => {
 
 exports.getBloodRequestsByUrgency = async (req, res) => {
     try {
-        const { urgency } = req.query;
+        const { urgency,lat, lng, radius } = req.query;
 
         
         if (!urgency) {
@@ -158,13 +165,24 @@ exports.getBloodRequestsByUrgency = async (req, res) => {
                 message: "Please provide an urgency level "
             });
         }
-
-       
-        const requests = await BloodRequest.find({
+ let query = {
             urgency: { $regex: new RegExp(`^${urgency}$`, "i") }
-        });
+        };
+       if (lat && lng) {
+            const latitude = parseFloat(lat);
+            const longitude = parseFloat(lng);
+            const distanceInKm = parseFloat(radius) || 10;
+            const radiusInRadians = distanceInKm / 6378.1;
 
-        // 4. Return the data
+            query.location = {
+                $geoWithin: {
+                    $centerSphere: [[longitude, latitude], radiusInRadians],
+                },
+            };
+        }
+                const requests = await BloodRequest.find(query).sort({ createdAt: -1 });
+
+
         res.status(200).json({
             success: true,
             results: requests.length,
