@@ -65,6 +65,8 @@ const postJob = async (req, res) => {
     const FEATURED_CREDITS = (jobCategory === "LOCAL_JOB") ? 10 : 50;
     const totalCredits = isFeatured ? config.credits + FEATURED_CREDITS : config.credits;
 
+        req.body.creditsSpent = totalCredits; 
+
  let daysToExpire = 7; 
     
     if (jobCategory === "LOCAL_JOB") {
@@ -631,7 +633,7 @@ const unlockJob =  async (req, res) => {
         throw new Error("Transaction failed. Please try again.");
     }
 
-    await JobUnlock.create({ userId, jobId });
+    await JobUnlock.create({ userId, jobId,creditsSpent: UNLOCK_COST  });
 
     res.status(200).json({
       success: true,

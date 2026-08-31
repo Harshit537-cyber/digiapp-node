@@ -120,7 +120,7 @@ exports.updateJobsCategory = async (req, res) => {
     if (name) {
       category.name = name;
     }
-
+                            
     if (status !== undefined) {
       category.status = String(status) === 'true';
     }

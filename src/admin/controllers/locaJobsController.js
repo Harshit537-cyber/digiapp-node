@@ -2,6 +2,7 @@ const Job = require("../../models/Job");
 const cloudinary = require("../../config/cloudinary"); 
 const fs = require("fs");
 const Admin = require("../models/Admin");
+const JobUnlock = require("../../models/JobUnlock");
 
 const uploadFilesToCloudinary = async (files) => {
   if (!files || files.length === 0) return [];
@@ -278,25 +279,92 @@ exports.getRegularUserLocalJobs = async (req, res) => {
         },
       };
     }
-// 6a82f2c865ca038e6de10728
+ const localJobStats = await Job.aggregate([
+      { $match: { jobCategory: "LOCAL_JOB", userId: { $nin: adminIds } } },
+      {
+        $group: {
+          _id: null,
+          totalLocalJobs: { $sum: 1 },
+          activeTasks: { $sum: { $cond: [{ $eq: ["$status", "active"] }, 1, 0] } },
+          expiredTasks: { $sum: { $cond: [{ $eq: ["$status", "expired"] }, 1, 0] } },
+          featuredTasks: { $sum: { $cond: ["$isFeatured", 1, 0] } },
+          totalPostingCreditsSpent: { $sum: "$creditsSpent" }
+        }
+      }
+    ]);
+
+    const localUnlockStats = await JobUnlock.aggregate([
+      {
+        $lookup: {
+          from: "jobs", 
+          localField: "jobId",
+          foreignField: "_id",
+          as: "jobInfo"
+        }
+      },
+      { $unwind: "$jobInfo" },
+      { 
+        $match: { 
+          "jobInfo.jobCategory": "LOCAL_JOB", 
+          "jobInfo.userId": { $nin: adminIds } 
+        } 
+      },
+      {
+        $group: {
+          _id: null,
+          totalUnlocksForLocalJobs: { $sum: 1 },
+          totalUnlockCreditsSpent: { $sum: "$creditsSpent" }
+        }
+      }
+    ]);
+
+    const stats = localJobStats[0] || { totalLocalJobs: 0, activeTasks: 0, expiredTasks: 0, featuredTasks: 0, totalPostingCreditsSpent: 0 };
+    const unlockStats = localUnlockStats[0] || { totalUnlocksForLocalJobs: 0, totalUnlockCreditsSpent: 0 };
+
     const totalJobs = await Job.countDocuments(query);
 
     const jobs = await Job.find(query)
       .populate("userId", "fullName role profilePhoto mobile")
       .sort({ createdAt: -1 })
       .skip(skip)
-      .limit(limitNum);
+      .limit(limitNum)
+        .lean();
+
+ const jobsWithUnlockDetails = await Promise.all(
+      jobs.map(async (job) => {
+        const unlocks = await JobUnlock.find({ jobId: job._id })
+          .populate("userId", "fullName profilePhoto mobile email role")
+          .lean();
+
+        return {
+          ...job,
+          jobUnlockCount: unlocks.length,
+          unlockedByUsers: unlocks.map(u => u.userId) 
+        };
+      })
+    );
 
     res.status(200).json({
       success: true,
-      count: jobs.length,
+      analytics: {
+        totalLocalJobs: stats.totalLocalJobs,
+        activeLocalJobs: stats.activeTasks,
+        expiredLocalJobs: stats.expiredTasks,
+        featuredLocalJobs: stats.featuredTasks,
+        totalUnlocksForAllLocalJobs: unlockStats.totalUnlocksForLocalJobs,
+        credits: {
+          totalPostingCredits: stats.totalPostingCreditsSpent,
+          totalUnlockCredits: unlockStats.totalUnlockCreditsSpent,
+          overallTotalCreditsSpent: stats.totalPostingCreditsSpent + unlockStats.totalUnlockCreditsSpent
+        }
+      },
       pagination: {
         totalJobs,
         totalPages: Math.ceil(totalJobs / limitNum),
         currentPage: pageNum,
         pageSize: jobs.length,
       },
-      data: jobs,
+      data:  jobsWithUnlockDetails,
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });

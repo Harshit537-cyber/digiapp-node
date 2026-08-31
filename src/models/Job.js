@@ -69,6 +69,10 @@ const jobSchema = new mongoose.Schema(
     whatsappNumber: { type: String },
     experience: { type: String },
     qualification: { type: String },
+    creditsSpent: { 
+  type: Number, 
+  default: 0 
+},
   },
   { timestamps: true },
 );

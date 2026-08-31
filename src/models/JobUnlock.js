@@ -7,6 +7,10 @@ const jobUnlockSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+    creditsSpent: { 
+  type: Number, 
+  default: 0 
+},
     jobId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Job",
@@ -15,6 +19,7 @@ const jobUnlockSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
+
 
 jobUnlockSchema.index({ userId: 1, jobId: 1 }, { unique: true });
 
