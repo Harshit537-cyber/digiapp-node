@@ -12,6 +12,8 @@ router.put("/update-job/:id", verifyAdmin, upload.array('images', 5), localJobCo
 
 router.get("/public/local-jobs", verifyAdmin, localJobController.getRegularUserLocalJobs);
 
+router.get("/user-list", verifyAdmin, localJobController.getUsersListForAdmin);
+
 
 router.delete("/delete/:id", verifyAdmin, localJobController.adminDeleteLocalJob)
 

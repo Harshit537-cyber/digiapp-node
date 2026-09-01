@@ -412,3 +412,62 @@ exports.getRegularUserLocalJobs = async (req, res) => {
     res.status(500).json({ success: false, message: error.message });
   }
 };
+
+
+exports.getUsersListForAdmin = async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) ;
+    const limit = parseInt(req.query.limit) ;
+    const skip = (page - 1) * limit;
+
+    let query = { 
+      role: { 
+        $in: ["SERVICE_PROVIDER", "BUSINESS_SHOPS", "JOB_SEEKER", "GENERAL_USER"] 
+      } 
+    };
+
+    if (req.query.search) {
+      query.$and = [
+        { role: { $in: ["SERVICE_PROVIDER", "BUSINESS_SHOPS", "JOB_SEEKER", "GENERAL_USER"] } },
+        {
+          $or: [
+            { fullName: { $regex: req.query.search, $options: "i" } },
+            { mobile: { $regex: req.query.search, $options: "i" } },
+            { email: { $regex: req.query.search, $options: "i" } }
+          ]
+        }
+      ];
+    }
+
+    const totalUsers = await User.countDocuments(query);
+
+    const users = await User.find(query)
+      .select("fullName mobile email role credits profilePhoto status")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    const totalPages = Math.ceil(totalUsers / limit);
+
+    res.status(200).json({
+      success: true,
+      results: users.length,
+      pagination: {
+        totalUsers,
+        totalPages,
+        currentPage: page,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1
+      },
+      data: users
+    });
+
+  } catch (error) {
+    console.error("Get Filtered Users Error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Users fetch karne mein error aayi",
+      error: error.message
+    });
+  }
+};
