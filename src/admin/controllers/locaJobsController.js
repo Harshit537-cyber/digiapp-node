@@ -3,6 +3,8 @@ const cloudinary = require("../../config/cloudinary");
 const fs = require("fs");
 const Admin = require("../models/Admin");
 const JobUnlock = require("../../models/JobUnlock");
+const User = require("../../models/User");
+const JobsCategory = require("../models/JobsCategory");
 
 const uploadFilesToCloudinary = async (files) => {
   if (!files || files.length === 0) return [];
@@ -15,6 +17,8 @@ const uploadFilesToCloudinary = async (files) => {
 
   return results.map((result) => result.secure_url);
 };
+
+
 
 exports.getLocalJobsForAdmin = async (req, res) => {
   try {
@@ -92,20 +96,55 @@ exports.getLocalJobsForAdmin = async (req, res) => {
 exports.adminCreateLocalJob = async (req, res) => {
   try {
     const body = req.body;
-    const userId = req.user.id;
+   const adminId = req.user.userId || req.user.id || req.user._id; 
+    
+    const targetUserId = body.userId; 
+    if (!targetUserId) {
+        return res.status(400).json({ success: false, message: "User ID is required to post on their behalf" });
+    }
+
+    const category = await JobsCategory.findById(body.categoryId);
+    if (!category || category.type !== "LOCAL_JOB") {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Invalid Category or Category is not LOCAL_JOB type" 
+      });
+    }
+
+    if (body.subCategory && !category.subCategory.includes(body.subCategory)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "The selected sub-category is not part of this category" 
+      });
+    }
+
+    const isFeatured = body.isFeatured === "true" || body.isFeatured === true;
+    let creditsToDeduct = 10; 
+    if (isFeatured) {
+      creditsToDeduct += 10; 
+    }
+
+    const targetUser = await User.findById(targetUserId);
+    if (!targetUser) {
+      return res.status(404).json({ success: false, message: "Target User not found" });
+    }
+
+    if (targetUser.credits < creditsToDeduct) {
+      return res.status(400).json({ 
+        success: false, 
+        message: `Insufficient credits. User needs ${creditsToDeduct} credits.` 
+      });
+    }
 
     const imageUrls = await uploadFilesToCloudinary(req.files);
 
-    const lng =
-      body.location?.coordinates?.[0] || body["location[coordinates][0]"] || 0;
-    const lat =
-      body.location?.coordinates?.[1] || body["location[coordinates][1]"] || 0;
+    const lng = body.location?.coordinates?.[0] || body["location[coordinates][0]"] || 0;
+    const lat = body.location?.coordinates?.[1] || body["location[coordinates][1]"] || 0;
     const address = body.location?.address || body["location[address]"] || "";
 
     let budget = { min: 0, max: 0 };
     if (body.budget) {
-      budget =
-        typeof body.budget === "string" ? JSON.parse(body.budget) : body.budget;
+      budget = typeof body.budget === "string" ? JSON.parse(body.budget) : body.budget;
     }
 
     let preferredComm = [];
@@ -118,8 +157,9 @@ exports.adminCreateLocalJob = async (req, res) => {
 
     const jobData = {
       ...body,
-      userId,
+      userId: targetUserId, 
       jobCategory: "LOCAL_JOB",
+      category: body.categoryId,
       images: imageUrls,
       budget: budget,
       preferredCommunication: preferredComm,
@@ -128,20 +168,19 @@ exports.adminCreateLocalJob = async (req, res) => {
         coordinates: [parseFloat(lng), parseFloat(lat)],
         address: address,
       },
-   
-      isFeatured: body.isFeatured === "true" || body.isFeatured === true,
-      expiresAt:
-        body.expiresAt || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      isFeatured: isFeatured,
+      expiresAt: body.expiresAt || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
     };
 
     const job = await Job.create(jobData);
 
-    const adminData = await Admin.findById(userId).select("name role");
+    targetUser.credits -= creditsToDeduct;
+    await targetUser.save();
+
+    const adminData = await User.findById(adminId).select("name role"); 
 
     if (!adminData) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Admin details not found" });
+      return res.status(404).json({ success: false, message: "Admin details not found" });
     }
 
     const finalResponseData = job.toObject();
@@ -149,12 +188,15 @@ exports.adminCreateLocalJob = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: "Local Job created successfully by Admin",
+      message: "Local Job created successfully and credits deducted",
       postedBy: "ADMIN",
       adminName: adminData.name,
       adminRole: adminData.role,
+      creditDeducted: creditsToDeduct,
+      remainingCredits: targetUser.credits,
       data: finalResponseData,
     });
+
   } catch (error) {
     console.error("Create Local Job Error:", error);
     res.status(500).json({

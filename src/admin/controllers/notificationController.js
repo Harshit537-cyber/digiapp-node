@@ -73,7 +73,7 @@ exports.getAllUserCities = async (req, res) => {
     } catch (error) {
         res.status(500).json({
             success: false,
-            message: "Cities fetch karne mein error aaya",
+            message: "Error while fetching cities",
             error: error.message
         });
     }
