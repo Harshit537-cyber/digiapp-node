@@ -466,7 +466,7 @@ exports.getUsersListForAdmin = async (req, res) => {
     console.error("Get Filtered Users Error:", error);
     res.status(500).json({
       success: false,
-      message: "Users fetch karne mein error aayi",
+      message: "Error while fetching users",
       error: error.message
     });
   }
