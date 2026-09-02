@@ -4,7 +4,8 @@ const cloudinary = require("../../config/cloudinary");
 const fs = require("fs");
 const Admin = require("../../admin/models/Admin");
 const JobUnlock = require("../../models/JobUnlock");
-
+const User = require("../../models/User");
+const JobsCategory = require("../models/JobsCategory");
 const uploadFilesToCloudinary = async (files) => {
     if (!files || files.length === 0) return [];
     const uploadPromises = files.map(file =>
@@ -33,7 +34,46 @@ exports.getJobByIdForAdmin = async (req, res) => {
 exports.adminCreateJob = async (req, res) => {
     try {
         const body = req.body;
-        const userId = req.user.id ;
+        const adminId = req.user.userId || req.user.id || req.user._id; 
+
+       const targetUserId = body.userId; 
+        if (!targetUserId) {
+            return res.status(400).json({ success: false, message: "User ID (target user) is required" });
+        }
+
+       const category = await JobsCategory.findById(body.categoryId);
+        if (!category || category.type !== "PART_TIME_JOB") {
+            return res.status(400).json({ 
+                success: false, 
+                message: "Invalid Category. Category must be of type PART_TIME_JOB." 
+            });
+        }
+
+
+ if (body.subCategory && !category.subCategory.includes(body.subCategory)) {
+            return res.status(400).json({ 
+                success: false, 
+                message: "Selected sub-category does not belong to this category." 
+            });
+        }
+
+   const isFeatured = body.isFeatured === "true" || body.isFeatured === true;
+        let creditsToDeduct = 50; // Base 50 credits
+        if (isFeatured) creditsToDeduct += 50; // Featured + 50 = Total 100
+
+        // 6. Target User Credit Check
+        const targetUser = await User.findById(targetUserId);
+        if (!targetUser) {
+            return res.status(404).json({ success: false, message: "Target user not found." });
+        }
+
+        if (targetUser.credits < creditsToDeduct) {
+            return res.status(400).json({ 
+                success: false, 
+                message: `Insufficient credits. User needs ${creditsToDeduct} credits.` 
+            });
+        }
+
 
         // 1. Upload Images to Cloudinary
         const imageUrls = await uploadFilesToCloudinary(req.files);
@@ -48,8 +88,9 @@ exports.adminCreateJob = async (req, res) => {
 
         const jobData = {
             ...body,
-            userId,
+            userId:targetUserId,
             jobCategory: "PART_TIME_JOB",
+             category: body.categoryId,
             images: imageUrls,
             salaryRange: salary,
             location: {
@@ -61,8 +102,9 @@ exports.adminCreateJob = async (req, res) => {
         };
 
         const job = await Job.create(jobData);
-
-        const adminData =  await Admin.findById(userId).select("name role");
+ targetUser.credits -= creditsToDeduct;
+        await targetUser.save();
+        const adminData =  await User.findById(adminId).select("name role");
 
           if (!adminData) {
             return res.status(404).json({ success: false, message: "Admin details not found" });
@@ -85,42 +127,82 @@ const finalResponseData = job.toObject();
 
 exports.adminUpdateJob = async (req, res) => {
     try {
+        const { id } = req.params;
         const body = req.body;
         let updateData = { ...body };
 
-        // 1. Image Update (If new images uploaded)
+        if (body.userId) {
+            const targetUser = await User.findById(body.userId);
+            if (!targetUser) {
+                return res.status(404).json({ success: false, message: "New target user not found." });
+            }
+            updateData.userId = body.userId;
+        }
+
+        if (body.categoryId) {
+            const category = await JobsCategory.findById(body.categoryId);
+            if (!category || category.type !== "PART_TIME_JOB") {
+                return res.status(400).json({ 
+                    success: false, 
+                    message: "Invalid Category. Category must be of type PART_TIME_JOB." 
+                });
+            }
+            updateData.category = body.categoryId; 
+
+            if (body.subCategory && !category.subCategory.includes(body.subCategory)) {
+                return res.status(400).json({ 
+                    success: false, 
+                    message: "Selected sub-category does not belong to this category." 
+                });
+            }
+        }
+
         if (req.files && req.files.length > 0) {
             updateData.images = await uploadFilesToCloudinary(req.files);
         }
 
-        // 2. Location Handling
         const lng = body.location?.coordinates?.[0] || body["location[coordinates][0]"];
         const lat = body.location?.coordinates?.[1] || body["location[coordinates][1]"];
+        const address = body.location?.address || body["location[address]"];
+
         if (lng && lat) {
             updateData.location = {
                 type: "Point",
                 coordinates: [parseFloat(lng), parseFloat(lat)],
-                address: body["location[address]"] || body.location?.address || ""
+                address: address || ""
             };
         }
 
-        // 3. Salary Handling
-        if (body.salaryRange && typeof body.salaryRange === "string") {
-            try { updateData.salaryRange = JSON.parse(body.salaryRange); } catch (e) { }
+        if (body.salaryRange) {
+            updateData.salaryRange = typeof body.salaryRange === "string" 
+                ? JSON.parse(body.salaryRange) 
+                : body.salaryRange;
         }
 
-        // Cleanup flat keys
-        const keysToDelete = ["location[coordinates][0]", "location[coordinates][1]", "location[address]"];
+        if (body.isFeatured !== undefined) {
+            updateData.isFeatured = body.isFeatured === "true" || body.isFeatured === true;
+        }
+
+        const keysToDelete = ["location[coordinates][0]", "location[coordinates][1]", "location[address]", "categoryId"];
         keysToDelete.forEach(key => delete updateData[key]);
 
+        // 7. Update the Job
         const updatedJob = await Job.findOneAndUpdate(
-            { _id: req.params.id, jobCategory: "PART_TIME_JOB" },
+            { _id: id, jobCategory: "PART_TIME_JOB" },
             { $set: updateData },
             { new: true, runValidators: true }
-        );
+        ).populate("category", "name");
 
-        if (!updatedJob) return res.status(404).json({ success: false, message: "Job not found" });
-        res.status(200).json({ success: true, message: "Job updated successfully", data: updatedJob });
+        if (!updatedJob) {
+            return res.status(404).json({ success: false, message: "Job not found or not a PART_TIME_JOB" });
+        }
+
+        res.status(200).json({ 
+            success: true, 
+            message: "Job updated successfully by Admin", 
+            data: updatedJob 
+        });
+
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }

@@ -123,7 +123,6 @@ exports.adminCreateLocalJob = async (req, res) => {
     if (isFeatured) {
       creditsToDeduct += 10; 
     }
-
     const targetUser = await User.findById(targetUserId);
     if (!targetUser) {
       return res.status(404).json({ success: false, message: "Target User not found" });
