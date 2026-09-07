@@ -5,7 +5,7 @@ const mongoose = require("mongoose");
 const Admin = require("../../admin/models/Admin");
 const User = require("../../models/User");
 const JobUnlock = require("../../models/JobUnlock");
-
+const JobsCategory = require("../../admin/models/JobsCategory");
 const getSingleValue = (val) => Array.isArray(val) ? val[0] : val;
 
 const uploadFilesToCloudinary = async (files) => {
@@ -119,13 +119,32 @@ exports.getFullTimeJobById = async (req, res) => {
     }
 };
 
-exports.adminCreateFullTimeJob = async (req, res) => {
+exports.adminCreateFullTimeJob =  async (req, res) => {
     try {
         const body = req.body;
+        
         const userId = body.userId || (req.user ? req.user.id : null);
 
         if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
             return res.status(400).json({ success: false, message: "Valid User ID is required" });
+        }
+
+        const targetUser = await User.findById(userId);
+        if (!targetUser || targetUser.role === "ADMIN") {
+            return res.status(400).json({ success: false, message: "Invalid User: Cannot post job for an ADMIN role" });
+        }
+
+        const categoryId = body.categoryId; 
+        const subCategoryValue = getSingleValue(body.subCategory); 
+
+        const categoryData = await JobsCategory.findOne({ 
+            _id: categoryId, 
+            type: "FULL_TIME_JOB",
+            status: true 
+        });
+
+        if (!categoryData || !categoryData.subCategory.includes(subCategoryValue)) {
+            return res.status(400).json({ success: false, message: "Invalid Category or Sub-category selection" });
         }
 
         const imageUrls = await uploadFilesToCloudinary(req.files);
@@ -149,7 +168,11 @@ exports.adminCreateFullTimeJob = async (req, res) => {
             title: getSingleValue(body.title),
             details: getSingleValue(body.details),
             companyName: getSingleValue(body.companyName),
-            jobRole: getSingleValue(body.jobRole),
+            
+            category: categoryId,           
+            subCategory: subCategoryValue,  
+            jobRole: subCategoryValue,      
+            
             description: getSingleValue(body.description),
             vacancies: Number(getSingleValue(body.vacancies)) || 0,
             whatsappNumber: getSingleValue(body.whatsappNumber),
@@ -167,20 +190,31 @@ exports.adminCreateFullTimeJob = async (req, res) => {
         };
 
         const job = await Job.create(jobData);
-        const adminData = await Admin.findById(userId).select("name role");
+
+ const currentAdminId = req.user ? (req.user.userId || req.user.id) : null;
+        
+        const adminData = await User.findOne({ _id: currentAdminId, role: "ADMIN" }).select("fullName role");
 
         if (!adminData) {
-            return res.status(404).json({ success: false, message: "Admin details not found" });
+            return res.status(404).json({ 
+                success: false, 
+                message: "Only an ADMIN can perform this action",
+                debug_id: currentAdminId 
+            });
         }
 
         const finalResponseData = job.toObject();
-        finalResponseData.userId = adminData;
+        finalResponseData.postedForUser = {
+            id: targetUser._id,
+            name: targetUser.fullName,
+            role: targetUser.role
+        };
 
         res.status(201).json({ 
             success: true,
             message: "Job created successfully", 
             postedBy: "ADMIN",
-            adminName: adminData.name,
+            adminName: adminData.fullName,
             adminRole: adminData.role,
             data: finalResponseData 
         });
@@ -188,7 +222,6 @@ exports.adminCreateFullTimeJob = async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 };
-
 exports.updateFullTimeJob = async (req, res) => {
     try {
         const body = req.body;
