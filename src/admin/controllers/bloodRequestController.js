@@ -1,24 +1,43 @@
 const BloodRequest = require("../../models/BloodRequest");
+const User = require("../../models/User");
 
-exports.createBloodRequest = async (req, res) => {
-    console.log("Received Body:", req.body)
+
+exports.createBloodRequest =  async (req, res) => {
+    console.log("Received Body:", req.body);
     try {
-        const { userId, adminId, lat, lng, address, ...otherData } = req.body;
+        const { userId, lat, lng, address, ...otherData } = req.body;
 
-        if (!userId && !adminId) {
+        if (!userId) {
             return res.status(400).json({ 
                 success: false, 
-                message: "Provide either userId or adminId" 
+                message: "userId is required" 
             });
         }
 
-       if (lat === undefined || lng === undefined || lat === null || lng === null) {
-    return res.status(400).json({ 
-        success: false, 
-        message: "Latitude and Longitude are required" 
-    });
-}
+        const user = await User.findById(userId);
 
+        if (!user) {
+            return res.status(404).json({ 
+                success: false, 
+                message: "User not found! Invalid userId." 
+            });
+        }
+
+        if (user.role === "ADMIN") {
+            return res.status(403).json({ 
+                success: false, 
+                message: "Admins are not allowed to create blood requests." 
+            });
+        }
+
+        if (lat === undefined || lng === undefined || lat === null || lng === null) {
+            return res.status(400).json({ 
+                success: false, 
+                message: "Latitude and Longitude are required" 
+            });
+        }
+
+        // 5. Location Object Prepare karein
         const location = {
             type: "Point",
             coordinates: [parseFloat(lng), parseFloat(lat)],
@@ -27,8 +46,7 @@ exports.createBloodRequest = async (req, res) => {
 
         const newRequest = new BloodRequest({
             ...otherData,
-            userId: userId || null,
-            adminId: adminId || null,
+            userId: userId,
             location
         });
 
@@ -36,16 +54,24 @@ exports.createBloodRequest = async (req, res) => {
         
         res.status(201).json({ 
             success: true, 
+            message: "Blood request created successfully",
             data: savedRequest 
         });
+
     } catch (error) {
-        res.status(400).json({ 
+        if (error.name === 'CastError') {
+            return res.status(400).json({ 
+                success: false, 
+                message: "Invalid User ID format" 
+            });
+        }
+
+        res.status(500).json({ 
             success: false, 
             message: error.message 
         });
     }
 };
-
 exports.getAllBloodRequests = async (req, res) => {
     try {
          const totalRequests = await BloodRequest.countDocuments();

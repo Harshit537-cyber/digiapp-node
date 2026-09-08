@@ -30,6 +30,8 @@ exports.createJobsCategory = async (req, res) => {
       });
     }
 
+
+    
     const exists = await JobsCategory.findOne({ name, type });
     if (exists) {
       if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
