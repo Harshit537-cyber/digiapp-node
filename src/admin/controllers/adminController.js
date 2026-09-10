@@ -263,15 +263,44 @@ exports.getDashboardStats = async (req, res) => {
 
 exports.getAllUsersForAdmin = async (req, res) => {
   try {
-    const { search } = req.query;
+    const { search, type } = req.query;
     let query = {};
 
-    // Search by fullName (Case-insensitive search)
     if (search) {
       query.fullName = { $regex: search, $options: "i" };
     }
 
-    // Fetch all user data
+    if (type) {
+      const typeValue = type.trim();
+      const typeLower = typeValue.toLowerCase();
+
+      if (typeLower === "all") {
+        query.role = {
+          $in: ["SERVICE_PROVIDER", "BUSINESS_SHOPS", "JOB_SEEKER", "GENERAL_USER"],
+        };
+      }
+      else if (["male", "female", "other"].includes(typeLower)) {
+        query.gender = typeLower;
+      }
+      else if (typeLower === "service provider") {
+        query.role = "SERVICE_PROVIDER";
+      } else if (typeLower === "general user") {
+        query.role = "GENERAL_USER";
+      } else if (typeLower === "business/shop" || typeLower === "business shop" || typeLower === "business/shops") {
+        query.role = "BUSINESS_SHOPS";
+      } else if (typeLower === "job seeker") {
+        query.role = "JOB_SEEKER";
+      }
+      else {
+        query.$or = [
+          { city: { $regex: typeValue, $options: "i" } },
+          { state: { $regex: typeValue, $options: "i" } },
+          { country: { $regex: typeValue, $options: "i" } },
+          { address: { $regex: typeValue, $options: "i" } },
+        ];
+      }
+    }
+
     const users = await User.find(query).sort({ createdAt: -1 });
 
     res.status(200).json({
@@ -284,7 +313,6 @@ exports.getAllUsersForAdmin = async (req, res) => {
     res.status(500).json({ message: "Server Error", error: error.message });
   }
 };
-
 // --- BLOCK / UNBLOCK USER ---
 exports.toggleUserStatus = async (req, res) => {
   try {

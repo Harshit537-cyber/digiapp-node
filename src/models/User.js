@@ -86,6 +86,7 @@ fcmToken: {
       default: ""
     },
 
+    
     isVerified: {
       type: Boolean,
       default: false

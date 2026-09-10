@@ -19,6 +19,7 @@ const uploadToCloudinary = async (filePath) => {
     }
 };
 
+
 // --- GET ALL BUSINESSES ---
 exports.getAllBusiness = async (req, res) => {
     try {
