@@ -181,7 +181,7 @@ exports.adminCreateFullTimeJob =  async (req, res) => {
             jobCategory: "FULL_TIME_JOB",
             images: imageUrls,
             salaryRange: salary,
-            location: {
+            location: {           
                 type: "Point",
                 coordinates: [parseFloat(lng), parseFloat(lat)],
                 address: address || ""

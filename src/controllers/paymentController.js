@@ -117,6 +117,7 @@ exports.verifyPayment = async (req, res) => {
       );
     }
 
+
     trx.status = 'Success';
     trx.paymentId = razorpay_payment_id;
     await trx.save();
@@ -154,6 +155,9 @@ exports.getTransactionHistory = async (req, res) => {
     });
   }
 };
+
+
+
 
 exports.getUserCredits = async (req, res) => {
   try {

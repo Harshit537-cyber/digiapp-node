@@ -28,7 +28,11 @@ const itemSchema = new mongoose.Schema({
       type: String,
     },
   },
-
+ creditsInfo: {
+    totalCreditsUsed: { type: Number, default: 0 }, 
+    postCost: { type: Number, default: 0 },         
+    featuredAddonCost: { type: Number, default: 0 }, 
+  },
   preferredCommunication: {
     call: { type: Boolean, default: false },
     chat: { type: Boolean, default: false }

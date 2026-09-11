@@ -103,6 +103,11 @@ const postItem = async (req, res) => {
       expiryDate: expiryDate,
       images: imageUrls,
       user: req.user.userId,
+      creditsInfo: {
+        totalCreditsUsed: totalCreditsNeeded,
+        postCost: POST_COST,
+        featuredAddonCost: isFeaturedTrue ? FEATURED_ADDON : 0,
+      },
     }, session);
 
     await session.commitTransaction();

@@ -556,16 +556,13 @@ const getJobsList = async (isLoggedIn, requestedCategory) => {
     let filter = { status: "active" };
 
     if (!isLoggedIn) {
-      // Logic: User login nahi hai, toh sirf LOCAL_JOB filter lagao
       filter.jobCategory = "LOCAL_JOB";
     } else {
-      // Logic: User login hai, toh in teen categories se match hote results dikhao
       filter.jobCategory = {
         $in: ["LOCAL_JOB", "PART_TIME_JOB", "FULL_TIME_JOB"],
       };
     }
 
-    // Database se data fetch karein
     const jobs = await Job.find(filter).sort({ createdAt: -1 });
     return jobs;
   } catch (error) {

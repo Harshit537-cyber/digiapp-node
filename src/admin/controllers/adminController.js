@@ -887,7 +887,7 @@ exports.displayImage = async (req, res) => {
 
       return res.json({
         success: true,
-        message: "Images saved successfully",
+        message: "Images saved successfully",     
         data: newImageDoc,
       });
     }
