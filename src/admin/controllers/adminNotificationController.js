@@ -57,6 +57,7 @@ exports.sendAdminNotification = async (req, res) => {
         notificationParams.isTopic = true;
         break;
 
+
 case "USER_TYPE":
         if (!targetValue) return res.status(400).json({ message: "User type missing" });
         notificationParams.target = NotificationService.formatTopic("cat", targetValue);
@@ -72,6 +73,7 @@ case "USER_TYPE":
         notificationParams.isTopic = false;
         break;
 
+        
       default:
         return res.status(400).json({ success: false, message: "Invalid targetType" });
     }

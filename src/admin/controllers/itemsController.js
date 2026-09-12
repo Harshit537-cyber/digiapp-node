@@ -2,7 +2,7 @@ const Item = require("../../models/Item");
 const Admin = require("../../admin/models/Admin")
 const cloudinary = require("../../config/cloudinary");
 const fs = require("fs");
-
+const User = require("../../models/User");
 const uploadFilesToCloudinary = async (files) => {
     if (!files || files.length === 0) return [];
     const uploadPromises = files.map(file =>
@@ -20,7 +20,27 @@ const uploadFilesToCloudinary = async (files) => {
 exports.createItem = async (req, res) => {
     try {
         const body = req.body;
-        const userId = req.user.id; 
+        const userId = req.user.id || req.user.userId; 
+
+        const itemUserId = body.userId || userId;
+
+        const allowedRoles = ["SERVICE_PROVIDER", "BUSINESS_SHOPS", "JOB_SEEKER", "GENERAL_USER"];
+        if (body.userId) {
+            const targetUser = await User.findById(itemUserId).select("role");
+            if (!targetUser) {
+                return res.status(404).json({
+                    success: false,
+                    message: "User not found"
+                });
+            }
+            if (!allowedRoles.includes(targetUser.role)) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Item can only be posted for SERVICE_PROVIDER, BUSINESS_SHOPS, JOB_SEEKER, or GENERAL_USER roles"
+                });
+            }
+        }
+
         let imageUrls = [];
         if (req.files && req.files.length > 0) {
             imageUrls = await uploadFilesToCloudinary(req.files);
@@ -55,11 +75,13 @@ exports.createItem = async (req, res) => {
             },
             isActive: body.isActive === 'undefined' ? true : (body.isActive === 'true' || body.isActive === true),
             isFeatured: body.isFeatured === 'true' || body.isFeatured === true,
-            user: userId, 
+            user: itemUserId,
             expiryDate: body.expiryDate || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
         };
 
-        const adminData = await Admin.findById(userId).select("fullName role");
+        const adminData = await User.findById(userId).select("fullName role");
+        // -------------------------------------------------------------------------------
+
         if (!adminData) {
             return res.status(404).json({ 
                 success: false, 
@@ -218,11 +240,7 @@ exports.getUserCreatedItems = async (req, res) => {
         const pageNum = parseInt(page);
         const limitNum = parseInt(limit);
         const skip = (pageNum - 1) * limitNum;
-        const admins = await Admin.find().select("_id");
-        const adminIds = admins.map(admin => admin._id);
-        let query = { 
-            user: { $nin: adminIds } 
-        };
+        let query = {};
 
    
         if (title) {
@@ -256,9 +274,18 @@ exports.getUserCreatedItems = async (req, res) => {
             }
         ]);
         const totalSum = priceAggregation.length > 0 ? priceAggregation[0].totalPrice : 0;
-
+ const creditsAggregation = await Item.aggregate([
+            { $match: query },
+            {
+                $group: {
+                    _id: null,
+                    totalCreditsSpent: { $sum: "$creditsInfo.totalCreditsUsed" }
+                }
+            }
+        ]);
+        const totalCreditsSpent = creditsAggregation.length > 0 ? creditsAggregation[0].totalCreditsSpent : 0;
         const items = await Item.find(query)
-            .populate("user", "fullName email phone profilePic")
+            .populate("user", "-password")
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(limitNum)
@@ -271,6 +298,7 @@ exports.getUserCreatedItems = async (req, res) => {
             totalItems: totalItems,
             activeItems: activeCount,
             totalPriceSum: totalSum,
+               totalCreditsSpent: totalCreditsSpent,
             isFeatured: isFeaturedCount,
             pagination: {
                 totalPages: Math.ceil(totalItems / limitNum),
