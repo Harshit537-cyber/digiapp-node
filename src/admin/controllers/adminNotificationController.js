@@ -64,6 +64,11 @@ case "USER_TYPE":
         notificationParams.isTopic = true;
         break;
 
+ case "BUSINESS_SHOPS":
+        notificationParams.target = NotificationService.formatTopic("cat", "BUSINESS_SHOPS");
+        notificationParams.isTopic = true;
+        break;
+
       case "USER":
         const user = await User.findById(targetValue).select("fcmToken");
         if (!user || !user.fcmToken) {

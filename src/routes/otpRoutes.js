@@ -25,5 +25,5 @@ router.post("/admin/send-otp", authController.requestAdminOtp);
 
 router.post("/admin/verify-otp", authController.verifyAdminOtp);
 
-router.post("/admin/resend-otp", authController.resendAdminOtp);
+router.post("/admin/resend-otp", authController.resendAdminOtp);   
 module.exports = router;
