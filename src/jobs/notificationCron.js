@@ -75,6 +75,11 @@ cron.schedule("* * * * *", async () => {
                         }
                         break;
 
+                    case "BUSINESS_SHOPS":
+                        notificationParams.target = NotificationService.formatTopic("cat", "BUSINESS_SHOPS");
+                        notificationParams.isTopic = true;
+                        targetFound = true;
+                        break;
                     case "USER":
                         const user = await User.findById(notif.targetValue).select("fcmToken");
                         if (user && user.fcmToken) {
