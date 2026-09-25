@@ -371,7 +371,7 @@ const homeAPI = async (req, res) => {
       shops,
       bloodRequests
     
-      
+       
     });
   } catch (error) {
     res.status(500).json({

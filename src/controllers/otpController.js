@@ -4,18 +4,26 @@ const OtpService = require("../utils/msg91Service");
 const jwt = require("jsonwebtoken");
 
 const handleOtpSending = async (mobile) => {
-  const otp = Math.floor(100000 + Math.random() * 900000).toString(); 
-  
+  const isTestNumber =
+    process.env.ENABLE_TEST_CREDENTIALS === "true" &&
+    mobile === process.env.TEST_MOBILE_NUMBER;
+
+  const otp = isTestNumber
+    ? process.env.TEST_OTP
+    : Math.floor(100000 + Math.random() * 900000).toString();
+
   await Otp.findOneAndUpdate(
-    { mobile }, 
-    { otp, createdAt: Date.now() }, 
+    { mobile },
+    { otp, createdAt: Date.now() },
     { upsert: true, new: true }
   );
 
-  await OtpService.sendOTP(mobile, otp);
+  if (!isTestNumber) {
+    await OtpService.sendOTP(mobile, otp);
+  }
+
   return true;
 };
-
 
 exports.requestOtp = async (req, res) => {
   try {
