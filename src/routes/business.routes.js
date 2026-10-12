@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const businessController = require('../controllers/business.controller');
+const uploadUnique = require("../middlewares/uploadUnique");
 
 // Imports
 const upload = require('../middlewares/upload'); 
@@ -40,7 +41,7 @@ router.get('/:id', businessController.getBusinessById);
 router.put(
   '/update/:id',
   verifyToken,
-  upload.fields([
+  uploadUnique.fields([
     { name: 'businessImages', maxCount: 5 }, 
     { name: 'nationalId', maxCount: 1 },     
     { name: 'ownerImage', maxCount: 1 }      

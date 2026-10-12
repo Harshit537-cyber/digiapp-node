@@ -222,6 +222,7 @@ exports.adminCreateFullTimeJob =  async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 };
+
 exports.updateFullTimeJob = async (req, res) => {
     try {
         const body = req.body;

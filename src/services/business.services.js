@@ -66,12 +66,9 @@ const getBusinessById = async (id) => {
 
 // 4. Update Business
 const updateBusiness = async (id, data) => {
-  try {
-    return await Business.findByIdAndUpdate(id, data, { new: true });
-  } catch (error) {
-    throw error;
-  }
+  return Business.findByIdAndUpdate(id, data, { new: true, runValidators: true });
 };
+
 
 // 5. Delete Business
 const deleteBusiness = async (id) => {

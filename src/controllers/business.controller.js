@@ -5,6 +5,18 @@ const Business = require("../models/Business");
 const mongoose = require("mongoose");
 const Review = require("../models/Review");
 const BusinessCategory = require('../admin/models/BusinessCategory');
+const ALLOWED_FIELDS = [
+  "businessName",
+  "details",
+  "category",
+  "subCategory",
+  "location",
+  "ownerName",
+  "mobileNumber",
+  "whatsappNumber",
+  "backgroundImage",
+  "services",
+];
 // --- Helper Function: Upload to Cloudinary ---
 const uploadToCloudinary = async (filePath) => {
   if (!filePath) return null;
@@ -21,6 +33,44 @@ const uploadToCloudinary = async (filePath) => {
     throw err;
   }
 };
+
+const getPublicId = (url) => {
+  if (!url || typeof url !== "string") return null;
+  const match = url.match(/\/upload\/(?:v\d+\/)?(.+)\.[^./]+$/);
+  return match ? match[1] : null;
+};
+
+const deleteImage = async (url) => {
+  try {
+    const publicId = getPublicId(url);
+    if (!publicId) return;
+    await cloudinary.uploader.destroy(publicId);
+  } catch (err) {
+    console.error("Cloudinary delete failed:", url, err.message);
+  }
+};
+
+const cleanupTempFiles = (files) => {
+  if (!files) return;
+  Object.values(files)
+    .flat()
+    .forEach((file) => {
+      try {
+        if (file?.path && fs.existsSync(file.path)) fs.unlinkSync(file.path);
+      } catch (_) {}
+    });
+};
+
+// subCategories array se naam nikalna (string ya object dono chalenge)
+const getSubCategoryNames = (categoryDoc) => {
+  const list = categoryDoc?.subCategories;
+  if (!Array.isArray(list)) return null; // structure alag hai to check skip
+  return list
+    .map((s) => (typeof s === "string" ? s : s?.name || s?.title))
+    .filter(Boolean)
+    .map((s) => String(s).trim().toLowerCase());
+};
+
 
 // --- Helper Function: Get User ID from Request ---
 const getUserId = (req) => req.user?.userId || req.user?._id || req.user?.id;
@@ -434,51 +484,146 @@ console.log(`Stats: Total Reviews - ${totalReviews}, Avg Rating - ${avg.toFixed(
 
 // --- 4. Update Business ---
 const updateBusiness = async (req, res) => {
+  const newlyUploadedUrls = [];
+
   try {
     const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ success: false, message: "Invalid business id" });
+    }
+
     const userId = getUserId(req);
+    if (!userId) {
+      return res.status(401).json({ success: false, message: "Unauthorized" });
+    }
 
     const existingBusiness = await businessService.getBusinessById(id);
     if (!existingBusiness) {
       return res.status(404).json({ success: false, message: "Business not found" });
     }
 
-    // Authorization Check
-    if (existingBusiness.userId.toString() !== userId.toString()) {
+    if (!existingBusiness.userId || existingBusiness.userId.toString() !== userId.toString()) {
       return res.status(403).json({ success: false, message: "You are not authorized to update this business" });
     }
 
-    let updateData = { ...req.body };
-    const files = req.files || {};
+    if (existingBusiness.isBlocked) {
+      return res.status(403).json({ success: false, message: "This business is blocked" });
+    }
 
-    // Handle Image Updates
+    // 1. Sirf allowed fields
+    const updateData = {};
+    for (const key of ALLOWED_FIELDS) {
+      if (req.body[key] !== undefined) updateData[key] = req.body[key];
+    }
+
+    // 2. form-data ke JSON strings parse karo
+    for (const key of ["location", "services"]) {
+      if (typeof updateData[key] === "string") {
+        try {
+          updateData[key] = JSON.parse(updateData[key]);
+        } catch {
+          return res.status(400).json({ success: false, message: `Invalid JSON in ${key}` });
+        }
+      }
+    }
+
+    if (updateData.location && updateData.location.type !== "Point") {
+      return res.status(400).json({ success: false, message: "location.type must be 'Point'" });
+    }
+
+    // 3. Category / SubCategory validate (BusinessCategory model se)
+    if (updateData.category !== undefined || updateData.subCategory !== undefined) {
+      const categoryId = updateData.category || existingBusiness.category;
+
+      if (!mongoose.Types.ObjectId.isValid(categoryId)) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid category id. Send the category _id, not its name.",
+        });
+      }
+
+      const categoryDoc = await BusinessCategory.findById(categoryId);
+      if (!categoryDoc) {
+        return res.status(400).json({ success: false, message: "Category not found" });
+      }
+
+      // subCategory check (sirf tab jab model me subCategories array ho)
+      const subCategory = (updateData.subCategory ?? existingBusiness.subCategory ?? "")
+        .toString()
+        .trim();
+      const allowedSubs = getSubCategoryNames(categoryDoc);
+
+      if (allowedSubs && !allowedSubs.includes(subCategory.toLowerCase())) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid subCategory for the selected category",
+        });
+      }
+
+      if (updateData.subCategory !== undefined) updateData.subCategory = subCategory;
+    }
+
+    // 4. Images: nayi upload, purani DB update ke baad delete
+    const files = req.files || {};
+    const oldImagesToDelete = [];
+
     if (files.businessImages?.length > 0) {
-      const newBusinessImages = await Promise.all(
-        files.businessImages.map((file) => uploadToCloudinary(file.path))
+      const uploaded = await Promise.all(
+        files.businessImages.map(async (file) => {
+          const url = await uploadToCloudinary(file.path);
+          newlyUploadedUrls.push(url);
+          return url;
+        })
       );
-      updateData.businessImages = [...existingBusiness.businessImages, ...newBusinessImages];
+      updateData.businessImages = uploaded;
+      oldImagesToDelete.push(...(existingBusiness.businessImages || []));
     }
 
     if (files.nationalId?.[0]) {
-      updateData.nationalIdImage = await uploadToCloudinary(files.nationalId[0].path);
+      const url = await uploadToCloudinary(files.nationalId[0].path);
+      newlyUploadedUrls.push(url);
+      updateData.nationalIdImage = url;
+      if (existingBusiness.nationalIdImage) oldImagesToDelete.push(existingBusiness.nationalIdImage);
     }
 
     if (files.ownerImage?.[0]) {
-      updateData.ownerImage = await uploadToCloudinary(files.ownerImage[0].path);
+      const url = await uploadToCloudinary(files.ownerImage[0].path);
+      newlyUploadedUrls.push(url);
+      updateData.ownerImage = url;
+      if (existingBusiness.ownerImage) oldImagesToDelete.push(existingBusiness.ownerImage);
     }
 
+    // 5. DB update
     const updatedBusiness = await businessService.updateBusiness(id, updateData);
+
+    // 6. Purani images delete
+    if (oldImagesToDelete.length > 0) {
+      await Promise.all(oldImagesToDelete.map(deleteImage));
+    }
 
     return res.status(200).json({
       success: true,
       message: "Business updated successfully",
       data: updatedBusiness,
     });
-  } catch (error) {
-    return res.status(500).json({ success: false, message: "Error updating business", error: error.message });
+  } catch (rawError) {
+    if (newlyUploadedUrls.length > 0) {
+      await Promise.all(newlyUploadedUrls.map(deleteImage));
+    }
+
+    const error = rawError?.error instanceof Error ? rawError.error : rawError;
+
+    if (error?.name === "CastError" || error?.name === "ValidationError") {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+
+    console.error("updateBusiness error:", error);
+    return res.status(500).json({ success: false, message: "Error updating business" });
+  } finally {
+    cleanupTempFiles(req.files);
   }
 };
-
 // --- 5. Delete Business ---
 const deleteBusiness = async (req, res) => {
   try {
