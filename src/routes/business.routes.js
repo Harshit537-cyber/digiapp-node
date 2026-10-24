@@ -23,6 +23,7 @@ router.post(
   upload.fields([
     { name: 'businessImages', maxCount: 5 }, 
     { name: 'nationalId', maxCount: 1 },     
+    
     { name: 'ownerImage', maxCount: 1 }      
   ]),
   businessController.registerBusiness

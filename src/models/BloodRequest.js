@@ -58,8 +58,17 @@ const bloodRequestSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["Active", "Deactive"],
+      enum: ["Active", "Deactive", "Expired"],
       default: "Active",
+    },
+    expiresAt: {
+      type: Date,
+      default: () => new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      index: true,
+    },
+    expiryReminderSent: {
+      type: Boolean,
+      default: false,
     },
   },
   { timestamps: true }

@@ -11,6 +11,7 @@ const chatSocket = require("./socket/chatSocket")
 
 
 require('./jobs/sosCron'); 
+require('./jobs/bloodRequestCron');
 const Message = require("./models/message.model");
 
 const PORT = process.env.PORT ||5000;

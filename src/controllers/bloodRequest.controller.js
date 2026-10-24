@@ -37,6 +37,8 @@ const createBloodRequest = async (req, res) => {
       contactNumber,
       whatsappNumber,
       additionalInfo,
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      expiryReminderSent: false,
     };
 
     console.log("Data being sent to Service:", bloodRequestData);
@@ -200,7 +202,11 @@ const activateBloodRequest = async (req, res) => {
       return response.error(res, "Unauthorized to update this request", 403);
     }
 
-    const updated = await bloodRequestService.updateRequestStatus(id, "Active");
+    const updated = await bloodRequestService.updateBloodRequest(id, {
+      status: "Active",
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      expiryReminderSent: false,
+    });
     return response.success(
       res,
       "Blood request activated successfully",
