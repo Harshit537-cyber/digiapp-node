@@ -415,7 +415,27 @@ const getNearbyLatestJobs = async (latitude, longitude) => {
 
     const bloodRequests = await BloodRequest.aggregate([
       {
+        $geoNear: {
+          near: { type: "Point", coordinates: userCoordinates },
+          distanceField: "distance",
+          spherical: true,
+        },
+      },
+      {
+        $match: {
+          status: "Active",
+          $or: [
+            { expiresAt: { $gt: now } },
+            { expiresAt: { $exists: false } },
+            { expiresAt: null },
+          ],
+        },
+      },
+      {
         $addFields: {
+          distanceInKm: {
+            $round: [{ $divide: ["$distance", 1000] }, 2],
+          },
           urgencyPriority: {
             $switch: {
               branches: [
@@ -430,8 +450,8 @@ const getNearbyLatestJobs = async (latitude, longitude) => {
       },
       {
         $sort: {
+          distance: 1,
           urgencyPriority: -1,
-          createdAt: -1,
         },
       },
       { $limit: 25 },

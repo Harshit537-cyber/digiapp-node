@@ -17,20 +17,48 @@ const deleteBloodRequestById = async (id) => {
   return await BloodRequest.findByIdAndDelete(id);
 };
 
-const getAllBloodRequests = async (lat, lng, radius) => {
-    let query = {};
-    if (lat && lng) {
-    const radiusInKm = radius ? parseFloat(radius) : 5; 
-    const radiusInRadians = radiusInKm / 6378.1;
+const getAllBloodRequests = async (lat, lng) => {
+  const now = new Date();
+  const matchActive = {
+    status: "Active",
+    $or: [
+      { expiresAt: { $gt: now } },
+      { expiresAt: { $exists: false } },
+      { expiresAt: null },
+    ],
+  };
 
-    query.location = {
-      $geoWithin: {
-        $centerSphere: [[parseFloat(lng), parseFloat(lat)], radiusInRadians],
+  if (lat && lng) {
+    const userCoordinates = [parseFloat(lng), parseFloat(lat)];
+
+    return await BloodRequest.aggregate([
+      {
+        $geoNear: {
+          near: { type: "Point", coordinates: userCoordinates },
+          distanceField: "distance",
+          spherical: true,
+        },
       },
-    };
+      {
+        $match: matchActive,
+      },
+      {
+        $addFields: {
+          distanceInKm: {
+            $round: [{ $divide: ["$distance", 1000] }, 2],
+          },
+        },
+      },
+      {
+        $sort: {
+          distance: 1, // 0-5km first, then 10km, and so on
+          createdAt: -1,
+        },
+      },
+    ]);
   }
 
-  return await BloodRequest.find(query).sort({ createdAt: -1 });
+  return await BloodRequest.find(matchActive).sort({ createdAt: -1 });
 };
 
 const getBloodRequestById = async (id) => {
