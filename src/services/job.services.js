@@ -418,6 +418,7 @@ const getNearbyLatestJobs = async (latitude, longitude) => {
         $geoNear: {
           near: { type: "Point", coordinates: userCoordinates },
           distanceField: "distance",
+          maxDistance: 10000,
           spherical: true,
         },
       },
@@ -445,6 +446,28 @@ const getNearbyLatestJobs = async (latitude, longitude) => {
               ],
               default: 0,
             },
+          },
+          expiresAt: {
+            $ifNull: [
+              "$expiresAt",
+              {
+                $cond: {
+                  if: {
+                    $and: [
+                      "$createdAt",
+                      {
+                        $gt: [
+                          { $add: ["$createdAt", 7 * 24 * 60 * 60 * 1000] },
+                          now,
+                        ],
+                      },
+                    ],
+                  },
+                  then: { $add: ["$createdAt", 7 * 24 * 60 * 60 * 1000] },
+                  else: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+                },
+              },
+            ],
           },
         },
       },

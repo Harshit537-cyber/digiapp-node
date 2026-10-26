@@ -36,6 +36,7 @@ const getAllBloodRequests = async (lat, lng) => {
         $geoNear: {
           near: { type: "Point", coordinates: userCoordinates },
           distanceField: "distance",
+          maxDistance: 10000,
           spherical: true,
         },
       },
@@ -47,11 +48,33 @@ const getAllBloodRequests = async (lat, lng) => {
           distanceInKm: {
             $round: [{ $divide: ["$distance", 1000] }, 2],
           },
+          expiresAt: {
+            $ifNull: [
+              "$expiresAt",
+              {
+                $cond: {
+                  if: {
+                    $and: [
+                      "$createdAt",
+                      {
+                        $gt: [
+                          { $add: ["$createdAt", 7 * 24 * 60 * 60 * 1000] },
+                          now,
+                        ],
+                      },
+                    ],
+                  },
+                  then: { $add: ["$createdAt", 7 * 24 * 60 * 60 * 1000] },
+                  else: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+                },
+              },
+            ],
+          },
         },
       },
       {
         $sort: {
-          distance: 1, // 0-5km first, then 10km, and so on
+          distance: 1,
           createdAt: -1,
         },
       },
