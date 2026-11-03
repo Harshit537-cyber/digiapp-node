@@ -25,12 +25,12 @@ const getAllBusinesses =  async (page = 1, limit = 10, lat, lng, radius = 5) => 
           },
           distanceField: "distance", 
           maxDistance: radius * 1000, 
-          query: { status: 'Approved' },
+          query: { status: 'Approved', isBlocked: { $ne: true } },
           spherical: true,
         },
       });
     } else {
-      pipeline.push({ $match: { status: 'Approved' } });
+      pipeline.push({ $match: { status: 'Approved', isBlocked: { $ne: true } } });
       pipeline.push({ $sort: { createdAt: -1 } });
     }
 

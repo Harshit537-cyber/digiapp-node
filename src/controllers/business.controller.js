@@ -414,15 +414,25 @@ const categoryIds = businesses
       };
     });
 
+    const getPlanPriority = (business) => {
+      if (business.subscription?.planName === "Pro+" || (business.badge && business.badge.includes("Trusted"))) {
+        return 3;
+      }
+      if (business.subscription?.planName === "Lite" || (business.badge && business.badge.includes("Verified"))) {
+        return 2;
+      }
+      return 1;
+    };
+
     businessesWithRatings.sort((a, b) => {
       if (a.distanceBucket !== b.distanceBucket) {
         return a.distanceBucket - b.distanceBucket;
       }
 
-      const aIsTrusted = a.badge && a.badge.includes("Trusted") ? 1 : 0;
-      const bIsTrusted = b.badge && b.badge.includes("Trusted") ? 1 : 0;
-      if (aIsTrusted !== bIsTrusted) {
-        return bIsTrusted - aIsTrusted; 
+      const aPriority = getPlanPriority(a);
+      const bPriority = getPlanPriority(b);
+      if (bPriority !== aPriority) {
+        return bPriority - aPriority;
       }
 
       if (b.averageRating !== a.averageRating) {

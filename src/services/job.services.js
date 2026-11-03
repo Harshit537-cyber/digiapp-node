@@ -320,11 +320,27 @@ const getNearbyLatestJobs = async (latitude, longitude) => {
           badgePriority: {
             $switch: {
               branches: [
-                { case: { $eq: ["$badge", "Trusted"] }, then: 3 },
-                { case: { $eq: ["$badge", "Normal"] }, then: 2 },
-                { case: { $eq: ["$badge", "Trial"] }, then: 1 },
+                {
+                  case: {
+                    $or: [
+                      { $eq: ["$subscription.planName", "Pro+"] },
+                      { $in: ["Trusted", { $ifNull: ["$badge", []] }] },
+                    ],
+                  },
+                  then: 3,
+                },
+                {
+                  case: {
+                    $or: [
+                      { $eq: ["$subscription.planName", "Lite"] },
+                      { $in: ["Verified", { $ifNull: ["$badge", []] }] },
+                    ],
+                  },
+                  then: 2,
+                },
+
               ],
-              default: 0,
+              default: 1,
             },
           },
         },
@@ -353,6 +369,7 @@ const getNearbyLatestJobs = async (latitude, longitude) => {
       {
         $match: {
           status: { $in: ["active", "Approved"] },
+          isBlocked: { $ne: true },
         },
       },
 
@@ -377,6 +394,7 @@ const getNearbyLatestJobs = async (latitude, longitude) => {
         {
           $match: {
             status: "active",
+            isBlocked: { $ne: true },
             _id: { $nin: shops.map((s) => s._id) },
           },
         },
