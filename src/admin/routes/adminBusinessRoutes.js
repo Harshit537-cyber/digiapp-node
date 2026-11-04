@@ -22,6 +22,7 @@ router.put('/update/:id', businessUploadFields, adminBusinessController.updateBu
 router.delete('/delete/:id', adminBusinessController.deleteBusiness);
 router.patch("/update-status/:id", verifyAdmin,adminBusinessController.updateBusinessStatus)
 router.patch('/toggle-status/:id', adminBusinessController.toggleBlockBusiness);
+router.put('/toggle-status/:id', adminBusinessController.toggleBlockBusiness);
 
 // Example Route
 router.post('/add-service/:businessId', upload.single('serviceImage'), adminBusinessController.addServiceToBusiness);

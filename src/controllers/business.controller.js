@@ -57,7 +57,7 @@ const cleanupTempFiles = (files) => {
     .forEach((file) => {
       try {
         if (file?.path && fs.existsSync(file.path)) fs.unlinkSync(file.path);
-      } catch (_) {}
+      } catch (_) { }
     });
 };
 
@@ -93,8 +93,8 @@ const registerBusiness = async (req, res) => {
       });
     }
     console.log(req.body)
-   
-       const { businessName, details, category, subCategory, location, address, ownerName, mobileNumber, whatsappNumber } = req.body;
+
+    const { businessName, details, category, subCategory, location, address, ownerName, mobileNumber, whatsappNumber } = req.body;
     const { businessImages, nationalId, ownerImage } = req.files || {};
 
     if (!businessImages || businessImages.length === 0) {
@@ -107,17 +107,17 @@ const registerBusiness = async (req, res) => {
     if (!nationalId || !ownerImage) {
       return res.status(400).json({ success: false, message: "Please upload all required images (ID and Owner Image)" });
     }
-  const BusinessCategory = require('../admin/models/BusinessCategory'); 
+    const BusinessCategory = require('../admin/models/BusinessCategory');
     const catData = await BusinessCategory.findById(category);
-    
+
     if (!catData) {
       return res.status(404).json({ success: false, message: "Selected Category not found" });
     }
 
     if (!subCategory || !catData.subCategory.includes(subCategory)) {
-      return res.status(400).json({ 
-        success: false, 
-        message: `Invalid sub-category. Please select a valid one from this category.` 
+      return res.status(400).json({
+        success: false,
+        message: `Invalid sub-category. Please select a valid one from this category.`
       });
     }
 
@@ -127,16 +127,13 @@ const registerBusiness = async (req, res) => {
     const nationalIdUrl = await uploadToCloudinary(nationalId[0].path);
     const ownerImageUrl = await uploadToCloudinary(ownerImage[0].path);
 
-  const trialExpiry = new Date();
-    trialExpiry.setMonth(trialExpiry.getMonth() + 1); 
-
     const businessData = {
       userId,
       businessName,
       details,
-      category,      
-      subCategory,  
-    location, 
+      category,
+      subCategory,
+      location,
       address,
       ownerName,
       mobileNumber,
@@ -144,15 +141,15 @@ const registerBusiness = async (req, res) => {
       businessImages: businessImageUrls,
       nationalIdImage: nationalIdUrl,
       ownerImage: ownerImageUrl,
-      status:  ["Pending"],
-      badge: ["Trial"],      
-      backgroundImage: "",   
-      services: [],   
+      status: ["Pending"],
+      badge: ["None"],
+      backgroundImage: "",
+      services: [],
       subscription: {
-        planName: "Trial",        
-        planType: "Trial",      
-        expiryDate: trialExpiry,
-        isTrialUsed: true    
+        planName: "None",
+        planType: "None",
+        expiryDate: null,
+        isTrialUsed: false
       }
     };
 
@@ -184,31 +181,31 @@ const addBusinessServiceListing = async (req, res) => {
     }
 
     if (business.userId.toString() !== loggedInUserId.toString()) {
-      return res.status(403).json({ 
-        success: false, 
-        message: "Unauthorized! You can only add services to your own business." 
+      return res.status(403).json({
+        success: false,
+        message: "Unauthorized! You can only add services to your own business."
       });
     }
 
     if (!business.status.includes("Active")) {
-      return res.status(403).json({ 
-        success: false, 
-        message: "Your subscription plan is not active." 
+      return res.status(403).json({
+        success: false,
+        message: "Your subscription plan is not active."
       });
     }
 
     if (business.subscription.planName === "Trial") {
-      return res.status(403).json({ 
+      return res.status(403).json({
         success: false,
-        message: "Service listings are not allowed in the Free Trial. Please upgrade." 
+        message: "Service listings are not allowed in the Free Trial. Please upgrade."
       });
     }
 
     const MAX_SERVICE_LIMIT = 5;
     if (business.services.length >= MAX_SERVICE_LIMIT) {
-      return res.status(400).json({ 
-        success: false, 
-        message: `You have reached the maximum limit of ${MAX_SERVICE_LIMIT} service listings.` 
+      return res.status(400).json({
+        success: false,
+        message: `You have reached the maximum limit of ${MAX_SERVICE_LIMIT} service listings.`
       });
     }
 
@@ -220,13 +217,13 @@ const addBusinessServiceListing = async (req, res) => {
     }
 
     const result = await uploadToCloudinary(req.files[0].path);
-    const imageUrl = result; 
+    const imageUrl = result;
 
     // 8. Service Push and Save
     business.services.push({
       serviceTitle,
       serviceDetails,
-      serviceImages: [imageUrl] 
+      serviceImages: [imageUrl]
     });
 
     await business.save();
@@ -235,21 +232,21 @@ const addBusinessServiceListing = async (req, res) => {
       success: true,
       message: "Service listing added successfully!",
       totalServices: business.services.length,
-  addedService: business.services[business.services.length - 1] 
+      addedService: business.services[business.services.length - 1]
     });
 
   } catch (error) {
-    return res.status(500).json({ 
+    return res.status(500).json({
       success: false,
       message: "Internal server error.",
-      error: error.message 
+      error: error.message
     });
   }
 };
 
 const getServiceListings = async (req, res) => {
   try {
-    const { businessId } = req.params; 
+    const { businessId } = req.params;
 
     const business = await Business.findById(businessId).select("services businessName");
 
@@ -264,9 +261,9 @@ const getServiceListings = async (req, res) => {
       success: true,
       businessName: business.businessName,
       totalServices: business.services.length,
-      services: business.services, 
+      services: business.services,
     });
-    
+
   } catch (error) {
     return res.status(500).json({
       success: false,
@@ -287,16 +284,16 @@ const addGalleryImages = async (req, res) => {
     }
 
     if (business.userId.toString() !== loggedInUserId.toString()) {
-      return res.status(403).json({ 
-        success: false, 
-        message: "Unauthorized! You can only manage your own business gallery." 
+      return res.status(403).json({
+        success: false,
+        message: "Unauthorized! You can only manage your own business gallery."
       });
     }
 
     if (!business.status.includes("Active")) {
-      return res.status(403).json({ 
-        success: false, 
-        message: "Your business is not active. Please check your subscription status." 
+      return res.status(403).json({
+        success: false,
+        message: "Your business is not active. Please check your subscription status."
       });
     }
 
@@ -308,9 +305,9 @@ const addGalleryImages = async (req, res) => {
     } else if (plan === "Pro+") {
       limit = 15;
     } else {
-      return res.status(403).json({ 
-        success: false, 
-        message: `Gallery images are not allowed in the ${plan} plan. Please upgrade.` 
+      return res.status(403).json({
+        success: false,
+        message: `Gallery images are not allowed in the ${plan} plan. Please upgrade.`
       });
     }
 
@@ -322,9 +319,9 @@ const addGalleryImages = async (req, res) => {
     }
 
     if (currentImagesCount + newFilesCount > limit) {
-      return res.status(400).json({ 
-        success: false, 
-        message: `Limit exceeded! Your ${plan} plan allows only ${limit} images. You already have ${currentImagesCount}.` 
+      return res.status(400).json({
+        success: false,
+        message: `Limit exceeded! Your ${plan} plan allows only ${limit} images. You already have ${currentImagesCount}.`
       });
     }
 
@@ -339,14 +336,14 @@ const addGalleryImages = async (req, res) => {
       message: "Gallery images uploaded successfully!",
       totalImages: business.businessImages.length,
       limitForPlan: limit,
-      gallery: business.businessImages 
+      gallery: business.businessImages
     });
 
   } catch (error) {
-    return res.status(500).json({ 
+    return res.status(500).json({
       success: false,
       message: "Internal server error while uploading gallery images.",
-      error: error.message 
+      error: error.message
     });
   }
 };
@@ -367,7 +364,7 @@ const getGalleryImages = async (req, res) => {
       success: true,
       businessName: business.businessName,
       totalImages: business.businessImages.length,
-      images: business.businessImages, 
+      images: business.businessImages,
     });
 
   } catch (error) {
@@ -384,8 +381,8 @@ const getAllBusinesses = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const { lat, lng } = req.query;
-    
-    const radius = Math.min(parseInt(req.query.radius) || 5, 100); 
+
+    const radius = Math.min(parseInt(req.query.radius) || 5, 100);
 
     const result = await businessService.getAllBusinesses(page, limit, lat, lng, radius);
     let businesses = result.businesses || [];
@@ -394,10 +391,10 @@ const getAllBusinesses = async (req, res) => {
       return res.status(200).json({ success: true, data: result });
     }
 
-const categoryIds = businesses
-  .map(b => b.category)
-  .filter(id => mongoose.Types.ObjectId.isValid(id));
-      const categoriesFromDb = await BusinessCategory.find({ _id: { $in: categoryIds } }).select('name');
+    const categoryIds = businesses
+      .map(b => b.category)
+      .filter(id => mongoose.Types.ObjectId.isValid(id));
+    const categoriesFromDb = await BusinessCategory.find({ _id: { $in: categoryIds } }).select('name');
     const catLookup = {};
     categoriesFromDb.forEach(c => { catLookup[c._id.toString()] = c.name; });
 
@@ -408,18 +405,18 @@ const categoryIds = businesses
     ]);
 
     const businessesWithRatings = businesses.map(business => {
-      const b = business; 
+      const b = business;
       const ratingInfo = ratingsData.find(r => r._id.toString() === b._id.toString());
-      
+
       const distInKm = b.distance ? b.distance / 1000 : 0;
-      const distanceBucket = Math.floor(distInKm / 5); 
+      const distanceBucket = Math.floor(distInKm / 5);
 
       return {
         ...b,
         category: catLookup[b.category?.toString()] || null,
         averageRating: ratingInfo ? parseFloat(ratingInfo.averageRating.toFixed(1)) : 0,
         totalReviews: ratingInfo ? ratingInfo.totalReviews : 0,
-        distanceBucket: distanceBucket 
+        distanceBucket: distanceBucket
       };
     });
 
@@ -452,7 +449,7 @@ const categoryIds = businesses
     });
 
     let finalData = { ...result, businesses: businessesWithRatings };
-    
+
     return res.status(200).json({
       success: true,
       message: "Businesses retrieved successfully",
@@ -470,32 +467,34 @@ const categoryIds = businesses
 const getBusinessById = async (req, res) => {
   try {
     const { id } = req.params;
-     console.log("Fetching details for Business ID:", id);
+    console.log("Fetching details for Business ID:", id);
     const business = await businessService.getBusinessById(id);
 
     if (!business) {
       return res.status(404).json({ success: false, message: "Business not found" });
     }
-console.log("Business found:", business.businessName);
+    console.log("Business found:", business.businessName);
 
-const reviews = await Review.find({ businessId: id })
-      .populate("userId", "fullName profilePhoto") 
-      .sort("-createdAt"); 
+    const reviews = await Review.find({ businessId: id })
+      .populate("userId", "fullName profilePhoto")
+      .sort("-createdAt");
 
     const totalReviews = reviews.length;
-    const avg = totalReviews > 0 
-      ? reviews.reduce((sum, r) => sum + r.rating, 0) / totalReviews 
+    const avg = totalReviews > 0
+      ? reviews.reduce((sum, r) => sum + r.rating, 0) / totalReviews
       : 0;
 
     const businessData = business.toObject ? business.toObject() : business;
-console.log(`Stats: Total Reviews - ${totalReviews}, Avg Rating - ${avg.toFixed(1)}`);
+    console.log(`Stats: Total Reviews - ${totalReviews}, Avg Rating - ${avg.toFixed(1)}`);
 
-    return res.status(200).json({ success: true, data: {
+    return res.status(200).json({
+      success: true, data: {
         ...businessData,
-        averageRating: parseFloat(avg.toFixed(1)), 
+        averageRating: parseFloat(avg.toFixed(1)),
         totalReviews: totalReviews,
-        reviews: reviews 
-      }  });
+        reviews: reviews
+      }
+    });
   } catch (error) {
     return res.status(500).json({ success: false, message: "Error fetching business details", error: error.message });
   }
@@ -708,7 +707,48 @@ const updateBusinessStatus = async (req, res) => {
       return res.status(400).json({ success: false, message: "Invalid status. Must be 'Approved' or 'Rejected'" });
     }
 
-    const updatedBusiness = await Business.findByIdAndUpdate(id, { status }, { new: true });
+    const business = await Business.findById(id);
+    if (!business) {
+      return res.status(404).json({ success: false, message: "Business not found" });
+    }
+
+    let updateFields = { status };
+
+    const currentPlan = business.subscription?.planName;
+    const isPaidPlan = ["Pro+", "Lite"].includes(currentPlan);
+    const hasActiveTrial = currentPlan === "Trial" && business.subscription?.expiryDate && new Date(business.subscription.expiryDate) > new Date();
+
+    const shouldActivateTrial = status === "Approved" && !isPaidPlan && !hasActiveTrial;
+    if (shouldActivateTrial) {
+      const trialExpiry = new Date();
+      trialExpiry.setMonth(trialExpiry.getMonth() + 1);
+
+      updateFields["subscription.planName"] = "Trial";
+      updateFields["subscription.planType"] = "Trial";
+      updateFields["subscription.expiryDate"] = trialExpiry;
+      updateFields["subscription.isTrialUsed"] = true;
+      updateFields["badge"] = ["Trial"];
+    }
+
+    const updatedBusiness = await Business.findByIdAndUpdate(id, updateFields, { new: true });
+
+    if (status === "Approved") {
+      try {
+        const User = require("../models/User");
+        const user = await User.findById(business.userId);
+        if (user && user.fcmToken) {
+          const { sendNotification } = require("../utils/notification");
+          await sendNotification(
+            user.fcmToken,
+            "Free Trial Activated",
+            "your free trail is activated",
+            { type: "BUSINESS_APPROVAL", businessId: business._id.toString() }
+          );
+        }
+      } catch (notifErr) {
+        console.error("Error sending approval notification:", notifErr.message);
+      }
+    }
 
     if (!updatedBusiness) {
       return res.status(404).json({ success: false, message: "Business not found" });
@@ -856,7 +896,7 @@ const updateServiceInBusiness = async (req, res) => {
 
 const getMyBusinesses = async (req, res) => {
   try {
-    const userId = getUserId(req); 
+    const userId = getUserId(req);
 
     if (!userId) {
       return res.status(401).json({ success: false, message: "Unauthorized access" });
@@ -947,7 +987,7 @@ const addServiceImages = async (req, res) => {
   try {
     const { id, serviceId } = req.params;
     const userId = getUserId(req);
-    const files = req.files; 
+    const files = req.files;
 
     if (!files || files.length === 0) {
       return res.status(400).json({ success: false, message: "No images provided" });
@@ -1021,7 +1061,7 @@ const addMoreBusinessImages = async (req, res) => {
       return res.status(403).json({ success: false, message: "Unauthorized action" });
     }
 
-    
+
     const newImageUrls = await Promise.all(
       files.map((file) => uploadToCloudinary(file.path))
     );
@@ -1043,7 +1083,7 @@ const addMoreBusinessImages = async (req, res) => {
 const deleteBusinessImage = async (req, res) => {
   try {
     const { id } = req.params;
-    const { imageUrl } = req.body; 
+    const { imageUrl } = req.body;
     const userId = getUserId(req);
 
     if (!imageUrl) {
@@ -1055,12 +1095,12 @@ const deleteBusinessImage = async (req, res) => {
       return res.status(404).json({ success: false, message: "Business not found" });
     }
 
-   
+
     if (business.userId.toString() !== userId.toString()) {
       return res.status(403).json({ success: false, message: "Unauthorized action" });
     }
 
-   
+
     const updatedBusiness = await businessService.removeImageFromBusiness(id, imageUrl);
 
     return res.status(200).json({
@@ -1075,11 +1115,11 @@ const deleteBusinessImage = async (req, res) => {
 
 const searchBusinesses = async (req, res) => {
   try {
-    const { q } = req.query; 
-    
+    const { q } = req.query;
+
     let query = {};
     if (q) {
-      query.businessName = { $regex: q, $options: "i" }; 
+      query.businessName = { $regex: q, $options: "i" };
     }
 
     const businesses = await Business.find(query).sort({ createdAt: -1 });
@@ -1102,8 +1142,8 @@ const getMyPostedBusinesses = async (req, res) => {
   try {
     const idFromToken = req.user.userId;
 
-    const businesses = await Business.find({ 
-      userId: new mongoose.Types.ObjectId(idFromToken) 
+    const businesses = await Business.find({
+      userId: new mongoose.Types.ObjectId(idFromToken)
     }).sort({ createdAt: -1 });
 
     res.status(200).json({
@@ -1123,7 +1163,7 @@ const getMyPostedBusinesses = async (req, res) => {
 const searchMyBusinesses = async (req, res) => {
   try {
     const idFromToken = req.user.userId;
-    const { q } = req.query; 
+    const { q } = req.query;
 
     if (!idFromToken) {
       return res.status(401).json({ success: false, message: "Unauthorized" });
@@ -1174,8 +1214,8 @@ module.exports = {
   deleteBackgroundImage,
   addServiceImages,
   deleteServiceImage,
-  addMoreBusinessImages ,
-  deleteBusinessImage ,
+  addMoreBusinessImages,
+  deleteBusinessImage,
   searchBusinesses,
   getMyPostedBusinesses,
   searchMyBusinesses,

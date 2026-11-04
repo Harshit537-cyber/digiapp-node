@@ -239,6 +239,48 @@ exports.updateBusiness = async (req, res) => {
             }
         }
 
+        let normalizedNewStatus = null;
+        if (updateData.status) {
+            const rawStatus = Array.isArray(updateData.status) ? updateData.status[0] : updateData.status;
+            if (typeof rawStatus === 'string') {
+                normalizedNewStatus = rawStatus.charAt(0).toUpperCase() + rawStatus.slice(1).toLowerCase();
+                updateData.status = normalizedNewStatus;
+            }
+        }
+
+        if (normalizedNewStatus === "Approved") {
+            const currentPlan = business.subscription?.planName;
+            const isPaidPlan = ["Pro+", "Lite"].includes(currentPlan);
+            const hasActiveTrial = currentPlan === "Trial" && business.subscription?.expiryDate && new Date(business.subscription.expiryDate) > new Date();
+
+            if (!isPaidPlan && !hasActiveTrial) {
+                const trialExpiry = new Date();
+                trialExpiry.setMonth(trialExpiry.getMonth() + 1);
+
+                updateData["subscription.planName"] = "Trial";
+                updateData["subscription.planType"] = "Trial";
+                updateData["subscription.expiryDate"] = trialExpiry;
+                updateData["subscription.isTrialUsed"] = true;
+                updateData["badge"] = ["Trial"];
+
+                try {
+                    const User = require("../../models/User");
+                    const user = await User.findById(business.userId);
+                    if (user && user.fcmToken) {
+                        const { sendNotification } = require("../../utils/notification");
+                        await sendNotification(
+                            user.fcmToken,
+                            "Free Trial Activated",
+                            "your free trail is activated",
+                            { type: "BUSINESS_APPROVAL", businessId: business._id.toString() }
+                        );
+                    }
+                } catch (notifErr) {
+                    console.error("Error sending approval notification:", notifErr.message);
+                }
+            }
+        }
+
         const updatedBusiness = await Business.findByIdAndUpdate(
             req.params.id,
             { $set: updateData },
@@ -425,18 +467,86 @@ exports.deleteBackgroundImage = async (req, res) => {
     }
 };
 
-// --- TOGGLE STATUS ---
+// --- TOGGLE / UPDATE STATUS ---
 exports.toggleBlockBusiness = async (req, res) => {
     try {
-        const business = await Business.findById(req.params.id);
+        const { id } = req.params;
+        const business = await Business.findById(id);
         if (!business) return res.status(404).json({ success: false, message: "Business not found." });
 
-        business.status = business.status === 'Approved' ? 'Rejected' : 'Approved';
+        const validStatuses = ["Pending", "Approved", "Rejected", "Expired", "Active"];
+        let targetStatus = req.body?.status || req.query?.status;
+
+        if (Array.isArray(targetStatus) && targetStatus.length > 0) {
+            targetStatus = targetStatus[0];
+        }
+
+        let newStatus;
+        if (targetStatus && typeof targetStatus === "string") {
+            const trimmed = targetStatus.trim();
+            const matched = validStatuses.find(s => s.toLowerCase() === trimmed.toLowerCase());
+            if (!matched) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Invalid status! Allowed statuses are: ${validStatuses.join(", ")}`
+                });
+            }
+            newStatus = matched;
+        } else {
+            // No status passed -> toggle between Approved and Rejected
+            const isCurrentlyApproved = Array.isArray(business.status)
+                ? business.status.some(s => s && s.toLowerCase() === "approved")
+                : (typeof business.status === "string" && business.status.toLowerCase() === "approved");
+            newStatus = isCurrentlyApproved ? "Rejected" : "Approved";
+        }
+
+        business.status = [newStatus];
+
+        // If new status is Approved, activate Free Trial if not already paid/active
+        if (newStatus === "Approved") {
+            const currentPlan = business.subscription?.planName;
+            const isPaidPlan = ["Pro+", "Lite"].includes(currentPlan);
+            const hasActiveTrial = currentPlan === "Trial" && business.subscription?.expiryDate && new Date(business.subscription.expiryDate) > new Date();
+
+            if (!isPaidPlan && !hasActiveTrial) {
+                const trialExpiry = new Date();
+                trialExpiry.setMonth(trialExpiry.getMonth() + 1);
+
+                business.subscription = business.subscription || {};
+                business.subscription.planName = "Trial";
+                business.subscription.planType = "Trial";
+                business.subscription.expiryDate = trialExpiry;
+                business.subscription.isTrialUsed = true;
+                business.badge = ["Trial"];
+            }
+
+            try {
+                const User = require("../../models/User");
+                const user = await User.findById(business.userId);
+                if (user && user.fcmToken) {
+                    const { sendNotification } = require("../../utils/notification");
+                    await sendNotification(
+                        user.fcmToken,
+                        "Free Trial Activated",
+                        "your free trail is activated",
+                        { type: "BUSINESS_APPROVAL", businessId: business._id.toString() }
+                    );
+                }
+            } catch (notifErr) {
+                console.error("Error sending approval notification:", notifErr.message);
+            }
+        }
+
         await business.save();
 
-        res.status(200).json({ success: true, message: `Status: ${business.status}`, data: business });
+        return res.status(200).json({
+            success: true,
+            message: `Business status successfully updated to ${newStatus}`,
+            data: business
+        });
     } catch (error) {
-        res.status(500).json({ success: false, message: "Server Error: " + error.message });
+        console.error("Error toggling business status:", error);
+        return res.status(500).json({ success: false, message: "Server Error: " + error.message });
     }
 };
 
@@ -467,25 +577,75 @@ exports.updateBusinessStatus = async (req, res) => {
     const { id } = req.params; 
     const { status } = req.body; 
 
-    const validStatuses = ["Pending", "Approved", "Rejected"];
-    if (!validStatuses.includes(status)) {
-      return res.status(400).json({ 
-        success: false, 
-        message: "Invalid status! Please use Pending, Approved, or Rejected." 
-      });
+    if (Array.isArray(status) && status.length > 0) {
+      status = status[0];
+    }
+    if (typeof status === "string") {
+      status = status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
     }
 
-    const updatedBusiness = await Business.findByIdAndUpdate(
-      id,
-      { status: status },
-      { new: true, runValidators: true } 
-    );
+    const validStatuses = ["Pending", "Approved", "Rejected", "Expired", "Active"];
+    let matchedStatus = null;
+    if (typeof status === "string") {
+      matchedStatus = validStatuses.find(s => s.toLowerCase() === status.trim().toLowerCase());
+    }
+    if (!matchedStatus) {
+      return res.status(400).json({ 
+        success: false, 
+        message: `Invalid status! Allowed statuses are: ${validStatuses.join(", ")}` 
+      });
+    }
+    status = matchedStatus;
 
-    if (!updatedBusiness) {
+    const business = await Business.findById(id);
+    if (!business) {
       return res.status(404).json({ 
         success: false, 
         message: "Business not found!" 
       });
+    }
+
+    let updateFields = { status: status };
+
+    const currentPlan = business.subscription?.planName;
+    const isPaidPlan = ["Pro+", "Lite"].includes(currentPlan);
+    const hasActiveTrial = currentPlan === "Trial" && business.subscription?.expiryDate && new Date(business.subscription.expiryDate) > new Date();
+
+    // If status is Approved and not currently on an active paid plan or active trial, activate 1-month Free Trial
+    const shouldActivateTrial = status === "Approved" && !isPaidPlan && !hasActiveTrial;
+    if (shouldActivateTrial) {
+      const trialExpiry = new Date();
+      trialExpiry.setMonth(trialExpiry.getMonth() + 1);
+
+      updateFields["subscription.planName"] = "Trial";
+      updateFields["subscription.planType"] = "Trial";
+      updateFields["subscription.expiryDate"] = trialExpiry;
+      updateFields["subscription.isTrialUsed"] = true;
+      updateFields["badge"] = ["Trial"];
+    }
+
+    const updatedBusiness = await Business.findByIdAndUpdate(
+      id,
+      updateFields,
+      { new: true, runValidators: true } 
+    );
+
+    // Send push notification when approved and free trial is active
+    if (status === "Approved") {
+      try {
+        const user = await User.findById(business.userId);
+        if (user && user.fcmToken) {
+          const { sendNotification } = require("../../utils/notification");
+          await sendNotification(
+            user.fcmToken,
+            "Free Trial Activated",
+            "your free trail is activated",
+            { type: "BUSINESS_APPROVAL", businessId: business._id.toString() }
+          );
+        }
+      } catch (notifErr) {
+        console.error("Error sending approval notification:", notifErr.message);
+      }
     }
 
     res.status(200).json({

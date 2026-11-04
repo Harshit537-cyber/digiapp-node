@@ -11,7 +11,7 @@ const createBusiness = async (data) => {
 };
 
 // 2. Get All Businesses
-const getAllBusinesses =  async (page = 1, limit = 10, lat, lng, radius = 5) => {
+const getAllBusinesses = async (page = 1, limit = 10, lat, lng, radius = 5) => {
   try {
     const skip = (page - 1) * limit;
     let pipeline = [];
@@ -23,8 +23,8 @@ const getAllBusinesses =  async (page = 1, limit = 10, lat, lng, radius = 5) => 
             type: "Point",
             coordinates: [parseFloat(lng), parseFloat(lat)],
           },
-          distanceField: "distance", 
-          maxDistance: radius * 1000, 
+          distanceField: "distance",
+          maxDistance: radius * 1000,
           query: { status: 'Approved', isBlocked: { $ne: true } },
           spherical: true,
         },
@@ -58,7 +58,37 @@ const getAllBusinesses =  async (page = 1, limit = 10, lat, lng, radius = 5) => 
 // 3. Get Business By ID
 const getBusinessById = async (id) => {
   try {
-    return await Business.findById(id);
+    let business = await Business.findById(id);
+    if (!business) return null;
+
+    // Auto-sync: if business status is Approved (even if set directly in DB) but trial is not active yet
+    const isApproved = Array.isArray(business.status)
+      ? business.status.some(s => s && s.toLowerCase() === 'approved')
+      : (typeof business.status === 'string' && business.status.toLowerCase() === 'approved');
+
+    const isPaid = ["Pro+", "Lite"].includes(business.subscription?.planName);
+    const hasValidTrial = business.subscription?.planName === "Trial" && business.subscription?.expiryDate && new Date(business.subscription.expiryDate) > new Date();
+
+    if (isApproved && !isPaid && !hasValidTrial && (!business.subscription || business.subscription.planName === "None" || !business.subscription.expiryDate)) {
+      const trialExpiry = new Date();
+      trialExpiry.setMonth(trialExpiry.getMonth() + 1);
+
+      business = await Business.findByIdAndUpdate(
+        id,
+        {
+          $set: {
+            "subscription.planName": "Trial",
+            "subscription.planType": "Trial",
+            "subscription.expiryDate": trialExpiry,
+            "subscription.isTrialUsed": true,
+            badge: ["Trial"]
+          }
+        },
+        { new: true }
+      );
+    }
+
+    return business;
   } catch (error) {
     throw error;
   }
@@ -84,7 +114,7 @@ const getPendingBusinesses = async (page = 1, limit = 10) => {
     const skip = (page - 1) * limit;
 
     const businesses = await Business.find({ status: 'Pending' })
-      .sort({ createdAt: 1 }) 
+      .sort({ createdAt: 1 })
       .skip(skip)
       .limit(limit);
 
@@ -103,19 +133,61 @@ const getPendingBusinesses = async (page = 1, limit = 10) => {
 
 // 7. Update Business Status (Approve/Reject)
 const updateBusinessStatus = async (id, newStatus) => {
-    // newStatus should be 'Approved' or 'Rejected'
-    if (!['Approved', 'Rejected'].includes(newStatus)) {
-        throw new Error("Invalid status update.");
+  // newStatus should be 'Approved' or 'Rejected'
+  if (!['Approved', 'Rejected'].includes(newStatus)) {
+    throw new Error("Invalid status update.");
+  }
+  try {
+    const business = await Business.findById(id);
+    if (!business) return null;
+
+    let updateFields = { status: newStatus };
+
+    const currentPlan = business.subscription?.planName;
+    const isPaidPlan = ["Pro+", "Lite"].includes(currentPlan);
+    const hasActiveTrial = currentPlan === "Trial" && business.subscription?.expiryDate && new Date(business.subscription.expiryDate) > new Date();
+
+    const shouldActivateTrial = newStatus === "Approved" && !isPaidPlan && !hasActiveTrial;
+    if (shouldActivateTrial) {
+      const trialExpiry = new Date();
+      trialExpiry.setMonth(trialExpiry.getMonth() + 1);
+
+      updateFields["subscription.planName"] = "Trial";
+      updateFields["subscription.planType"] = "Trial";
+      updateFields["subscription.expiryDate"] = trialExpiry;
+      updateFields["subscription.isTrialUsed"] = true;
+      updateFields["badge"] = ["Trial"];
     }
-    try {
-        return await Business.findByIdAndUpdate(
-            id, 
-            { status: newStatus }, 
-            { new: true }
-        );
-    } catch (error) {
-        throw error;
+
+    const updated = await Business.findByIdAndUpdate(
+      id,
+      updateFields,
+      { new: true }
+    );
+
+    // Send push notification when approved
+    if (newStatus === "Approved") {
+      try {
+        const User = require("../models/User");
+        const user = await User.findById(business.userId);
+        if (user && user.fcmToken) {
+          const { sendNotification } = require("../utils/notification");
+          await sendNotification(
+            user.fcmToken,
+            "Free Trial Activated",
+            "your free trail is activated",
+            { type: "BUSINESS_APPROVAL", businessId: business._id.toString() }
+          );
+        }
+      } catch (notifErr) {
+        console.error("Error sending approval notification:", notifErr.message);
+      }
     }
+
+    return updated;
+  } catch (error) {
+    throw error;
+  }
 }
 
 
@@ -123,7 +195,7 @@ const addService = async (businessId, serviceData) => {
   try {
     return await Business.findByIdAndUpdate(
       businessId,
-      { $push: { services: serviceData } }, 
+      { $push: { services: serviceData } },
       { new: true }
     );
   } catch (error) {
@@ -135,7 +207,7 @@ const deleteService = async (businessId, serviceId) => {
   try {
     return await Business.findByIdAndUpdate(
       businessId,
-      { $pull: { services: { _id: serviceId } } }, 
+      { $pull: { services: { _id: serviceId } } },
       { new: true }
     );
   } catch (error) {
@@ -145,7 +217,7 @@ const deleteService = async (businessId, serviceId) => {
 
 const updateService = async (businessId, serviceId, updateFields) => {
   try {
-    
+
     const updateObj = {};
     for (const key in updateFields) {
       updateObj[`services.$.${key}`] = updateFields[key];
@@ -153,7 +225,7 @@ const updateService = async (businessId, serviceId, updateFields) => {
 
     return await Business.findOneAndUpdate(
       { _id: businessId, "services._id": serviceId },
-      { $set: updateObj }, 
+      { $set: updateObj },
       { new: true }
     );
   } catch (error) {
@@ -166,11 +238,40 @@ const getBusinessesByUserId = async (userId, page = 1, limit = 10) => {
   try {
     const skip = (page - 1) * limit;
 
-   
+
     const businesses = await Business.find({ userId: userId })
-      .sort({ createdAt: -1 }) // Newest first
+      .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit);
+
+    // Auto-sync trial if status is Approved but trial fields not set yet (e.g. updated directly in DB)
+    for (let i = 0; i < businesses.length; i++) {
+      const b = businesses[i];
+      const isApproved = Array.isArray(b.status)
+        ? b.status.some(s => s && s.toLowerCase() === 'approved')
+        : (typeof b.status === 'string' && b.status.toLowerCase() === 'approved');
+      const isPaid = ["Pro+", "Lite"].includes(b.subscription?.planName);
+      const hasValidTrial = b.subscription?.planName === "Trial" && b.subscription?.expiryDate && new Date(b.subscription.expiryDate) > new Date();
+
+      if (isApproved && !isPaid && !hasValidTrial && (!b.subscription || b.subscription.planName === "None" || !b.subscription.expiryDate)) {
+        const trialExpiry = new Date();
+        trialExpiry.setMonth(trialExpiry.getMonth() + 1);
+
+        businesses[i] = await Business.findByIdAndUpdate(
+          b._id,
+          {
+            $set: {
+              "subscription.planName": "Trial",
+              "subscription.planType": "Trial",
+              "subscription.expiryDate": trialExpiry,
+              "subscription.isTrialUsed": true,
+              badge: ["Trial"]
+            }
+          },
+          { new: true }
+        );
+      }
+    }
 
     const totalBusinesses = await Business.countDocuments({ userId: userId });
 
@@ -274,9 +375,9 @@ module.exports = {
   getPendingBusinesses,
   updateBusinessStatus,
   addService,
- deleteService ,
- updateService ,
-  getBusinessesByUserId, 
+  deleteService,
+  updateService,
+  getBusinessesByUserId,
   updateBackgroundImage,
   removeBackgroundImage,
   addImagesToService,
