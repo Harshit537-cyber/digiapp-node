@@ -75,13 +75,6 @@ exports.getAllBusiness = async (req, res) => {
                 approved: approvedCount,
                 rejected: rejectedCount
             },
-            totalShops: total,
-            proPlusCount,
-            trialCount,
-            liteCount,
-            pendingCount,
-            approvedCount,
-            rejectedCount,
             count: formattedBusinesses.length,
             pagination: {
                 total,
