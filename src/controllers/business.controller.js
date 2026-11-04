@@ -83,6 +83,15 @@ const registerBusiness = async (req, res) => {
     if (!userId) {
       return res.status(401).json({ success: false, message: "User authentication failed" });
     }
+
+    const existingBusiness = await Business.findOne({ userId });
+    if (existingBusiness) {
+      cleanupTempFiles(req.files);
+      return res.status(400).json({
+        success: false,
+        message: "You cannot register more than 1 shop"
+      });
+    }
     console.log(req.body)
    
        const { businessName, details, category, subCategory, location, address, ownerName, mobileNumber, whatsappNumber } = req.body;
