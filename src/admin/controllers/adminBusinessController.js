@@ -224,6 +224,12 @@ exports.updateBusiness = async (req, res) => {
 
         let updateData = { ...req.body };
 
+        if (updateData.location && typeof updateData.location === 'string') {
+            try {
+                updateData.location = JSON.parse(updateData.location);
+            } catch (e) {}
+        }
+
         // Handle Image Uploads to Cloudinary
         if (req.files) {
             if (req.files.businessImages) {

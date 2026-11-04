@@ -11,23 +11,28 @@ const createBusiness = async (data) => {
 };
 
 // 2. Get All Businesses
-const getAllBusinesses = async (page = 1, limit = 10, lat, lng, radius = 5) => {
+const getAllBusinesses = async (page = 1, limit = 10, lat, lng, radius = null) => {
   try {
     const skip = (page - 1) * limit;
     let pipeline = [];
 
     if (lat && lng) {
-      pipeline.push({
-        $geoNear: {
-          near: {
-            type: "Point",
-            coordinates: [parseFloat(lng), parseFloat(lat)],
-          },
-          distanceField: "distance",
-          maxDistance: radius * 1000,
-          query: { status: 'Approved', isBlocked: { $ne: true } },
-          spherical: true,
+      const geoNearStage = {
+        near: {
+          type: "Point",
+          coordinates: [parseFloat(lng), parseFloat(lat)],
         },
+        distanceField: "distance",
+        query: { status: 'Approved', isBlocked: { $ne: true } },
+        spherical: true,
+      };
+
+      if (radius) {
+        geoNearStage.maxDistance = radius * 1000;
+      }
+
+      pipeline.push({
+        $geoNear: geoNearStage,
       });
     } else {
       pipeline.push({ $match: { status: 'Approved', isBlocked: { $ne: true } } });

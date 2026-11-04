@@ -382,7 +382,7 @@ const getAllBusinesses = async (req, res) => {
     const limit = parseInt(req.query.limit) || 10;
     const { lat, lng } = req.query;
 
-    const radius = Math.min(parseInt(req.query.radius) || 5, 100);
+    const radius = req.query.radius ? Math.min(parseInt(req.query.radius) || 5, 100) : null;
 
     const result = await businessService.getAllBusinesses(page, limit, lat, lng, radius);
     let businesses = result.businesses || [];
