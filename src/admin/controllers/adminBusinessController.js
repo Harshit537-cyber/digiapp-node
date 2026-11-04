@@ -24,26 +24,72 @@ const uploadToCloudinary = async (filePath) => {
 // --- GET ALL BUSINESSES ---
 exports.getAllBusiness = async (req, res) => {
     try {
-const page = parseInt(req.query.page) || 1;
+        const page = parseInt(req.query.page) || 1;
         const limit = parseInt(req.query.limit) || 10;
         const skip = (page - 1) * limit;
 
+        const [
+            total,
+            proPlusCount,
+            liteCount,
+            trialCount,
+            pendingCount,
+            approvedCount,
+            rejectedCount,
+            businesses
+        ] = await Promise.all([
+            Business.countDocuments(),
+            Business.countDocuments({ "subscription.planName": { $in: ["Pro+", "Pro Plus", "pro+"] } }),
+            Business.countDocuments({ "subscription.planName": { $regex: /^lite$/i } }),
+            Business.countDocuments({ "subscription.planName": { $regex: /^(trial|trail)$/i } }),
+            Business.countDocuments({ status: { $in: ["Pending", "pending"] } }),
+            Business.countDocuments({ status: { $in: ["Approved", "approved"] } }),
+            Business.countDocuments({ status: { $in: ["Rejected", "rejected"] } }),
+            Business.find()
+                .populate('category', 'name')
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit)
+                .lean()
+        ]);
 
-         const total = await Business.countDocuments();
-   
-        const businesses = await Business.find().sort({ createdAt: -1 })
-        .skip(skip)
-            .limit(limit);
+        const formattedBusinesses = businesses.map(b => {
+            const catName = b.category && typeof b.category === 'object' ? b.category.name : b.category;
+            const catId = b.category && typeof b.category === 'object' ? b.category._id : b.category;
+            return {
+                ...b,
+                categoryId: catId,
+                categoryName: catName || null,
+                category: catName || b.category
+            };
+        });
+
         res.status(200).json({
             success: true,
-            count: businesses.length,
-              pagination: {
+            counts: {
+                totalShops: total,
+                proPlus: proPlusCount,
+                trial: trialCount,
+                lite: liteCount,
+                pending: pendingCount,
+                approved: approvedCount,
+                rejected: rejectedCount
+            },
+            totalShops: total,
+            proPlusCount,
+            trialCount,
+            liteCount,
+            pendingCount,
+            approvedCount,
+            rejectedCount,
+            count: formattedBusinesses.length,
+            pagination: {
                 total,
                 page,
                 limit,
                 totalPages: Math.ceil(total / limit)
             },
-            data: businesses
+            data: formattedBusinesses
         });
     } catch (error) {
         console.error("Error fetching businesses:", error);

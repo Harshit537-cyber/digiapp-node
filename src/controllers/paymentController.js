@@ -56,32 +56,6 @@ exports.createOrder = async (req, res) => {
       }
     }
 
-    // Prevent duplicate orders: Reuse existing pending order within 5 minutes if still active
-    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
-    const existingPendingTxn = await TransactionRecord.findOne({
-      userId: userId,
-      amount: plan.price,
-      status: "Pending",
-      businessId: plan.category === "SUBSCRIPTION" ? businessId : null,
-      "metadata.planId": plan.planId,
-      createdAt: { $gte: fiveMinutesAgo }
-    }).sort({ createdAt: -1 });
-
-    if (existingPendingTxn && existingPendingTxn.orderId) {
-      try {
-        const existingOrder = await callWithRetryAndTimeout(
-          () => razorpay.orders.fetch(existingPendingTxn.orderId),
-          1,
-          5000
-        );
-        if (existingOrder && existingOrder.status === "created") {
-          return res.json({ success: true, order: existingOrder });
-        }
-      } catch (_) {
-        // If order fetch fails, proceed with creating a new order
-      }
-    }
-
     const options = {
       amount: plan.price * 100, 
       currency: "INR",

@@ -2,7 +2,7 @@ const bloodRequestService = require("../services/bloodRequest.services");
 const response = require("../utils/response");
 const BloodRequest = require("../models/BloodRequest");
 const mongoose = require("mongoose");
-const {sendNotification} = require("../utils/notification");
+const { sendNotification } = require("../utils/notification");
 const User = require("../models/User")
 
 const createBloodRequest = async (req, res) => {
@@ -23,16 +23,16 @@ const createBloodRequest = async (req, res) => {
       additionalInfo,
     } = req.body;
 
-    
+
     const bloodRequestData = {
       userId: req.user.userId,
       patientName,
       bloodGroup,
       urgency,
       hospitalName,
-       location: {
-        ...location, 
-        type: "Point", 
+      location: {
+        ...location,
+        type: "Point",
       },
       contactNumber,
       whatsappNumber,
@@ -46,7 +46,7 @@ const createBloodRequest = async (req, res) => {
     const bloodRequest =
       await bloodRequestService.createBloodRequest(bloodRequestData);
 
-try {
+    try {
       const user = await User.findById(req.user.userId);
 
       if (user && user.fcmToken) {
@@ -62,7 +62,7 @@ try {
         console.log("User FCM token not found, skipping notification.");
       }
     } catch (notifError) {
-      
+
       console.error("Notification failed to send:", notifError.message);
     }
 
@@ -73,7 +73,7 @@ try {
       bloodRequest,
     );
   } catch (error) {
-    console.error("Error in createBloodRequest:",error);
+    console.error("Error in createBloodRequest:", error);
     return response.error(res, "Server error", 500);
   }
 };
@@ -296,8 +296,8 @@ const getMyPostedBloodRequests = async (req, res) => {
   try {
     const idFromToken = req.user.userId;
 
-    const requests = await BloodRequest.find({ 
-      userId: new mongoose.Types.ObjectId(idFromToken) 
+    const requests = await BloodRequest.find({
+      userId: new mongoose.Types.ObjectId(idFromToken)
     }).sort({ createdAt: -1 });
 
     res.status(200).json({
@@ -317,7 +317,7 @@ const getMyPostedBloodRequests = async (req, res) => {
 const searchMyBloodRequests = async (req, res) => {
   try {
     const idFromToken = req.user.userId;
-    const { q } = req.query; 
+    const { q } = req.query;
 
     let filter = { userId: new mongoose.Types.ObjectId(idFromToken) };
 
