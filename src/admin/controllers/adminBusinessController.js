@@ -193,16 +193,47 @@ exports.createBusinessByAdmin = async (req, res) => {
             ownerImageUrl = await uploadToCloudinary(ownerImage[0].path);
         }
 
+        let initialStatus = 'Pending';
+        if (req.body.status) {
+            const rawStatus = Array.isArray(req.body.status) ? req.body.status[0] : req.body.status;
+            if (typeof rawStatus === 'string' && rawStatus.trim() !== '') {
+                initialStatus = rawStatus.charAt(0).toUpperCase() + rawStatus.slice(1).toLowerCase();
+            }
+        }
+
+        const isApproved = initialStatus === 'Approved';
+        let subscriptionData = {
+            planName: "None",
+            planType: "None",
+            expiryDate: null,
+            isTrialUsed: false
+        };
+        let badgeData = ["None"];
+
+        if (isApproved) {
+            const trialExpiry = new Date();
+            trialExpiry.setMonth(trialExpiry.getMonth() + 1);
+            subscriptionData = {
+                planName: "Trial",
+                planType: "Trial",
+                expiryDate: trialExpiry,
+                isTrialUsed: true
+            };
+            badgeData = ["Trial"];
+        }
+
         const businessData = {
             ...req.body,
             userId: userId,
             businessImages: businessImageUrls,
             nationalIdImage: nationalIdUrl,
-            category: categoryDoc._id,        // new
-            subCategory: cleanSubCategory,    // new
+            category: categoryDoc._id,
+            subCategory: cleanSubCategory,
             location: finalLocation,
             ownerImage: ownerImageUrl,
-            status: 'Approved'
+            status: [initialStatus],
+            subscription: subscriptionData,
+            badge: badgeData
         };
 
         const newBusiness = new Business(businessData);
