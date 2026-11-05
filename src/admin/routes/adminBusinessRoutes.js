@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const adminBusinessController = require('../controllers/adminBusinessController');
 const adminAuth = require('../middlewares/adminAuth');
-const upload = require('../../middlewares/upload'); 
+const upload = require('../../middlewares/upload');
 const verifyAdmin = require('../middlewares/adminAuth');
 
 router.use(adminAuth);
@@ -20,7 +20,7 @@ router.get('/all', adminBusinessController.getAllBusiness);
 router.get('/:id', adminBusinessController.getBusinessById);
 router.put('/update/:id', businessUploadFields, adminBusinessController.updateBusiness);
 router.delete('/delete/:id', adminBusinessController.deleteBusiness);
-router.patch("/update-status/:id", verifyAdmin,adminBusinessController.updateBusinessStatus)
+router.patch("/update-status/:id", verifyAdmin, adminBusinessController.updateBusinessStatus)
 router.patch('/toggle-status/:id', adminBusinessController.toggleBlockBusiness);
 router.put('/toggle-status/:id', adminBusinessController.toggleBlockBusiness);
 

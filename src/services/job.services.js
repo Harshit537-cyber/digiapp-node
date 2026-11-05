@@ -1,5 +1,7 @@
 const Job = require("../models/Job");
 const Business = require("../models/Business");
+const Review = require("../models/Review");
+const mongoose = require("mongoose");
 const SavedJob = require("../models/SavedJob");
 const cloudinary = require("../config/cloudinary");
 const User = require("../models/User");
@@ -393,7 +395,7 @@ const getNearbyLatestJobs = async (latitude, longitude) => {
       const extraShops = await Business.aggregate([
         {
           $match: {
-            status: "active",
+            status: { $in: ["active", "Approved"] },
             isBlocked: { $ne: true },
             _id: { $nin: shops.map((s) => s._id) },
           },
@@ -426,6 +428,53 @@ const getNearbyLatestJobs = async (latitude, longitude) => {
           return b.badgePriority - a.badgePriority; // Trusted first
         }
         return a.distance - b.distance; // nearest first
+      });
+    }
+
+    // ================= ⭐ RATINGS CALCULATION & ENRICHMENT =================
+    if (shops.length > 0) {
+      const shopIds = shops.map((s) => new mongoose.Types.ObjectId(s._id));
+
+      const ratingsData = await Review.aggregate([
+        { $match: { businessId: { $in: shopIds } } },
+        {
+          $group: {
+            _id: "$businessId",
+            averageRating: { $avg: "$rating" },
+            totalReviews: { $sum: 1 },
+          },
+        },
+      ]);
+
+      const ratingsLookup = {};
+      ratingsData.forEach((r) => {
+        ratingsLookup[r._id.toString()] = {
+          averageRating: parseFloat(r.averageRating.toFixed(1)),
+          totalReviews: r.totalReviews,
+        };
+      });
+
+      shops = shops.map((shop) => {
+        const ratingInfo = ratingsLookup[shop._id.toString()];
+        return {
+          ...shop,
+          averageRating: ratingInfo ? ratingInfo.averageRating : 0,
+          totalReviews: ratingInfo ? ratingInfo.totalReviews : 0,
+        };
+      });
+
+      // Sort: badgePriority first, then distance, then highest rating, then newest
+      shops.sort((a, b) => {
+        if (b.badgePriority !== a.badgePriority) {
+          return b.badgePriority - a.badgePriority; // Trusted/Pro+ first
+        }
+        if (a.distance !== b.distance) {
+          return a.distance - b.distance; // Nearest first
+        }
+        if (b.averageRating !== a.averageRating) {
+          return b.averageRating - a.averageRating; // Highest rating first
+        }
+        return new Date(b.createdAt) - new Date(a.createdAt);
       });
     }
 
