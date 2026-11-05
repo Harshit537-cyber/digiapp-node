@@ -39,7 +39,7 @@ exports.createItemCategory = async (req, res) => {
       name,
       image: uploadResponse.secure_url,
       subCategory: subCategory ? (Array.isArray(subCategory) ? subCategory : [subCategory]) : [],
-      createdBy: req.user?.id
+      createdBy: req.user.userId
     });
 
     if (fs.existsSync(req.file.path)) {
