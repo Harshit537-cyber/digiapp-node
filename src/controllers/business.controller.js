@@ -114,7 +114,14 @@ const registerBusiness = async (req, res) => {
       return res.status(404).json({ success: false, message: "Selected Category not found" });
     }
 
-    if (!subCategory || !catData.subCategory.includes(subCategory)) {
+    const cleanSubCategory = String(subCategory || "").trim().replace(/\r/g, '');
+    const matchedSubCategory = Array.isArray(catData.subCategory)
+      ? catData.subCategory.find(
+          s => String(s).trim().replace(/\r/g, '').toLowerCase() === cleanSubCategory.toLowerCase()
+        )
+      : null;
+
+    if (!matchedSubCategory) {
       return res.status(400).json({
         success: false,
         message: `Invalid sub-category. Please select a valid one from this category.`
@@ -132,7 +139,7 @@ const registerBusiness = async (req, res) => {
       businessName,
       details,
       category,
-      subCategory,
+      subCategory: cleanSubCategory,
       location,
       address,
       ownerName,

@@ -107,7 +107,7 @@ exports.getBusinessById = async (req, res) => {
 // --- CREATE A NEW BUSINESS (BY ADMIN) ---
 exports.createBusinessByAdmin = async (req, res) => {
     try {
-        const {  userId, businessName, category, subCategory } = req.body;
+        const { userId, businessName, category, subCategory } = req.body;
 
         if (!userId) {
             return res.status(400).json({ success: false, message: "Target User ID is required." });
@@ -118,53 +118,59 @@ exports.createBusinessByAdmin = async (req, res) => {
         }
 
         if (!category || !subCategory) {
-  return res.status(400).json({ success: false, message: "Category and subCategory are required." });
-}
-if (!mongoose.Types.ObjectId.isValid(category)) {
-  return res.status(400).json({ success: false, message: "Invalid category ID." });
-}
+            return res.status(400).json({ success: false, message: "Category and subCategory are required." });
+        }
+        if (!mongoose.Types.ObjectId.isValid(category)) {
+            return res.status(400).json({ success: false, message: "Invalid category ID." });
+        }
 
-const categoryDoc = await BusinessCategory.findById(category);
-if (!categoryDoc) {
-  return res.status(404).json({ success: false, message: "Category not found." });
-}
-if (!categoryDoc.status) {
-  return res.status(400).json({ success: false, message: "This category is inactive." });
-}
+        const categoryDoc = await BusinessCategory.findById(category);
+        if (!categoryDoc) {
+            return res.status(404).json({ success: false, message: "Category not found." });
+        }
+        if (!categoryDoc.status) {
+            return res.status(400).json({ success: false, message: "This category is inactive." });
+        }
 
-// SubCategory validation
-const cleanSubCategory = String(subCategory).trim();
-if (!categoryDoc.subCategory.includes(cleanSubCategory)) {
-  return res.status(400).json({
-    success: false,
-    message: `SubCategory '${cleanSubCategory}' does not belong to category '${categoryDoc.name}'.`,
-  });
-}
+        // SubCategory validation (handles hidden \r / newlines / case-insensitive)
+        const cleanSubCategory = String(subCategory).trim().replace(/\r/g, '');
+        const matchedSubCategory = Array.isArray(categoryDoc.subCategory)
+            ? categoryDoc.subCategory.find(
+                s => String(s).trim().replace(/\r/g, '').toLowerCase() === cleanSubCategory.toLowerCase()
+              )
+            : null;
 
-// Location parse + validate
-let location = req.body.location;
-if (typeof location === "string") {
-  try {
-    location = JSON.parse(location);
-  } catch (e) {
-    return res.status(400).json({ success: false, message: "Location must be valid JSON." });
-  }
-}
-if (!location || !Array.isArray(location.coordinates) || location.coordinates.length !== 2) {
-  return res.status(400).json({
-    success: false,
-    message: "Location must be { type: 'Point', coordinates: [longitude, latitude], address }.",
-  });
-}
-const [lng, lat] = location.coordinates.map(Number);
-if (Number.isNaN(lng) || Number.isNaN(lat) || lng < -180 || lng > 180 || lat < -90 || lat > 90) {
-  return res.status(400).json({ success: false, message: "Invalid coordinates. Use [longitude, latitude]." });
-}
-const finalLocation = {
-  type: "Point",
-  coordinates: [lng, lat],
-  address: location.address || "",
-};
+        if (!matchedSubCategory) {
+            return res.status(400).json({
+                success: false,
+                message: `SubCategory '${cleanSubCategory}' does not belong to category '${categoryDoc.name?.trim().replace(/\r/g, '')}'.`,
+            });
+        }
+
+        // Location parse + validate
+        let location = req.body.location;
+        if (typeof location === "string") {
+            try {
+                location = JSON.parse(location);
+            } catch (e) {
+                return res.status(400).json({ success: false, message: "Location must be valid JSON." });
+            }
+        }
+        if (!location || !Array.isArray(location.coordinates) || location.coordinates.length !== 2) {
+            return res.status(400).json({
+                success: false,
+                message: "Location must be { type: 'Point', coordinates: [longitude, latitude], address }.",
+            });
+        }
+        const [lng, lat] = location.coordinates.map(Number);
+        if (Number.isNaN(lng) || Number.isNaN(lat) || lng < -180 || lng > 180 || lat < -90 || lat > 90) {
+            return res.status(400).json({ success: false, message: "Invalid coordinates. Use [longitude, latitude]." });
+        }
+        const finalLocation = {
+            type: "Point",
+            coordinates: [lng, lat],
+            address: location.address || "",
+        };
 
 
         const { businessImages, nationalIdImage, ownerImage } = req.files || {};
@@ -193,8 +199,8 @@ const finalLocation = {
             businessImages: businessImageUrls,
             nationalIdImage: nationalIdUrl,
             category: categoryDoc._id,        // new
-    subCategory: cleanSubCategory,    // new
-    location: finalLocation,  
+            subCategory: cleanSubCategory,    // new
+            location: finalLocation,
             ownerImage: ownerImageUrl,
             status: 'Approved'
         };
@@ -227,7 +233,7 @@ exports.updateBusiness = async (req, res) => {
         if (updateData.location && typeof updateData.location === 'string') {
             try {
                 updateData.location = JSON.parse(updateData.location);
-            } catch (e) {}
+            } catch (e) { }
         }
 
         // Handle Image Uploads to Cloudinary
@@ -328,7 +334,7 @@ exports.addServiceToBusiness = async (req, res) => {
         if (!req.file) {
             return res.status(400).json({ success: false, message: "A service image is required." });
         }
-        
+
         // 1. Cloudinary par upload karein
         const serviceImageUrl = await uploadToCloudinary(req.file.path);
 
@@ -336,11 +342,11 @@ exports.addServiceToBusiness = async (req, res) => {
         const updatedBusiness = await Business.findByIdAndUpdate(
             businessId,
             {
-                $push: { 
-                    services: { 
-                        serviceTitle, 
+                $push: {
+                    services: {
+                        serviceTitle,
                         serviceDetails,
-                        serviceImages: [serviceImageUrl] 
+                        serviceImages: [serviceImageUrl]
                     }
                 }
             },
@@ -579,92 +585,92 @@ exports.getBusinessServices = async (req, res) => {
 
 
 exports.updateBusinessStatus = async (req, res) => {
-  try {
-    const { id } = req.params; 
-    const { status } = req.body; 
+    try {
+        const { id } = req.params;
+        const { status } = req.body;
 
-    if (Array.isArray(status) && status.length > 0) {
-      status = status[0];
-    }
-    if (typeof status === "string") {
-      status = status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
-    }
-
-    const validStatuses = ["Pending", "Approved", "Rejected", "Expired", "Active"];
-    let matchedStatus = null;
-    if (typeof status === "string") {
-      matchedStatus = validStatuses.find(s => s.toLowerCase() === status.trim().toLowerCase());
-    }
-    if (!matchedStatus) {
-      return res.status(400).json({ 
-        success: false, 
-        message: `Invalid status! Allowed statuses are: ${validStatuses.join(", ")}` 
-      });
-    }
-    status = matchedStatus;
-
-    const business = await Business.findById(id);
-    if (!business) {
-      return res.status(404).json({ 
-        success: false, 
-        message: "Business not found!" 
-      });
-    }
-
-    let updateFields = { status: status };
-
-    const currentPlan = business.subscription?.planName;
-    const isPaidPlan = ["Pro+", "Lite"].includes(currentPlan);
-    const hasActiveTrial = currentPlan === "Trial" && business.subscription?.expiryDate && new Date(business.subscription.expiryDate) > new Date();
-
-    // If status is Approved and not currently on an active paid plan or active trial, activate 1-month Free Trial
-    const shouldActivateTrial = status === "Approved" && !isPaidPlan && !hasActiveTrial;
-    if (shouldActivateTrial) {
-      const trialExpiry = new Date();
-      trialExpiry.setMonth(trialExpiry.getMonth() + 1);
-
-      updateFields["subscription.planName"] = "Trial";
-      updateFields["subscription.planType"] = "Trial";
-      updateFields["subscription.expiryDate"] = trialExpiry;
-      updateFields["subscription.isTrialUsed"] = true;
-      updateFields["badge"] = ["Trial"];
-    }
-
-    const updatedBusiness = await Business.findByIdAndUpdate(
-      id,
-      updateFields,
-      { new: true, runValidators: true } 
-    );
-
-    // Send push notification when approved and free trial is active
-    if (status === "Approved") {
-      try {
-        const user = await User.findById(business.userId);
-        if (user && user.fcmToken) {
-          const { sendNotification } = require("../../utils/notification");
-          await sendNotification(
-            user.fcmToken,
-            "Free Trial Activated",
-            "your free trail is activated",
-            { type: "BUSINESS_APPROVAL", businessId: business._id.toString() }
-          );
+        if (Array.isArray(status) && status.length > 0) {
+            status = status[0];
         }
-      } catch (notifErr) {
-        console.error("Error sending approval notification:", notifErr.message);
-      }
-    }
+        if (typeof status === "string") {
+            status = status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
+        }
 
-    res.status(200).json({
-      success: true,
-      message: `Business status successfully updated to ${status}`,
-      data: updatedBusiness
-    });
-    
-  } catch (error) {
-    res.status(500).json({ 
-      success: false, 
-      message: "Server Error", 
-      error: error.message 
-    });
-  }
+        const validStatuses = ["Pending", "Approved", "Rejected", "Expired", "Active"];
+        let matchedStatus = null;
+        if (typeof status === "string") {
+            matchedStatus = validStatuses.find(s => s.toLowerCase() === status.trim().toLowerCase());
+        }
+        if (!matchedStatus) {
+            return res.status(400).json({
+                success: false,
+                message: `Invalid status! Allowed statuses are: ${validStatuses.join(", ")}`
+            });
+        }
+        status = matchedStatus;
+
+        const business = await Business.findById(id);
+        if (!business) {
+            return res.status(404).json({
+                success: false,
+                message: "Business not found!"
+            });
+        }
+
+        let updateFields = { status: status };
+
+        const currentPlan = business.subscription?.planName;
+        const isPaidPlan = ["Pro+", "Lite"].includes(currentPlan);
+        const hasActiveTrial = currentPlan === "Trial" && business.subscription?.expiryDate && new Date(business.subscription.expiryDate) > new Date();
+
+        // If status is Approved and not currently on an active paid plan or active trial, activate 1-month Free Trial
+        const shouldActivateTrial = status === "Approved" && !isPaidPlan && !hasActiveTrial;
+        if (shouldActivateTrial) {
+            const trialExpiry = new Date();
+            trialExpiry.setMonth(trialExpiry.getMonth() + 1);
+
+            updateFields["subscription.planName"] = "Trial";
+            updateFields["subscription.planType"] = "Trial";
+            updateFields["subscription.expiryDate"] = trialExpiry;
+            updateFields["subscription.isTrialUsed"] = true;
+            updateFields["badge"] = ["Trial"];
+        }
+
+        const updatedBusiness = await Business.findByIdAndUpdate(
+            id,
+            updateFields,
+            { new: true, runValidators: true }
+        );
+
+        // Send push notification when approved and free trial is active
+        if (status === "Approved") {
+            try {
+                const user = await User.findById(business.userId);
+                if (user && user.fcmToken) {
+                    const { sendNotification } = require("../../utils/notification");
+                    await sendNotification(
+                        user.fcmToken,
+                        "Free Trial Activated",
+                        "your free trail is activated",
+                        { type: "BUSINESS_APPROVAL", businessId: business._id.toString() }
+                    );
+                }
+            } catch (notifErr) {
+                console.error("Error sending approval notification:", notifErr.message);
+            }
+        }
+
+        res.status(200).json({
+            success: true,
+            message: `Business status successfully updated to ${status}`,
+            data: updatedBusiness
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: "Server Error",
+            error: error.message
+        });
+    }
 };
