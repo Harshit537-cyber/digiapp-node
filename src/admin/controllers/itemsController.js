@@ -234,33 +234,54 @@ exports.deleteItem = async (req, res) => {
 };
 
 exports.getUserCreatedItems = async (req, res) => {
-        try {
-            const { lat, lng, radius, title, page = 1, limit = 10 } = req.query;
+    try {
+        const { lat, lng, radius, title, page = 1, limit = 10 } = req.query;
 
-            const pageNum = parseInt(page);
-            const limitNum = parseInt(limit);
-            const skip = (pageNum - 1) * limitNum;
-            let query = {};
+        const pageNum = parseInt(page);
+        const limitNum = parseInt(limit);
+        const skip = (pageNum - 1) * limitNum;
+        let query = {};
 
 
-            if (title) {
-                query.title = { $regex: title, $options: "i" };
+        if (title) {
+            query.title = { $regex: title, $options: "i" };
+        }
+
+
+        if (lat && lng) {
+            const latitude = parseFloat(lat);
+            const longitude = parseFloat(lng);
+            const distanceInKm = parseFloat(radius) || 10;
+            const radiusInRadians = distanceInKm / 6378.1;
+            query.location = {
+                $geoWithin: {
+                    $centerSphere: [[longitude, latitude], radiusInRadians]
+                }
+            };
+        }
+
+        const totalItems = await Item.countDocuments(query);
+        const activeCount = await Item.countDocuments({ ...query, isActive: true });
+        const isFeaturedCount = await Item.countDocuments({ ...query, isFeatured: true })
+
+        const priceAggregation = await Item.aggregate([
+            { $match: query },
+            {
+                $group: {
+                    _id: null,
+                    totalPrice: { $sum: "$price" }
+                }
             }
-
-
-            if (lat && lng) {
-                const latitude = parseFloat(lat);
-                const longitude = parseFloat(lng);
-                const distanceInKm = parseFloat(radius) || 10;
-                const radiusInRadians = distanceInKm / 6378.1;
-                query.location = {
-                    $geoWithin: {
-                        $centerSphere: [[longitude, latitude], radiusInRadians]
-                    }
-                };
+        ]);
+        const totalSum = priceAggregation.length > 0 ? priceAggregation[0].totalPrice : 0;
+        const creditsAggregation = await Item.aggregate([
+            { $match: query },
+            {
+                $group: {
+                    _id: null,
+                    totalCreditsSpent: { $sum: "$creditsInfo.totalCreditsUsed" }
+                }
             }
-<<<<<<< HEAD
-=======
         ]);
         const totalCreditsSpent = creditsAggregation.length > 0 ? creditsAggregation[0].totalCreditsSpent : 0;
         const items = await Item.find(query)
@@ -270,65 +291,33 @@ exports.getUserCreatedItems = async (req, res) => {
             .skip(skip)
             .limit(limitNum)
             .lean();
->>>>>>> 9cdea51fecbfceaf1dae2f0a470eede7ca83e1f1
 
-            const totalItems = await Item.countDocuments(query);
-            const activeCount = await Item.countDocuments({ ...query, isActive: true });
-            const isFeaturedCount = await Item.countDocuments({ ...query, isFeatured: true })
+        // 7. Final Response
+        res.status(200).json({
+            success: true,
+            message: "User created items fetched successfully",
+            totalItems: totalItems,
+            activeItems: activeCount,
+            totalPriceSum: totalSum,
+            totalCreditsSpent: totalCreditsSpent,
+            isFeatured: isFeaturedCount,
+            pagination: {
+                totalPages: Math.ceil(totalItems / limitNum),
+                currentPage: pageNum,
+                pageSize: items.length
+            },
+            data: items
+        });
 
-            const priceAggregation = await Item.aggregate([
-                { $match: query },
-                {
-                    $group: {
-                        _id: null,
-                        totalPrice: { $sum: "$price" }
-                    }
-                }
-            ]);
-            const totalSum = priceAggregation.length > 0 ? priceAggregation[0].totalPrice : 0;
-            const creditsAggregation = await Item.aggregate([
-                { $match: query },
-                {
-                    $group: {
-                        _id: null,
-                        totalCreditsSpent: { $sum: "$creditsInfo.totalCreditsUsed" }
-                    }
-                }
-            ]);
-            const totalCreditsSpent = creditsAggregation.length > 0 ? creditsAggregation[0].totalCreditsSpent : 0;
-            const items = await Item.find(query)
-                .populate("user", "-password")
-                .sort({ createdAt: -1 })
-                .skip(skip)
-                .limit(limitNum)
-                .lean();
-
-            // 7. Final Response
-            res.status(200).json({
-                success: true,
-                message: "User created items fetched successfully",
-                totalItems: totalItems,
-                activeItems: activeCount,
-                totalPriceSum: totalSum,
-                totalCreditsSpent: totalCreditsSpent,
-                isFeatured: isFeaturedCount,
-                pagination: {
-                    totalPages: Math.ceil(totalItems / limitNum),
-                    currentPage: pageNum,
-                    pageSize: items.length
-                },
-                data: items
-            });
-
-        } catch (error) {
-            console.error("Get User Items Error:", error);
-            res.status(500).json({
-                success: false,
-                message: "Error fetching user items",
-                error: error.message
-            });
-        }
-    };
+    } catch (error) {
+        console.error("Get User Items Error:", error);
+        res.status(500).json({
+            success: false,
+            message: "Error fetching user items",
+            error: error.message
+        });
+    }
+};
 
 
 
