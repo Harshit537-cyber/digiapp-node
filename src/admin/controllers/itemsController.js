@@ -259,6 +259,18 @@ exports.getUserCreatedItems = async (req, res) => {
                     }
                 };
             }
+<<<<<<< HEAD
+=======
+        ]);
+        const totalCreditsSpent = creditsAggregation.length > 0 ? creditsAggregation[0].totalCreditsSpent : 0;
+        const items = await Item.find(query)
+            .populate("user", "-password")
+            .populate("category", "name")
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limitNum)
+            .lean();
+>>>>>>> 9cdea51fecbfceaf1dae2f0a470eede7ca83e1f1
 
             const totalItems = await Item.countDocuments(query);
             const activeCount = await Item.countDocuments({ ...query, isActive: true });
