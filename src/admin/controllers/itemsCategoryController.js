@@ -410,6 +410,10 @@ exports.updateItemSubCategory = async (req, res) => {
     }
 
     const category = await ItemCategory.findById(categoryId);
+    if (!category) {
+      return res.status(404).json({ success: false, message: "Category not found" });
+    }
+
     if (category.subCategory.includes(newName.trim())) {
       return res.status(400).json({ success: false, message: "New name already exists" });
     }
@@ -426,6 +430,9 @@ exports.updateItemSubCategory = async (req, res) => {
 
     res.status(200).json({ success: true, message: "Updated successfully", data: updatedDoc });
   } catch (error) {
+    if (error.kind === 'ObjectId') {
+      return res.status(400).json({ success: false, message: "Invalid Category ID format" });
+    }
     res.status(500).json({ success: false, message: error.message });
   }
 };
@@ -433,10 +440,18 @@ exports.updateItemSubCategory = async (req, res) => {
 
 exports.deleteItemSubCategory = async (req, res) => {
   try {
-    const { categoryId, subCategoryName } = req.query;
+    const categoryId = req.query.categoryId || req.body?.categoryId;
+    const subCategoryName = req.query.subCategoryName || req.body?.subCategoryName;
+
+    if (!categoryId || !subCategoryName) {
+      return res.status(400).json({
+        success: false,
+        message: "categoryId and subCategoryName are required"
+      });
+    }
 
     const updatedDoc = await ItemCategory.findByIdAndUpdate(
-      categoryId,
+      categoryId.trim(),
       { $pull: { subCategory: subCategoryName.trim() } },
       { new: true }
     );
@@ -447,10 +462,13 @@ exports.deleteItemSubCategory = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: `Sub-category '${subCategoryName}' deleted successfully`,
+      message: `Sub-category '${subCategoryName.trim()}' deleted successfully`,
       data: updatedDoc
     });
   } catch (error) {
+    if (error.kind === 'ObjectId') {
+      return res.status(400).json({ success: false, message: "Invalid Category ID format" });
+    }
     res.status(500).json({ success: false, message: error.message });
   }
 };

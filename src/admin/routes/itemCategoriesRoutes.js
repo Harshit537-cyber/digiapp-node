@@ -1,6 +1,18 @@
 const express = require("express");
 const adminAuth = require('../middlewares/adminAuth');
-const { createItemCategory ,getAllItemCategories,getItemCategoryById,getSingleItemSubCategory,deleteItemCategory, getAllItemSubCategories,addItemSubCategory, updateItemCategory, searchItemCategory} = require("../controllers/itemsCategoryController");
+const { 
+  createItemCategory,
+  getAllItemCategories,
+  getItemCategoryById,
+  getSingleItemSubCategory,
+  deleteItemCategory, 
+  getAllItemSubCategories,
+  addItemSubCategory, 
+  updateItemCategory, 
+  searchItemCategory,
+  updateItemSubCategory,
+  deleteItemSubCategory
+} = require("../controllers/itemsCategoryController");
 const router = express.Router();
 const upload = require('../../middlewares/upload');
 
@@ -8,12 +20,15 @@ const upload = require('../../middlewares/upload');
 router.post("/create", adminAuth, upload.single('image'), createItemCategory);
 router.get("/get-all", adminAuth, getAllItemCategories);
 router.get("/get-by-id/:id", adminAuth, getItemCategoryById);
-router.delete("/delete/:id", adminAuth,deleteItemCategory );
-router.post("/create-subcategory", adminAuth, addItemSubCategory);
+router.delete("/delete/:id", adminAuth, deleteItemCategory);
 router.put("/update-category/:id", adminAuth, upload.single('image'), updateItemCategory);
 router.get("/search-category", adminAuth, searchItemCategory);
-router.get("/getAllSubCategories", adminAuth, getAllItemSubCategories);
-router.get("/getSingleItemSubCategory", adminAuth, getSingleItemSubCategory)
 
+// Sub-Category Routes
+router.post("/create-subcategory", adminAuth, addItemSubCategory);
+router.put("/update-subcategory", adminAuth, updateItemSubCategory);
+router.delete("/delete-subcategory", adminAuth, deleteItemSubCategory);
+router.get("/getAllSubCategories", adminAuth, getAllItemSubCategories);
+router.get("/getSingleItemSubCategory", adminAuth, getSingleItemSubCategory);
 
 module.exports = router;

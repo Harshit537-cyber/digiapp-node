@@ -20,7 +20,7 @@ const uploadFilesToCloudinary = async (files) => {
 exports.createItem = async (req, res) => {
     try {
         const body = req.body;
-        const userId = req.user.id || req.user.userId; 
+        const userId = req.user.id || req.user.userId;
 
         const itemUserId = body.userId || userId;
 
@@ -52,8 +52,8 @@ exports.createItem = async (req, res) => {
 
         let preferredComm = { call: false, chat: false };
         if (body.preferredCommunication) {
-            preferredComm = typeof body.preferredCommunication === "string" 
-                ? JSON.parse(body.preferredCommunication) 
+            preferredComm = typeof body.preferredCommunication === "string"
+                ? JSON.parse(body.preferredCommunication)
                 : body.preferredCommunication;
         }
 
@@ -65,7 +65,7 @@ exports.createItem = async (req, res) => {
             price: Number(body.price) || 0,
             images: imageUrls,
             location: {
-                type: "Point", 
+                type: "Point",
                 coordinates: [parseFloat(lng), parseFloat(lat)],
                 address: address
             },
@@ -83,16 +83,16 @@ exports.createItem = async (req, res) => {
         // -------------------------------------------------------------------------------
 
         if (!adminData) {
-            return res.status(404).json({ 
-                success: false, 
-                message: "Admin profile not found" 
+            return res.status(404).json({
+                success: false,
+                message: "Admin profile not found"
             });
         }
 
         const newItem = await Item.create(itemData);
 
         const finalResponseData = newItem.toObject();
-        finalResponseData.user = adminData; 
+        finalResponseData.user = adminData;
 
         res.status(201).json({
             success: true,
@@ -127,14 +127,14 @@ exports.getAllItems = async (req, res) => {
 
         const adminMap = {};
         admins.forEach(admin => {
-            adminMap[admin._id.toString()] = { 
-                name: admin.name, 
-                role: admin.role 
+            adminMap[admin._id.toString()] = {
+                name: admin.name,
+                role: admin.role
             };
         });
 
-        let query = { 
-            user: { $in: adminIds } 
+        let query = {
+            user: { $in: adminIds }
         };
 
         if (title) {
@@ -211,7 +211,7 @@ exports.deleteItem = async (req, res) => {
     try {
         const item = await Item.findByIdAndDelete(req.params.id);
 
-        
+
         if (!item) {
             return res.status(404).json({
                 success: false,
@@ -234,89 +234,89 @@ exports.deleteItem = async (req, res) => {
 };
 
 exports.getUserCreatedItems = async (req, res) => {
-    try {
-        const { lat, lng, radius, title, page = 1, limit = 10 } = req.query;
+        try {
+            const { lat, lng, radius, title, page = 1, limit = 10 } = req.query;
 
-        const pageNum = parseInt(page);
-        const limitNum = parseInt(limit);
-        const skip = (pageNum - 1) * limitNum;
-        let query = {};
+            const pageNum = parseInt(page);
+            const limitNum = parseInt(limit);
+            const skip = (pageNum - 1) * limitNum;
+            let query = {};
 
-   
-        if (title) {
-            query.title = { $regex: title, $options: "i" };
-        }
 
-    
-        if (lat && lng) {
-            const latitude = parseFloat(lat);
-            const longitude = parseFloat(lng);
-            const distanceInKm = parseFloat(radius) || 10;
-            const radiusInRadians = distanceInKm / 6378.1;
-            query.location = {
-                $geoWithin: {
-                    $centerSphere: [[longitude, latitude], radiusInRadians]
-                }
-            };
-        }
-
-        const totalItems = await Item.countDocuments(query);
-        const activeCount = await Item.countDocuments({ ...query, isActive: true });
-        const isFeaturedCount = await Item.countDocuments({...query, isFeatured: true})
-      
-        const priceAggregation = await Item.aggregate([
-            { $match: query },
-            {
-                $group: {
-                    _id: null,
-                    totalPrice: { $sum: "$price" }
-                }
+            if (title) {
+                query.title = { $regex: title, $options: "i" };
             }
-        ]);
-        const totalSum = priceAggregation.length > 0 ? priceAggregation[0].totalPrice : 0;
- const creditsAggregation = await Item.aggregate([
-            { $match: query },
-            {
-                $group: {
-                    _id: null,
-                    totalCreditsSpent: { $sum: "$creditsInfo.totalCreditsUsed" }
-                }
+
+
+            if (lat && lng) {
+                const latitude = parseFloat(lat);
+                const longitude = parseFloat(lng);
+                const distanceInKm = parseFloat(radius) || 10;
+                const radiusInRadians = distanceInKm / 6378.1;
+                query.location = {
+                    $geoWithin: {
+                        $centerSphere: [[longitude, latitude], radiusInRadians]
+                    }
+                };
             }
-        ]);
-        const totalCreditsSpent = creditsAggregation.length > 0 ? creditsAggregation[0].totalCreditsSpent : 0;
-        const items = await Item.find(query)
-            .populate("user", "-password")
-            .sort({ createdAt: -1 })
-            .skip(skip)
-            .limit(limitNum)
-            .lean();
 
-        // 7. Final Response
-        res.status(200).json({
-            success: true,
-            message: "User created items fetched successfully",
-            totalItems: totalItems,
-            activeItems: activeCount,
-            totalPriceSum: totalSum,
-               totalCreditsSpent: totalCreditsSpent,
-            isFeatured: isFeaturedCount,
-            pagination: {
-                totalPages: Math.ceil(totalItems / limitNum),
-                currentPage: pageNum,
-                pageSize: items.length
-            },
-            data: items
-        });
+            const totalItems = await Item.countDocuments(query);
+            const activeCount = await Item.countDocuments({ ...query, isActive: true });
+            const isFeaturedCount = await Item.countDocuments({ ...query, isFeatured: true })
 
-    } catch (error) {
-        console.error("Get User Items Error:", error);
-        res.status(500).json({
-            success: false,
-            message: "Error fetching user items",
-            error: error.message
-        });
-    }
-};
+            const priceAggregation = await Item.aggregate([
+                { $match: query },
+                {
+                    $group: {
+                        _id: null,
+                        totalPrice: { $sum: "$price" }
+                    }
+                }
+            ]);
+            const totalSum = priceAggregation.length > 0 ? priceAggregation[0].totalPrice : 0;
+            const creditsAggregation = await Item.aggregate([
+                { $match: query },
+                {
+                    $group: {
+                        _id: null,
+                        totalCreditsSpent: { $sum: "$creditsInfo.totalCreditsUsed" }
+                    }
+                }
+            ]);
+            const totalCreditsSpent = creditsAggregation.length > 0 ? creditsAggregation[0].totalCreditsSpent : 0;
+            const items = await Item.find(query)
+                .populate("user", "-password")
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limitNum)
+                .lean();
+
+            // 7. Final Response
+            res.status(200).json({
+                success: true,
+                message: "User created items fetched successfully",
+                totalItems: totalItems,
+                activeItems: activeCount,
+                totalPriceSum: totalSum,
+                totalCreditsSpent: totalCreditsSpent,
+                isFeatured: isFeaturedCount,
+                pagination: {
+                    totalPages: Math.ceil(totalItems / limitNum),
+                    currentPage: pageNum,
+                    pageSize: items.length
+                },
+                data: items
+            });
+
+        } catch (error) {
+            console.error("Get User Items Error:", error);
+            res.status(500).json({
+                success: false,
+                message: "Error fetching user items",
+                error: error.message
+            });
+        }
+    };
 
 
 
@@ -333,11 +333,11 @@ exports.updateItem = async (req, res) => {
             });
         }
 
-        let imageUrls = item.images; 
+        let imageUrls = item.images;
         if (req.files && req.files.length > 0) {
             const newImages = await uploadFilesToCloudinary(req.files);
             imageUrls = [...imageUrls, ...newImages];
-           
+
         }
 
         const lng = body.location?.coordinates?.[0] || body["location[coordinates][0]"] || item.location.coordinates[0];
@@ -346,10 +346,10 @@ exports.updateItem = async (req, res) => {
 
         let preferredComm = item.preferredCommunication;
         if (body.preferredCommunication) {
-            const parsedComm = typeof body.preferredCommunication === "string" 
-                ? JSON.parse(body.preferredCommunication) 
+            const parsedComm = typeof body.preferredCommunication === "string"
+                ? JSON.parse(body.preferredCommunication)
                 : body.preferredCommunication;
-            
+
             preferredComm = {
                 call: parsedComm.call === 'true' || parsedComm.call === true,
                 chat: parsedComm.chat === 'true' || parsedComm.chat === true
@@ -375,8 +375,8 @@ exports.updateItem = async (req, res) => {
         };
 
         const updatedItem = await Item.findByIdAndUpdate(
-            itemId, 
-            { $set: updateData }, 
+            itemId,
+            { $set: updateData },
             { new: true, runValidators: true }
         ).populate("user", "fullName role");
 
