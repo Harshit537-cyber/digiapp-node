@@ -286,6 +286,7 @@ exports.getUserCreatedItems = async (req, res) => {
         const totalCreditsSpent = creditsAggregation.length > 0 ? creditsAggregation[0].totalCreditsSpent : 0;
         const items = await Item.find(query)
             .populate("user", "-password")
+            .populate("category", "name")
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(limitNum)
