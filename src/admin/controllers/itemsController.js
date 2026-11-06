@@ -1,19 +1,25 @@
+const mongoose = require("mongoose");
 const Item = require("../../models/Item");
-const Admin = require("../../admin/models/Admin")
+const Admin = require("../../admin/models/Admin");
+const ItemCategory = require("../models/ItemCategory");
 const cloudinary = require("../../config/cloudinary");
 const fs = require("fs");
 const User = require("../../models/User");
+
 const uploadFilesToCloudinary = async (files) => {
     if (!files || files.length === 0) return [];
-    const uploadPromises = files.map(file =>
-        cloudinary.uploader.upload(file.path, { folder: "jobs" })
-    );
-    const results = await Promise.all(uploadPromises);
-
-
-    files.forEach(file => fs.unlinkSync(file.path));
-
-    return results.map(result => result.secure_url);
+    const urls = [];
+    for (const file of files) {
+        try {
+            const result = await cloudinary.uploader.upload(file.path, { folder: "items" });
+            urls.push(result.secure_url);
+        } finally {
+            if (fs.existsSync(file.path)) {
+                fs.unlinkSync(file.path);
+            }
+        }
+    }
+    return urls;
 };
 
 
@@ -24,16 +30,93 @@ exports.createItem = async (req, res) => {
 
         const itemUserId = body.userId || userId;
 
+        // 1. Basic validation
+        if (!body.title || !body.details) {
+            if (req.files && req.files.length > 0) {
+                req.files.forEach(f => fs.existsSync(f.path) && fs.unlinkSync(f.path));
+            }
+            return res.status(400).json({
+                success: false,
+                message: "Title and details are required"
+            });
+        }
+
+        const categoryInput = body.category || body.categoryId;
+        if (!categoryInput) {
+            if (req.files && req.files.length > 0) {
+                req.files.forEach(f => fs.existsSync(f.path) && fs.unlinkSync(f.path));
+            }
+            return res.status(400).json({
+                success: false,
+                message: "Category ID (category) is required"
+            });
+        }
+
+        if (!body.subCategory) {
+            if (req.files && req.files.length > 0) {
+                req.files.forEach(f => fs.existsSync(f.path) && fs.unlinkSync(f.path));
+            }
+            return res.status(400).json({
+                success: false,
+                message: "subCategory is required"
+            });
+        }
+
+        // 2. Validate Category ID (with name fallback)
+        let categoryDoc = null;
+        if (mongoose.Types.ObjectId.isValid(categoryInput)) {
+            categoryDoc = await ItemCategory.findById(categoryInput);
+        }
+        if (!categoryDoc) {
+            categoryDoc = await ItemCategory.findOne({
+                name: { $regex: new RegExp(`^${categoryInput.toString().trim().replace(/\r/g, '')}$`, 'i') }
+            });
+        }
+
+        if (!categoryDoc) {
+            if (req.files && req.files.length > 0) {
+                req.files.forEach(f => fs.existsSync(f.path) && fs.unlinkSync(f.path));
+            }
+            return res.status(404).json({
+                success: false,
+                message: "Item Category not found with provided ID or name"
+            });
+        }
+
+        // 3. Validate SubCategory belongs to Category (handling carriage returns and case)
+        const cleanSubCategory = (body.subCategory || "").toString().trim().replace(/\r/g, '');
+        const matchedSubCategory = categoryDoc.subCategory.find(
+            s => s.toString().trim().replace(/\r/g, '').toLowerCase() === cleanSubCategory.toLowerCase()
+        );
+
+        if (!matchedSubCategory) {
+            if (req.files && req.files.length > 0) {
+                req.files.forEach(f => fs.existsSync(f.path) && fs.unlinkSync(f.path));
+            }
+            return res.status(400).json({
+                success: false,
+                message: `SubCategory '${body.subCategory}' does not belong to category '${categoryDoc.name}'`
+            });
+        }
+
+        // 4. Role check if creating on behalf of specific user
         const allowedRoles = ["SERVICE_PROVIDER", "BUSINESS_SHOPS", "JOB_SEEKER", "GENERAL_USER"];
+        let targetUser = null;
         if (body.userId) {
-            const targetUser = await User.findById(itemUserId).select("role");
+            targetUser = await User.findById(itemUserId).select("fullName role email mobileNumber");
             if (!targetUser) {
+                if (req.files && req.files.length > 0) {
+                    req.files.forEach(f => fs.existsSync(f.path) && fs.unlinkSync(f.path));
+                }
                 return res.status(404).json({
                     success: false,
                     message: "User not found"
                 });
             }
             if (!allowedRoles.includes(targetUser.role)) {
+                if (req.files && req.files.length > 0) {
+                    req.files.forEach(f => fs.existsSync(f.path) && fs.unlinkSync(f.path));
+                }
                 return res.status(400).json({
                     success: false,
                     message: "Item can only be posted for SERVICE_PROVIDER, BUSINESS_SHOPS, JOB_SEEKER, or GENERAL_USER roles"
@@ -41,14 +124,51 @@ exports.createItem = async (req, res) => {
             }
         }
 
+        // 5. Admin profile fetch
+        let adminData = await Admin.findById(userId).select("name email role");
+        if (!adminData) {
+            adminData = await User.findById(userId).select("fullName role");
+        }
+        if (!adminData) {
+            if (req.files && req.files.length > 0) {
+                req.files.forEach(f => fs.existsSync(f.path) && fs.unlinkSync(f.path));
+            }
+            return res.status(404).json({
+                success: false,
+                message: "Admin profile not found"
+            });
+        }
+
+        // 6. Upload images to Cloudinary after all validations succeed
         let imageUrls = [];
         if (req.files && req.files.length > 0) {
             imageUrls = await uploadFilesToCloudinary(req.files);
         }
 
-        const lng = body.location?.coordinates?.[0] || body["location[coordinates][0]"] || 0;
-        const lat = body.location?.coordinates?.[1] || body["location[coordinates][1]"] || 0;
-        const address = body.location?.address || body["location[address]"] || "";
+        // 7. Parse location
+        let lng = 0;
+        let lat = 0;
+        let address = "";
+
+        if (body.location) {
+            let loc = body.location;
+            if (typeof loc === "string") {
+                try { loc = JSON.parse(loc); } catch (e) {}
+            }
+            if (loc && loc.coordinates && Array.isArray(loc.coordinates)) {
+                lng = loc.coordinates[0];
+                lat = loc.coordinates[1];
+            }
+            if (loc && loc.address) address = loc.address;
+        }
+
+        if (!lng && !lat) {
+            lng = body.longitude || body.lng || body["location[coordinates][0]"] || 0;
+            lat = body.latitude || body.lat || body["location[coordinates][1]"] || 0;
+        }
+        if (!address) {
+            address = body.address || body["location[address]"] || "";
+        }
 
         let preferredComm = { call: false, chat: false };
         if (body.preferredCommunication) {
@@ -58,52 +178,52 @@ exports.createItem = async (req, res) => {
         }
 
         const itemData = {
-            title: body.title,
-            details: body.details,
-            category: body.category,
-            subCategory: body.subCategory,
+            title: body.title.toString().trim(),
+            details: body.details.toString().trim(),
+            category: categoryDoc._id,
+            subCategory: matchedSubCategory,
             price: Number(body.price) || 0,
             images: imageUrls,
             location: {
                 type: "Point",
-                coordinates: [parseFloat(lng), parseFloat(lat)],
+                coordinates: [parseFloat(lng) || 0, parseFloat(lat) || 0],
                 address: address
             },
             preferredCommunication: {
                 call: preferredComm.call === 'true' || preferredComm.call === true,
                 chat: preferredComm.chat === 'true' || preferredComm.chat === true
             },
-            isActive: body.isActive === 'undefined' ? true : (body.isActive === 'true' || body.isActive === true),
+            isActive: body.isActive === undefined ? true : (body.isActive === 'true' || body.isActive === true),
             isFeatured: body.isFeatured === 'true' || body.isFeatured === true,
             user: itemUserId,
             expiryDate: body.expiryDate || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
         };
 
-        const adminData = await User.findById(userId).select("fullName role");
-        // -------------------------------------------------------------------------------
-
-        if (!adminData) {
-            return res.status(404).json({
-                success: false,
-                message: "Admin profile not found"
-            });
-        }
-
         const newItem = await Item.create(itemData);
 
-        const finalResponseData = newItem.toObject();
-        finalResponseData.user = adminData;
+        const populatedItem = await Item.findById(newItem._id)
+            .populate("category", "name")
+            .populate("user", "fullName role email mobileNumber")
+            .lean();
+
+        const finalResponseData = {
+            ...populatedItem,
+            user: populatedItem.user || targetUser || adminData
+        };
 
         res.status(201).json({
             success: true,
             message: "Item created successfully by Admin",
             postedBy: "ADMIN",
-            adminName: adminData.fullName,
+            adminName: adminData.name || adminData.fullName,
             adminRole: adminData.role,
             data: finalResponseData
         });
 
     } catch (error) {
+        if (req.files && req.files.length > 0) {
+            req.files.forEach(f => fs.existsSync(f.path) && fs.unlinkSync(f.path));
+        }
         console.error("Create Item Error:", error);
         res.status(500).json({
             success: false,
@@ -169,6 +289,7 @@ exports.getAllItems = async (req, res) => {
         const totalSum = priceAggregation.length > 0 ? priceAggregation[0].totalPrice : 0;
 
         const items = await Item.find(query)
+            .populate("category", "name")
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(limitNum)
@@ -328,17 +449,69 @@ exports.updateItem = async (req, res) => {
 
         let item = await Item.findById(itemId);
         if (!item) {
+            if (req.files && req.files.length > 0) {
+                req.files.forEach(f => fs.existsSync(f.path) && fs.unlinkSync(f.path));
+            }
             return res.status(404).json({
                 success: false,
                 message: "Item not found"
             });
         }
 
+        // Validate Category if provided
+        let targetCategoryId = item.category;
+        let targetCategoryDoc = null;
+        const categoryInput = body.category || body.categoryId;
+
+        if (categoryInput) {
+            if (mongoose.Types.ObjectId.isValid(categoryInput)) {
+                targetCategoryDoc = await ItemCategory.findById(categoryInput);
+            }
+            if (!targetCategoryDoc) {
+                targetCategoryDoc = await ItemCategory.findOne({
+                    name: { $regex: new RegExp(`^${categoryInput.toString().trim().replace(/\r/g, '')}$`, 'i') }
+                });
+            }
+            if (!targetCategoryDoc) {
+                if (req.files && req.files.length > 0) {
+                    req.files.forEach(f => fs.existsSync(f.path) && fs.unlinkSync(f.path));
+                }
+                return res.status(404).json({
+                    success: false,
+                    message: "Item Category not found"
+                });
+            }
+            targetCategoryId = targetCategoryDoc._id;
+        }
+
+        // Validate SubCategory if provided (against new or existing category)
+        let subCategoryVal = item.subCategory;
+        if (body.subCategory) {
+            if (!targetCategoryDoc) {
+                targetCategoryDoc = await ItemCategory.findById(targetCategoryId);
+            }
+            if (targetCategoryDoc) {
+                const cleanSub = body.subCategory.toString().trim().replace(/\r/g, '');
+                const matchedSub = targetCategoryDoc.subCategory.find(
+                    s => s.toString().trim().replace(/\r/g, '').toLowerCase() === cleanSub.toLowerCase()
+                );
+                if (!matchedSub) {
+                    if (req.files && req.files.length > 0) {
+                        req.files.forEach(f => fs.existsSync(f.path) && fs.unlinkSync(f.path));
+                    }
+                    return res.status(400).json({
+                        success: false,
+                        message: `SubCategory '${body.subCategory}' does not belong to category '${targetCategoryDoc.name}'`
+                    });
+                }
+                subCategoryVal = matchedSub;
+            }
+        }
+
         let imageUrls = item.images;
         if (req.files && req.files.length > 0) {
             const newImages = await uploadFilesToCloudinary(req.files);
             imageUrls = [...imageUrls, ...newImages];
-
         }
 
         const lng = body.location?.coordinates?.[0] || body["location[coordinates][0]"] || item.location.coordinates[0];
@@ -358,10 +531,10 @@ exports.updateItem = async (req, res) => {
         }
 
         const updateData = {
-            title: body.title || item.title,
-            details: body.details || item.details,
-            category: body.category || item.category,
-            subCategory: body.subCategory || item.subCategory,
+            title: body.title !== undefined ? body.title.toString().trim() : item.title,
+            details: body.details !== undefined ? body.details.toString().trim() : item.details,
+            category: targetCategoryId,
+            subCategory: subCategoryVal,
             price: body.price !== undefined ? Number(body.price) : item.price,
             images: imageUrls,
             location: {
@@ -379,7 +552,9 @@ exports.updateItem = async (req, res) => {
             itemId,
             { $set: updateData },
             { new: true, runValidators: true }
-        ).populate("user", "fullName role");
+        )
+            .populate("user", "fullName role")
+            .populate("category", "name");
 
         res.status(200).json({
             success: true,
@@ -388,6 +563,9 @@ exports.updateItem = async (req, res) => {
         });
 
     } catch (error) {
+        if (req.files && req.files.length > 0) {
+            req.files.forEach(f => fs.existsSync(f.path) && fs.unlinkSync(f.path));
+        }
         console.error("Update Item Error:", error);
         res.status(500).json({
             success: false,
